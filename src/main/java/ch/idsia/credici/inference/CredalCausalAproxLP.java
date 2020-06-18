@@ -50,7 +50,6 @@ public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFa
                 if(epsilon>0.0){
                    do_csmodel.setFactor(v, ((SeparateHalfspaceFactor) do_csmodel.getFactor(v)).getPerturbedZeroConstraints(epsilon));
              }
-            System.out.println("->");
 
         }
 

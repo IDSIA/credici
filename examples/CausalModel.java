@@ -1,3 +1,4 @@
+import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.credici.model.StructuralCausalModel;
 
@@ -24,6 +25,9 @@ public class CausalModel {
         model.addParents(x2, u2, x1);
         model.addParents(x3, u3, x1);
         model.addParents(x4, u4, x2, x3);
+
+
+
 
         // define the CPTs of the exogenous variables
         BayesianFactor pu1 = new BayesianFactor(model.getDomain(u1), new double[] { .4, .6 });
@@ -57,5 +61,10 @@ public class CausalModel {
         model.setFactor(x4,f4);
 
         model.printSummary();
+
+
+        BayesianFactor f4_ = EquationBuilder.of(model).withAllAssingments(x4);
+        System.out.println(f4_);
+
     }
 }

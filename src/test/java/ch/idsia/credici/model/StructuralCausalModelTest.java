@@ -1,4 +1,4 @@
-package ch.idsia.model;
+package ch.idsia.credici.model;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.utility.ArraysUtil;

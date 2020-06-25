@@ -101,6 +101,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 
 
+
+
+
 	/**
 	 * Create a copy of this model (i.e. dag and factors are copied)
 	 * @return
@@ -402,8 +405,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			System.out.println("\nEndogenous var "+x+" with "+ Arrays.toString(this.getSizes(x))+" states");
 			System.out.println("Exogenous parents: "+Arrays.toString(this.getSizes(this.getExogenousParents(x)))+" states");
 
-			BayesianFactor p = this.getProb(x).fixPrecission(5,x).reorderDomain(x);
-			System.out.println(p+" = "+Arrays.toString(p.getData()));
+			try {
+				BayesianFactor p = this.getProb(x).fixPrecission(5, x).reorderDomain(x);
+				System.out.println(p + " = " + Arrays.toString(p.getData()));
+			}catch (Exception e){}
 
 			BayesianFactor f = this.getFactor(x).reorderDomain(this.getExogenousParents(x));
 

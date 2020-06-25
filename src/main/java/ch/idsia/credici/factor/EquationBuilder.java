@@ -3,6 +3,7 @@ package ch.idsia.credici.factor;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.Combinatorial;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.javasoft.util.ints.IntHashMap;
 import com.google.common.primitives.Ints;
@@ -17,7 +18,7 @@ public class EquationBuilder {
     private StructuralCausalModel model;
 
     /**
-     * Constructor of a EquationBuilder with a model
+     * Constructor of a EquationBuilder with a model associated
      * @param model
      */
     public EquationBuilder(StructuralCausalModel model){
@@ -49,9 +50,9 @@ public class EquationBuilder {
     public BayesianFactor fromVector(int var, int... assignments){
         assertEndogenous(var);
 
-        return BayesianFactor.deterministic(model.getDomain(var),
-                                            model.getDomain(model.getParents(var)),
-                                            assignments);
+        return fromVector(model.getDomain(var),
+                model.getDomain(model.getParents(var)),
+                assignments);
 
     }
 
@@ -70,12 +71,45 @@ public class EquationBuilder {
         return this.fromVector(var, ArraysUtil.flattenInts(assignments));
     }
 
-    public BayesianFactor withAllAssingments(int var){
+    public BayesianFactor withAllAssignments(int var){
+
+        int[] U = model.getExogenousParents(var);
+        if(U.length>1 || model.getChildren(U[0]).length>1){
+            throw new IllegalArgumentException("Only marvokvian case is allowed");
+        }
+
         int n = model.getDomain(model.getEndegenousParents(var)).getCombinations();
         int[] states = IntStream.range(0, model.getSize(var)).toArray();
         return from2DArray(var, Combinatorial.getCombinations(n, states));
     }
 
+
+    public static BayesianFactor fromVector(Strides left, Strides right, int... assignments){
+        return BayesianFactor.deterministic(left, right, assignments);
+    }
+
+    public static BayesianFactor from2DArray(Strides left, Strides right, int[][] assignments) {
+        return fromVector(left, right, ArraysUtil.flattenInts(List.of(assignments)));
+    }
+
+    public static BayesianFactor from3DArray(Strides left, Strides right, int[][][] assignments) {
+        return fromVector(left, right, ArraysUtil.flattenInts(List.of(assignments)));
+    }
+
+    public static BayesianFactor from4DArray(Strides left, Strides right, int[][][][] assignments) {
+        return fromVector(left, right, ArraysUtil.flattenInts(List.of(assignments)));
+    }
+    public static BayesianFactor fromList(Strides left, Strides right, List assignments) {
+        return fromVector(left, right, ArraysUtil.flattenInts(assignments));
+    }
+
+    public BayesianFactor withAllAssignments(Strides left, Strides endoParents, Strides exoParent){
+        if(exoParent.getVariables().length>1)
+            throw new IllegalArgumentException("Only markovian case is allowed");
+        int n = endoParents.getCombinations();
+        int[] states = IntStream.range(0, left.getCombinations()).toArray();
+        return from2DArray(left, endoParents.concat(exoParent), Combinatorial.getCombinations(n, states));
+    }
 
 
 }

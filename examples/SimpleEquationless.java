@@ -14,7 +14,7 @@ public class SimpleEquationless {
 
         m.addParent(x,u);
 
-        BayesianFactor fx = EquationBuilder.of(m).withAllAssingments(x);
+        BayesianFactor fx = EquationBuilder.of(m).withAllAssignments(x);
         m.setFactor(x, fx);
 
         BayesianFactor probX = BayesianFactor.random(m.getDomain(x), Strides.empty(),  2, false);

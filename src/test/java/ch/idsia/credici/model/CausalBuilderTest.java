@@ -8,7 +8,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
 
-public class SCMBuilderTest {
+public class CausalBuilderTest {
 
 	BayesianNetwork bnet;
 
@@ -26,7 +26,7 @@ public class SCMBuilderTest {
 
 	@Test
 	public void buildMarkovianEqless() {
-		StructuralCausalModel model =  SCMBuilder.of(bnet).build();
+		StructuralCausalModel model =  CausalBuilder.of(bnet).build();
 
 		assertArrayEquals(
 				model.getEndogenousVars(),

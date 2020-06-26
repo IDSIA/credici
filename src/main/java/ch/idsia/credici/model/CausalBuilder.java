@@ -13,7 +13,7 @@ import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.stream.Stream;
 
-public class SCMBuilder {
+public class CausalBuilder {
 
     private SparseDirectedAcyclicGraph empiricalDAG;
 
@@ -36,7 +36,7 @@ public class SCMBuilder {
 
 
 
-    public SCMBuilder(SparseDirectedAcyclicGraph empiricalDAG, int[] endoVarSizes) {
+    public CausalBuilder(SparseDirectedAcyclicGraph empiricalDAG, int[] endoVarSizes) {
         this.empiricalDAG = empiricalDAG;
         this.endoVarSizes = new TIntIntHashMap();
         int i = 0;
@@ -46,15 +46,15 @@ public class SCMBuilder {
         }
     }
 
-    public SCMBuilder(BayesianNetwork bnet) {
+    public CausalBuilder(BayesianNetwork bnet) {
         this(bnet.getNetwork(), bnet.getSizes(bnet.getVariables()));
     }
 
-    public static SCMBuilder of(SparseDirectedAcyclicGraph empiricalDAG, int[] endoVarSizes){
-        return new SCMBuilder(empiricalDAG, endoVarSizes);
+    public static CausalBuilder of(SparseDirectedAcyclicGraph empiricalDAG, int[] endoVarSizes){
+        return new CausalBuilder(empiricalDAG, endoVarSizes);
     }
-    public static SCMBuilder of(BayesianNetwork bnet){
-        return new SCMBuilder(bnet);
+    public static CausalBuilder of(BayesianNetwork bnet){
+        return new CausalBuilder(bnet);
     }
 
 
@@ -208,22 +208,22 @@ public class SCMBuilder {
     }
 
 
-    public SCMBuilder setExoVarSizes(TIntIntMap exoVarSizes) {
+    public CausalBuilder setExoVarSizes(TIntIntMap exoVarSizes) {
         this.exoVarSizes = exoVarSizes;
         return this;
     }
 
-    public SCMBuilder setExoVarSizes(int[] exoVarSizes) {
+    public CausalBuilder setExoVarSizes(int[] exoVarSizes) {
         this.exoVarSizes_ = exoVarSizes;
         return this;
     }
 
-    public SCMBuilder setFillRandomExogenousFactors(int num_decimals){
+    public CausalBuilder setFillRandomExogenousFactors(int num_decimals){
         this.num_decimals = num_decimals;
         return this;
     }
 
-    public SCMBuilder setFillRandomEquations(boolean fillRandomEquations) {
+    public CausalBuilder setFillRandomEquations(boolean fillRandomEquations) {
         this.fillRandomEquations = fillRandomEquations;
         return this;
     }
@@ -251,13 +251,13 @@ public class SCMBuilder {
         return empiricalDAG;
     }
 
-    public SCMBuilder setCausalDAG(SparseDirectedAcyclicGraph causalDAG) {
+    public CausalBuilder setCausalDAG(SparseDirectedAcyclicGraph causalDAG) {
         this.causalDAG = causalDAG;
         return this;
     }
 
 
-    public SCMBuilder setEquations(BayesianFactor[] equations) {
+    public CausalBuilder setEquations(BayesianFactor[] equations) {
         this.equations = equations;
         return this;
     }
@@ -288,9 +288,9 @@ public class SCMBuilder {
 
         //EquationBuilder.fromVector(Strides.as(y,2))
 
-        StructuralCausalModel model =  SCMBuilder.of(bnet).setFillRandomExogenousFactors(3).build();
+        StructuralCausalModel model =  CausalBuilder.of(bnet).setFillRandomExogenousFactors(3).build();
 
-        SCMBuilder b = SCMBuilder.of(bnet).setFillRandomExogenousFactors(3);
+        CausalBuilder b = CausalBuilder.of(bnet).setFillRandomExogenousFactors(3);
         b.build();
         b.getModel().printSummary();
 

@@ -1,5 +1,5 @@
 import ch.idsia.credici.factor.EquationBuilder;
-import ch.idsia.credici.model.SCMBuilder;
+import ch.idsia.credici.model.CausalBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
@@ -26,21 +26,21 @@ public class BuildSCMs {
         /** Parametrizable API **/
 
         // Markovian equationless from BN
-        StructuralCausalModel m3 = SCMBuilder.of(bnet).build();
+        StructuralCausalModel m3 = CausalBuilder.of(bnet).build();
         // Markovian equationless from DAG and sizes
-        StructuralCausalModel m4 = SCMBuilder.of(bnet.getNetwork(), bnet.getSizes(bnet.getVariables())).build();
+        StructuralCausalModel m4 = CausalBuilder.of(bnet.getNetwork(), bnet.getSizes(bnet.getVariables())).build();
 
         /// Aditional cases:
 
         // Markovian equationless with random P(U)
         StructuralCausalModel m5 =
-                SCMBuilder.of(bnet)
+                CausalBuilder.of(bnet)
                 .setFillRandomExogenousFactors(2)
                 .build();
 
         // Markovian with random P(U) and equations
         StructuralCausalModel m6 =
-                SCMBuilder.of(bnet)
+                CausalBuilder.of(bnet)
                         .setFillRandomExogenousFactors(2)
                         .setFillRandomEquations(true)
                         .build();
@@ -53,7 +53,7 @@ public class BuildSCMs {
         dag.addLink(u2, x);
 
         StructuralCausalModel m7 =
-                SCMBuilder.of(bnet)
+                CausalBuilder.of(bnet)
                         .setCausalDAG(dag)
                         .build();
 
@@ -65,7 +65,7 @@ public class BuildSCMs {
         dag2.addLink(u,x);
 
         StructuralCausalModel m8 =
-                SCMBuilder.of(bnet)
+                CausalBuilder.of(bnet)
                         .setCausalDAG(dag2)
                         .setExoVarSizes(new int[]{4})
                         .setFillRandomEquations(true)
@@ -87,7 +87,7 @@ public class BuildSCMs {
 
         BayesianFactor[] eqs = {eqy, eqx};
 
-        StructuralCausalModel m9 = SCMBuilder.of(bnet)
+        StructuralCausalModel m9 = CausalBuilder.of(bnet)
                 .setEquations(eqs)
                 .setFillRandomExogenousFactors(3)
                 .build();

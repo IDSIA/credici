@@ -106,7 +106,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	public static StructuralCausalModel of(BayesianNetwork bnet){
-		return SCMBuilder.of(bnet).build();
+		return CausalBuilder.of(bnet).build();
 	}
 
 	/**
@@ -116,7 +116,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	public static StructuralCausalModel of(SparseDirectedAcyclicGraph dag, int[] endoVarSizes){
-		return SCMBuilder.of(dag,endoVarSizes).build();
+		return CausalBuilder.of(dag,endoVarSizes).build();
 	}
 
 

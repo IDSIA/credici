@@ -44,11 +44,22 @@ public class SCMBuilderTest {
 		);
 
 
-
-
 	}
 
 
+	@Test
+	public void builWithCausalDAG() {
 
+	}
+
+	@Test
+	public void builFromEquations() {
+
+	}
+
+	@Test
+	public void buildFromExoVarSizes() {
+
+	}
 
 }

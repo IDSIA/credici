@@ -46,7 +46,7 @@ public class TerBinChainMarkovian {
             model.addParent(i,u);
         }
 
-        model.fillWithRandomFactors(PROB_DECIMALS, false);
+        model.fillWithRandomFactors(PROB_DECIMALS, false, true);
 
 
 

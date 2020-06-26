@@ -49,7 +49,7 @@ public class RandomHMM {
             model.addParent(Y[i], u);
         }
 
-        model.fillWithRandomFactors(PROB_DECIMALS, false);
+        model.fillWithRandomFactors(PROB_DECIMALS, false, true);
 
 
 

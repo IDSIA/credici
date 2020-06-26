@@ -33,7 +33,7 @@ public class RandomChainGlobalU {
             model.addParent(i,u);
         }
 
-        model.fillWithRandomFactors(PROB_DECIMALS, false);
+        model.fillWithRandomFactors(PROB_DECIMALS, false, true);
 
 
 

@@ -54,7 +54,7 @@ public class RandomSquares {
 
         }
 
-        model.fillWithRandomFactors(PROB_DECIMALS, false);
+        model.fillWithRandomFactors(PROB_DECIMALS, false, true);
 
 
         return model;

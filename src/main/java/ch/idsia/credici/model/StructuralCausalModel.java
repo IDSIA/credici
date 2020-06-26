@@ -11,6 +11,7 @@ import ch.idsia.crema.model.counterfact.CounterFactMapping;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.ImmutableSet;
@@ -99,8 +100,24 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	}
 
+	/**
+	 * Constructs a makovian equationless SCM from a bayesian network
+	 * @param bnet
+	 * @return
+	 */
+	public static StructuralCausalModel of(BayesianNetwork bnet){
+		return SCMBuilder.of(bnet).build();
+	}
 
-
+	/**
+	 * Constructs a makovian equationless SCM from a DAG a vector of cardinalities
+	 * @param dag
+	 * @param endoVarSizes
+	 * @return
+	 */
+	public static StructuralCausalModel of(SparseDirectedAcyclicGraph dag, int[] endoVarSizes){
+		return SCMBuilder.of(dag,endoVarSizes).build();
+	}
 
 
 
@@ -268,7 +285,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param prob_decimals
 	 */
 	public void fillWithRandomFactors(int prob_decimals){
-		this.fillWithRandomFactors(prob_decimals, false);
+		this.fillWithRandomFactors(prob_decimals, false, true);
 	}
 
 	/**
@@ -276,7 +293,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param prob_decimals
 	 * @param EqCheck
 	 */
-	public void fillWithRandomFactors(int prob_decimals, boolean EqCheck){
+	public void fillWithRandomFactors(int prob_decimals, boolean EqCheck, boolean fillEqs){
 
 		for(int u : this.getExogenousVars()){
 			this.setFactor(u,
@@ -286,43 +303,65 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			);
 
 			// todo: implement in a wiser way
-			do{
-				for(int x: getEndogenousChildren(u)){
-					Strides pa_x = this.getDomain(this.getParents(x));
-					int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(),this.getSize(x), true);
+			if(fillEqs) {
+				do {
+					for (int x : getEndogenousChildren(u)) {
+						Strides pa_x = this.getDomain(this.getParents(x));
+						int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
 
-					this.setFactor(x,
-							BayesianFactor.deterministic(
-									this.getDomain(x),
-									pa_x,
-									assignments)
-					);
-				}
-			}while(EqCheck && !areValidSE(u));
+						this.setFactor(x,
+								BayesianFactor.deterministic(
+										this.getDomain(x),
+										pa_x,
+										assignments)
+						);
+					}
+				} while (EqCheck && !areValidSE(u));
+			}
 
 
 
 		}
 
-
-		/*
-
-		for(int x : this.getEndogenousVars()){
-			Strides pa_x = this.getDomain(this.getParents(x));
-			int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(),this.getSize(x), true);
-
-			this.setFactor(x,
-					BayesianFactor.deterministic(
-							this.getDomain(x),
-							pa_x,
-							assignments)
-			);
-		}
-
-
-		 */
 
 	}
+
+	/**
+	 * Attach to each variable (endogenous or exogenous) a random factor.
+	 * @param prob_decimals
+	 */
+	public void fillExogenousWithRandomFactors(int prob_decimals){
+
+		for(int u : this.getExogenousVars()){
+			this.setFactor(u,
+					BayesianFactor.random(this.getDomain(u),
+							this.getDomain(this.getParents(u)),
+							prob_decimals, false)
+			);
+
+		}
+	}
+
+		/**
+		 * Attach to each variable (endogenous) a random factor.
+
+		 */
+		public void fillWithRandomEquations(){
+
+			for (int x : getEndogenousVars()) {
+				Strides pa_x = this.getDomain(this.getParents(x));
+				int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
+
+				this.setFactor(x,
+						BayesianFactor.deterministic(
+								this.getDomain(x),
+								pa_x,
+								assignments)
+				);
+			}
+		}
+
+
 
 	/**
 	 * Get valid random SCM specification (i.e., empirical probabilities + equations)

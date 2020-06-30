@@ -157,22 +157,4 @@ public class CredalBuilder {
     }
 
 
-    public static void main(String[] args) {
-        BayesianNetwork bnet = new BayesianNetwork();
-        int y = bnet.addVariable(2);
-        int x = bnet.addVariable(2);
-
-        bnet.setFactor(y, new BayesianFactor(bnet.getDomain(y), new double[]{0.3,0.7}));
-        bnet.setFactor(x, new BayesianFactor(bnet.getDomain(x,y), new double[]{0.6,0.5, 0.5,0.5}));
-
-        StructuralCausalModel causalModel = CausalBuilder.of(bnet).build();
-
-
-        SparseModel credalModel = CredalBuilder.of(causalModel)
-                                    .setEmpirical(bnet.getFactors())
-                                    .setToVertex()
-                                    .build();
-
-
-    }
 }

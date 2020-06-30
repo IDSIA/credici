@@ -22,6 +22,7 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.DoubleStream;
@@ -525,6 +526,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param empiricalProbs - for each exogenous variable U, the empirical probability of the children given the endogenous parents.
 	 * @return
 	 */
+	@Deprecated
 	public SparseModel toCredalNetwork(BayesianFactor... empiricalProbs){
 		return this.toCredalNetwork(true, empiricalProbs);
 	}
@@ -538,6 +540,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param empiricalProbs - for each exogenous variable U, the empirical probability of the children given the endogenous parents.
 	 * @return
 	 */
+	@Deprecated
 	public SparseModel toCredalNetwork(boolean vertex, BayesianFactor... empiricalProbs){
 
 
@@ -598,11 +601,38 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			}
 
 
-
-
 		}
 
 		return cmodel;
+	}
+
+	public SparseModel toHCredal(BayesianFactor... empiricalProbs){
+		return CredalBuilder.of(this)
+				.setEmpirical(empiricalProbs)
+				.setToHalfSpace()
+				.build();
+	}
+
+	public SparseModel toHCredal(Collection empiricalProbs){
+		return CredalBuilder.of(this)
+				.setEmpirical(empiricalProbs)
+				.setToHalfSpace()
+				.build();
+	}
+
+
+	public SparseModel toVCredal(BayesianFactor... empiricalProbs){
+		return CredalBuilder.of(this)
+				.setEmpirical(empiricalProbs)
+				.setToVertex()
+				.build();
+	}
+
+	public SparseModel toVCredal(Collection empiricalProbs){
+		return CredalBuilder.of(this)
+				.setEmpirical(empiricalProbs)
+				.setToVertex()
+				.build();
 	}
 
 	/**

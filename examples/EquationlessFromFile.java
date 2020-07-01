@@ -1,6 +1,7 @@
 import ch.idsia.credici.inference.CredalCausalAproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.crema.IO;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
@@ -15,7 +16,7 @@ public class EquationlessFromFile {
 
         // Load the empirical model
         String fileName = "./models/simple-bayes.uai";
-        BayesianNetwork bnet = (BayesianNetwork) UAIParser.open(fileName);
+        BayesianNetwork bnet = (BayesianNetwork) IO.read(fileName);
 
         // Get the markovian equationless SCM
         StructuralCausalModel causalModel = StructuralCausalModel.of(bnet);

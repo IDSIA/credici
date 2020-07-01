@@ -13,19 +13,28 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Arrays;
+import java.util.Collection;
 
 public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
 
     private int[] elimOrder;
 
     public CredalCausalVE(StructuralCausalModel model){
-        // Get the empirical and fix the precision problems
-        this(model, model.getEmpiricalProbs());
+        assertTrueMarginals(model);
+        this.model = model.toVCredal(model.getEmpiricalProbs());
+        this.elimOrder = this.model.getVariables();
     }
 
 
     public CredalCausalVE(StructuralCausalModel model, BayesianFactor[] empirical){
-        this.model = model.toCredalNetwork(true, empirical);
+        this.model = model.toVCredal(empirical);
+        this.elimOrder = this.model.getVariables();
+
+    }
+
+
+    public CredalCausalVE(StructuralCausalModel model, Collection empirical){
+        this.model = model.toVCredal(empirical);
         this.elimOrder = this.model.getVariables();
 
     }

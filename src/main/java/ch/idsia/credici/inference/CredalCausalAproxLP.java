@@ -13,6 +13,8 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.lang3.ArrayUtils;
 
+import java.util.Collection;
+
 public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFactor> {
 
 
@@ -21,14 +23,22 @@ public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFa
     private StructuralCausalModel originalModel = null;
 
     public CredalCausalAproxLP(StructuralCausalModel model){
-        this(model,model.getEmpiricalProbs());
+        assertTrueMarginals(model);
+        this.model = model.toHCredal(model.getEmpiricalProbs());
+        this.originalModel = model;
     }
 
     public CredalCausalAproxLP(StructuralCausalModel model, BayesianFactor[] empirical){
-        this.model = model.toCredalNetwork(false, empirical);
+        this.model = model.toHCredal(empirical);
         this.originalModel = model;
 
     }
+    public CredalCausalAproxLP(StructuralCausalModel model, Collection empirical){
+        this.model = model.toHCredal(empirical);
+        this.originalModel = model;
+
+    }
+
 
     @Override
     public IntervalFactor query(int[] target, TIntIntMap evidence, TIntIntMap intervention) throws InterruptedException {

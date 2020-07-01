@@ -93,7 +93,7 @@ public class CredalBuilder {
 
             // Define the constraints in matrix form
             double[][] coeff = getCoeff(u);
-            double[] vals = empiricalFactors.get(u).getData();
+            double[] vals = empiricalFactors.get(u).reorderDomain(model.getChildren(u)).getData();
             SeparateHalfspaceFactor constFactor =
                     new SeparateHalfspaceFactor(model.getDomain(u), coeff, vals);
 

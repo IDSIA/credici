@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import gnu.trove.map.TIntIntMap;
@@ -51,5 +52,12 @@ public abstract class CausalInference<M extends GenericSparseModel, R extends Ge
         return (M) do_model;
     }
 
+
+    public void assertTrueMarginals(StructuralCausalModel causalModel){
+        for(int u: causalModel.getExogenousVars()){
+            if(causalModel.getFactor(u) == null)
+                throw new IllegalArgumentException("Empirical factors should be provided if true marginals are not in the SCM");
+        }
+    }
 
 }

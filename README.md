@@ -1,11 +1,6 @@
-Credici
-================
+<img src="./docs/_static/img/logo.png" alt="Credici" width="500"/>
 
-
-<img src="./docs/_static/img/logo.png" alt="drawing" width="200"/>
-
-
-Crema is an open-source library that allows to use credal inference methods
+Credici is an open-source library that allows to use credal inference methods
 for causal analysis:
 
 

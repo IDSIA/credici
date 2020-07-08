@@ -22,7 +22,7 @@ public class ChainNonMarkovianCase {
         int N = 4;
 
         /** Number of states in endogenous variables */
-        int endoVarSize = 3;
+        int endoVarSize = 2;
 
         /** Number of states in the exogenous variables */
         int exoVarSize = 9;

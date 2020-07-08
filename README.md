@@ -1,70 +1,53 @@
 Credici
 ================
 
-Credal Inference for Causal Inference
+
+<img src="./docs/_static/img/logo.png" alt="drawing" width="200"/>
+
+
+Crema is an open-source library that allows to use credal inference methods
+for causal analysis:
 
 
 ```
-
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.crema.IO;
+import ch.idsia.crema.factor.credal.linear.IntervalFactor;
+import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
-public class CausalModel {
-    public static void main(String[] args) {
+import java.io.IOException;
 
-        /* This code implements the Party example */
+public class EquationlessFromFile {
+    public static void main(String[] args) throws IOException, InterruptedException {
 
-        StructuralCausalModel model = new StructuralCausalModel();
+        // Load the empirical model
+        String fileName = "./models/simple-bayes.uai";
+        BayesianNetwork bnet = (BayesianNetwork) IO.read(fileName);
 
-        // define the variables (endogenous and exogenous)
-        int x1 = model.addVariable(2);
-        int x2 = model.addVariable(2);
-        int x3 = model.addVariable(2);
-        int x4 = model.addVariable(2);
+        // Get the markovian equationless SCM
+        StructuralCausalModel causalModel = StructuralCausalModel.of(bnet);
 
-        int u1 = model.addVariable(2, true);
-        int u2 = model.addVariable(4, true);
-        int u3 = model.addVariable(4, true);
-        int u4 = model.addVariable(3, true);
-
-        // Define the structure
-        model.addParents(x1, u1);
-        model.addParents(x2, u2, x1);
-        model.addParents(x3, u3, x1);
-        model.addParents(x4, u4, x2, x3);
-
-        // define the CPTs of the exogenous variables
-        BayesianFactor pu1 = new BayesianFactor(model.getDomain(u1), new double[] { .4, .6 });
-        BayesianFactor pu2 = new BayesianFactor(model.getDomain(u2), new double[] { .07, .9, .03, .0 });
-        BayesianFactor pu3 = new BayesianFactor(model.getDomain(u3), new double[] { .05, .0, .85, .10 });
-        BayesianFactor pu4 = new BayesianFactor(model.getDomain(u4), new double[] { .05, .9, .05 });
-
-        model.setFactor(u1,pu1);
-        model.setFactor(u2,pu2);
-        model.setFactor(u3,pu3);
-        model.setFactor(u4,pu4);
-
-        // Define the CPTs of endogenous variables as deterministic functions
-        BayesianFactor f1 = BayesianFactor.deterministic(model.getDomain(x1), model.getDomain(u1),0,1);
-
-        BayesianFactor f2 = BayesianFactor.deterministic(model.getDomain(x2), model.getDomain(u2,x1),
-                0,0,1,1,  0,1,0,1);
-
-        BayesianFactor f3 = BayesianFactor.deterministic(model.getDomain(x3), model.getDomain(u3,x1),
-                0,0,1,1,  0,1,0,1);
+        // Set query
+        TIntIntMap intervention = new TIntIntHashMap();
+        intervention.put(0,1);
+        int target = 1;
 
 
+        // Approx inference
+        CredalCausalAproxLP inf = new CredalCausalAproxLP(causalModel, bnet.getFactors());
+        IntervalFactor res = inf.doQuery(target, intervention);
+        System.out.println(res);
 
-        BayesianFactor f4 = BayesianFactor.deterministic(model.getDomain(x4), model.getDomain(u4,x3,x2),
-                0,1,1,  0,0,0,  0,0,0, 0,1,1);
-
-
-        model.setFactor(x1,f1);
-        model.setFactor(x2,f2);
-        model.setFactor(x3,f3);
-        model.setFactor(x4,f4);
-
-        model.printSummary();
+        //Exact inference
+        CredalCausalVE inf2 = new CredalCausalVE(causalModel, bnet.getFactors());
+        VertexFactor res2 = inf2.doQuery(target, intervention);
+        System.out.println(res2);
+        
     }
 }
 

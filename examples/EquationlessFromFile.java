@@ -5,7 +5,6 @@ import ch.idsia.crema.IO;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-import ch.idsia.crema.model.io.uai.UAIParser;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
@@ -26,6 +25,7 @@ public class EquationlessFromFile {
         intervention.put(0,1);
         int target = 1;
 
+
         // Approx inference
         CredalCausalAproxLP inf = new CredalCausalAproxLP(causalModel, bnet.getFactors());
         IntervalFactor res = inf.doQuery(target, intervention);
@@ -35,7 +35,6 @@ public class EquationlessFromFile {
         CredalCausalVE inf2 = new CredalCausalVE(causalModel, bnet.getFactors());
         VertexFactor res2 = inf2.doQuery(target, intervention);
         System.out.println(res2);
-
 
     }
 }

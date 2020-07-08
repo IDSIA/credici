@@ -49,3 +49,26 @@ public class EquationlessFromFile {
 
 
 ```
+
+
+## Installation
+
+Add the following code in the  pom.xml of your project:
+
+```
+    <repositories>
+        <repository>
+            <id>cremaRepo</id>
+            <url>https://raw.github.com/idsia/crema/mvn-repo/</url>
+        </repository>
+    </repositories>
+
+    <dependencies>
+        <dependency>
+            <groupId>ch.idsia</groupId>
+            <artifactId>credici</artifactId>
+            <version>0.1.1</version>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
+```

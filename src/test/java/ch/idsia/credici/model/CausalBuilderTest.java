@@ -1,5 +1,6 @@
 package ch.idsia.credici.model;
 
+import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import org.junit.Before;

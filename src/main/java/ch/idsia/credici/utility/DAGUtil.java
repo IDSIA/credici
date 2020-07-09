@@ -1,6 +1,6 @@
 package ch.idsia.credici.utility;
 
-import ch.idsia.credici.model.CausalBuilder;
+import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
@@ -60,8 +60,6 @@ public class DAGUtil {
         );
 
         System.out.println(str);
-
-
 
     }
 

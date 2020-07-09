@@ -1,5 +1,5 @@
 import ch.idsia.credici.factor.EquationBuilder;
-import ch.idsia.credici.model.CausalBuilder;
+import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;

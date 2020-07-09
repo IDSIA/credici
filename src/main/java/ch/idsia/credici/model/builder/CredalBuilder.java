@@ -1,5 +1,6 @@
-package ch.idsia.credici.model;
+package ch.idsia.credici.model.builder;
 
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.ConstraintsOps;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
@@ -8,7 +9,6 @@ import ch.idsia.crema.factor.convert.HalfspaceToVertex;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
@@ -17,7 +17,6 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 
 import java.util.Collection;
-import java.util.Optional;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -96,7 +95,6 @@ public class CredalBuilder {
             // Define the constraints in matrix form
             double[][] coeff = getCoeff(u);
             double[] vals = empiricalFactors.get(u).getData();
-            System.out.println(empiricalFactors.get(u).getDomain());
 
             SeparateHalfspaceFactor constFactor =
                     new SeparateHalfspaceFactor(model.getDomain(u), coeff, vals);

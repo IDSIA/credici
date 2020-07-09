@@ -1,6 +1,8 @@
 package ch.idsia.credici.model;
 
 import ch.idsia.credici.counterfactual.Operations;
+import ch.idsia.credici.model.builder.CausalBuilder;
+import ch.idsia.credici.model.builder.CredalBuilder;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
@@ -8,7 +10,7 @@ import ch.idsia.crema.factor.convert.HalfspaceToVertex;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.Strides;
-import ch.idsia.credici.counterfactual.CounterFactMapping;
+import ch.idsia.credici.counterfactual.WorldMapping;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
@@ -43,7 +45,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	/** mapping of each variables to other counterfactual scenarios. In case of a non counterfactual setting
 	 * this will be null*/
-	private CounterFactMapping map;
+	private WorldMapping map;
 
 	private String name="";
 
@@ -108,7 +110,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	public static StructuralCausalModel of(BayesianNetwork bnet){
-		return CausalBuilder.of(bnet).build();
+		return ch.idsia.credici.model.builder.CausalBuilder.of(bnet).build();
 	}
 
 	/**
@@ -608,14 +610,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public SparseModel toHCredal(BayesianFactor... empiricalProbs){
-		return CredalBuilder.of(this)
+		return ch.idsia.credici.model.builder.CredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToHalfSpace()
 				.build();
 	}
 
 	public SparseModel toHCredal(Collection empiricalProbs){
-		return CredalBuilder.of(this)
+		return ch.idsia.credici.model.builder.CredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToHalfSpace()
 				.build();
@@ -623,7 +625,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 
 	public SparseModel toVCredal(BayesianFactor... empiricalProbs){
-		return CredalBuilder.of(this)
+		return ch.idsia.credici.model.builder.CredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToVertex()
 				.build();
@@ -691,7 +693,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * associates the variables across the worlds.
 	 * @return
 	 */
-	public CounterFactMapping getMap() {
+	public WorldMapping getMap() {
 		return map;
 	}
 
@@ -700,7 +702,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * associates the variables across the worlds.
 	 * @return
 	 */
-	public void setMap(CounterFactMapping map) {
+	public void setMap(WorldMapping map) {
 		this.map = map;
 	}
 
@@ -729,14 +731,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		else{
 			for(int w: this.getMap().getWorlds()){
 
-				if (w == CounterFactMapping.ALL) {
+				if (w == WorldMapping.ALL) {
 					str.append("\nGlobal factors: ");
 				} else {
 					str.append("\n"+"World " + w + " factors: ");
 				}
 
 				for(int v: this.getMap().getVariablesIn(w)) {
-					if (w == CounterFactMapping.ALL || this.getMap().getWorld(v) != CounterFactMapping.ALL)
+					if (w == WorldMapping.ALL || this.getMap().getWorld(v) != WorldMapping.ALL)
 						str.append("\n"+this.getFactor(v));
 				}
 

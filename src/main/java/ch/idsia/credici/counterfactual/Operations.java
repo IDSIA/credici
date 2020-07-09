@@ -16,8 +16,6 @@ public class Operations {
      */
     public static StructuralCausalModel merge(StructuralCausalModel reality, StructuralCausalModel... models) {
 
-        
-        
         //check that the variables are the same
         for(StructuralCausalModel m : models){
             if (!Arrays.equals(reality.getExogenousVars(), m.getExogenousVars()) ||
@@ -34,14 +32,14 @@ public class Operations {
         int[] merged_vars = IntStream.range(0, reality.getVariables().length + models.length*reality.getEndogenousVars().length).toArray();
 
         //counterfactual mapping
-        CounterFactMapping map = new CounterFactMapping(merged_vars);
+        WorldMapping map = new WorldMapping(merged_vars);
 
         // add variables of world 0 (reality)
         StructuralCausalModel merged = reality.copy();
         IntStream.of(reality.getEndogenousVars())
                 .forEach(v->map.set(v,0,v));
         IntStream.of(reality.getExogenousVars())
-                .forEach(v->map.set(v, CounterFactMapping.ALL,v));
+                .forEach(v->map.set(v, WorldMapping.ALL,v));
 
 
         int w = 1;

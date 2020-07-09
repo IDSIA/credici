@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
-public class CounterFactMapping {
+public class WorldMapping {
 
     public static final int None = -1;
     public static final int ALL = -2;
@@ -19,7 +19,7 @@ public class CounterFactMapping {
      * Constructor from a vector of variables
      * @param vars
      */
-    public CounterFactMapping(int[] vars){
+    public WorldMapping(int[] vars){
         int[][] arr = new int[Collections.max(Ints.asList(vars)) +1][2];
         for(int i=0; i<arr.length; i++){
             arr[i][0] = None;

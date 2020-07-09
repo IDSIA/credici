@@ -1,6 +1,7 @@
-package ch.idsia.credici.model;
+package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.factor.EquationBuilder;
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;

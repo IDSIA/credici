@@ -1,4 +1,4 @@
-import ch.idsia.credici.model.CredalBuilder;
+import ch.idsia.credici.model.builder.CredalBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;

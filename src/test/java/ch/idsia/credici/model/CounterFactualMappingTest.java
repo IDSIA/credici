@@ -1,6 +1,6 @@
 package ch.idsia.credici.model;
 
-import ch.idsia.credici.counterfactual.CounterFactMapping;
+import ch.idsia.credici.counterfactual.WorldMapping;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -10,7 +10,7 @@ import static org.junit.Assert.assertTrue;
 
 public class CounterFactualMappingTest {
 
-	CounterFactMapping cfmapping;
+	WorldMapping cfmapping;
 	StructuralCausalModel merged;
 
 	@Before

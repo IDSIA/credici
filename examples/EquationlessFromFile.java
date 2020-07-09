@@ -26,15 +26,17 @@ public class EquationlessFromFile {
         int target = 1;
 
 
+        //Exact inference
+        CredalCausalVE inf2 = new CredalCausalVE(causalModel, bnet.getFactors());
+        VertexFactor res2 = inf2.doQuery(target, intervention);
+        System.out.println(res2);
+
         // Approx inference
         CredalCausalAproxLP inf = new CredalCausalAproxLP(causalModel, bnet.getFactors());
         IntervalFactor res = inf.doQuery(target, intervention);
         System.out.println(res);
 
-        //Exact inference
-        CredalCausalVE inf2 = new CredalCausalVE(causalModel, bnet.getFactors());
-        VertexFactor res2 = inf2.doQuery(target, intervention);
-        System.out.println(res2);
+
 
     }
 }

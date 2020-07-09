@@ -95,25 +95,20 @@ public class CredalBuilder {
 
             // Define the constraints in matrix form
             double[][] coeff = getCoeff(u);
-            int[] children = causalmodel.getEndogenousChildren(u);
-
-            /*double[] vals = empiricalFactors.get(u).reorderDomain(
-                    Ints.concat(children, causalmodel.getEndegenousParents(children))
-            ).getData();*/
-
             double[] vals = empiricalFactors.get(u).getData();
-
+            System.out.println(empiricalFactors.get(u).getDomain());
 
             SeparateHalfspaceFactor constFactor =
                     new SeparateHalfspaceFactor(model.getDomain(u), coeff, vals);
 
+            // Remove unnecesary constraints
             constFactor = constFactor.removeNormConstraints();
             constFactor = ConstraintsOps.removeZeroConstraints(constFactor);
-
 
             if(constFactor==null)
                 throw new NoFeasibleSolutionException();
 
+            // Transforms the factor if needed and set it to the model
             if(vertex){
                 VertexFactor fu = new HalfspaceToVertex().apply(constFactor);
                 if(fu.getData()[0]==null)
@@ -161,13 +156,18 @@ public class CredalBuilder {
 
         int[] children = causalmodel.getEndogenousChildren(u);
 
+        BayesianFactor joinEQ = IntStream.of(children).mapToObj(i -> causalmodel.getFactor(i)).reduce((f1, f2) -> f1.combine(f2)).get();
+        // reorder coeff domain
+        joinEQ = joinEQ.reorderDomain(Ints.concat(empiricalFactors.get(u).getDomain().getVariables(), new int[]{u}));
+
         // Get the coefficients by combining all the EQs of the children
         double[][] coeff = ArraysUtil.transpose(ArraysUtil.reshape2d(
-                IntStream.of(children).mapToObj(i-> causalmodel.getFactor(i)).reduce((f1, f2) -> f1.combine(f2)).get()
-                        .getData(), causalmodel.getSizes(u)
+                joinEQ.getData(), causalmodel.getSizes(u)
         ));
         return coeff;
     }
+
+
 
 
 }

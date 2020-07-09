@@ -1,7 +1,6 @@
 package ch.idsia.credici.model;
 
-import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.crema.model.counterfact.CounterFactMapping;
+import ch.idsia.credici.counterfactual.CounterFactMapping;
 import org.junit.Before;
 import org.junit.Test;
 

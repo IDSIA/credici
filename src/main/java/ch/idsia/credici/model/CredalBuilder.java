@@ -146,7 +146,7 @@ public class CredalBuilder {
     }
 
     /**
-     * Transforms the structural equations associated to the childrens of a given U into a coefficient matrix.
+     * Transforms the structural equations associated to the children of a given U into a coefficient matrix.
      * @param u
      * @return
      */

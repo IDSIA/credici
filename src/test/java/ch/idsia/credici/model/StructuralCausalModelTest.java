@@ -116,7 +116,7 @@ public class StructuralCausalModelTest {
         );
     }
 
-/*
+
 //todo: fix problem in this test
 
     @ParameterizedTest
@@ -144,28 +144,24 @@ public class StructuralCausalModelTest {
     private static Stream<Arguments> mergeParams() {
         return Stream.of(
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        modelSimple2().intervention(0,1)
+                        modelSimple2().counterfactual_do(0,1)
                 }),
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        modelSimple2().intervention(1,1)
+                        modelSimple2().counterfactual_do(1,1)
                 }),
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        modelSimple2().intervention(0,1),
-                        modelSimple2().intervention(1,1)}),
+                        modelSimple2().counterfactual_do(0,1),
+                        modelSimple2().counterfactual_do(1,1)}),
 
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        modelSingleU().intervention(0,1)}),
+                        modelSingleU().counterfactual_do(0,1)}),
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        modelSingleU().intervention(1,1)}),
+                        modelSingleU().counterfactual_do(1,1)}),
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        modelSingleU().intervention(0,1),
-                        modelSingleU().intervention(1,1)})
+                        modelSingleU().counterfactual_do(0,1),
+                        modelSingleU().counterfactual_do(1,1)})
 
         );
     }
-
-*/
-
-
-
+    
 }

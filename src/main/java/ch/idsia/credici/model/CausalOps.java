@@ -8,6 +8,7 @@ import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
+import gnu.trove.map.TIntIntMap;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -185,6 +186,26 @@ public class CausalOps {
     public static SparseModel intervention(SparseModel model, int var, int state, boolean... removeDisconnected){
         return (SparseModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);
     }
+
+
+    public static GenericSparseModel applyInterventions(GenericSparseModel model, TIntIntMap intervention, boolean... removeDisconnected){
+        GenericSparseModel do_model = model;
+        for(int i=0; i<intervention.size(); i++) {
+            do_model =  CausalOps.intervention(do_model, intervention.keys()[i], intervention.values()[i], removeDisconnected);
+        }
+        return do_model;
+    }
+/*
+
+
+    public static StructuralCausalModel counterfactualModel(StructuralCausalModel model, TIntIntMap intervention){
+        return (StructuralCausalModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);
+    }
+
+    public static SparseModel intervention(SparseModel model, int var, int state, boolean... removeDisconnected){
+        return (SparseModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);
+    }
+    */
 
 
 }

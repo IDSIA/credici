@@ -52,16 +52,6 @@ public abstract class CausalInference<M extends GenericSparseModel, R extends Ge
         return model;
     }
 
-    public  M applyInterventions(TIntIntMap intervention){
-        GenericSparseModel do_model = model;
-        for(int i=0; i<intervention.size(); i++) {
-            do_model =  CausalOps.intervention(do_model, intervention.keys()[i], intervention.values()[i], true);
-        }
-        return (M) do_model;
-    }
-
-
-
 
     public Query causalQuery(){
         return new Query<R>(this).setCounterfactual(false);

@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
@@ -30,7 +31,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         TIntIntMap intervention = q.getIntervention();
 
         // Get the mutilated model
-        StructuralCausalModel do_model = applyInterventions(intervention);
+        StructuralCausalModel do_model = (StructuralCausalModel) CausalOps.applyInterventions(model, intervention);
 
         RemoveBarren removeBarren = new RemoveBarren();
         do_model = removeBarren

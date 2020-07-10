@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -49,7 +50,7 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
         TIntIntMap evidence = q.getEvidence();
         TIntIntMap intervention = q.getIntervention();
 
-        SparseModel do_csmodel = applyInterventions(intervention);
+        SparseModel do_csmodel = (SparseModel) CausalOps.applyInterventions(model, intervention);
 
     // cut arcs coming from an observed node and remove barren w.r.t the target
         RemoveBarren removeBarren = new RemoveBarren();

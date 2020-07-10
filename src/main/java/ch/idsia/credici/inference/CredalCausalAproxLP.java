@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -52,7 +53,7 @@ public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFa
         if(target.length>1)
             throw new IllegalArgumentException("A single target variable is allowed with CredalCausalAproxLP ");
 
-        SparseModel do_csmodel = applyInterventions(intervention);
+        SparseModel do_csmodel = (SparseModel) CausalOps.applyInterventions(model, intervention);
 
         // preprocessing
         RemoveBarren removeBarren = new RemoveBarren();

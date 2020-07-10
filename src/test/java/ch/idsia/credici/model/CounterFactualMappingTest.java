@@ -1,6 +1,6 @@
 package ch.idsia.credici.model;
 
-import ch.idsia.credici.counterfactual.WorldMapping;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -25,7 +25,7 @@ public class CounterFactualMappingTest {
 		cmodel.addParent(1,2);
 
 		cmodel.fillWithRandomFactors(2);
-		StructuralCausalModel[] models = {cmodel.counterfactual_do(0,0), cmodel.counterfactual_do(1,1)};
+		StructuralCausalModel[] models = {CausalOps.intervention(cmodel, 0,0, false), CausalOps.intervention(cmodel, 1,1, false)};
 
 		merged = cmodel.merge(models);
 		cfmapping = merged.getMap();

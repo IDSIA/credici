@@ -1,16 +1,17 @@
-package ch.idsia.credici.counterfactual;
+package ch.idsia.credici.model;
 
-import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.Factor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseModel;
 import com.google.common.primitives.Ints;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;
 
-public class Operations {
+public class CausalOps {
 
     /**
      * Merge the a SCM with other equivalent ones to create a counterfactual model.
@@ -141,6 +142,40 @@ public class Operations {
 
         return merged;
 
+    }
+
+
+    private static GenericSparseModel intervention(GenericSparseModel model, int var, int state, boolean... removeDisconnected){
+        if(removeDisconnected.length == 0)
+            removeDisconnected = new boolean[]{false};
+        else if(removeDisconnected.length>1)
+            throw new IllegalArgumentException("wrong length of removeDisconnected");
+
+        GenericSparseModel do_model = model.copy();
+        // remove the parents
+        for(int v: model.getParents(var)){
+            do_model.removeParent(var, v);
+        }
+
+        // remove any variable that is now disconnected
+        if(removeDisconnected[0])
+            for(int v: do_model.getVariables()) {
+                if(!do_model.areConnected(v,var))
+                    do_model.removeVariable(v);
+            }
+
+        // Fix the value of the intervened variable
+        do_model.setFactor(var, model.getFactor(var).get_deterministic(var, state));
+        return do_model;
+
+    }
+
+    public static StructuralCausalModel intervention(StructuralCausalModel model, int var, int state, boolean... removeDisconnected){
+        return (StructuralCausalModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);
+    }
+
+    public static SparseModel intervention(SparseModel model, int var, int state, boolean... removeDisconnected){
+        return (SparseModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);
     }
 
 

@@ -1,6 +1,5 @@
 package ch.idsia.credici.model;
 
-import ch.idsia.credici.counterfactual.Operations;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.CredalBuilder;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -10,7 +9,7 @@ import ch.idsia.crema.factor.convert.HalfspaceToVertex;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.Strides;
-import ch.idsia.credici.counterfactual.WorldMapping;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
@@ -426,13 +425,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 */
 	@Override
 	public StructuralCausalModel intervention(int var, int state){
-		return (StructuralCausalModel)super.intervention(var, state);
+		return CausalOps.intervention(this, var, state, true);
 	}
 
-	@Override
-	public StructuralCausalModel counterfactual_do(int var, int state){
-		return (StructuralCausalModel)super.counterfactual_do(var, state);
-	}
 
 	/**
 	 * Prints a summary of the SCM
@@ -700,7 +695,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	public StructuralCausalModel merge(StructuralCausalModel... models) {
-		return Operations.merge(this, models);
+		return CausalOps.merge(this, models);
 	}
 
 	/**

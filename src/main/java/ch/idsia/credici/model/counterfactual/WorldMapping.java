@@ -1,10 +1,9 @@
-package ch.idsia.credici.counterfactual;
+package ch.idsia.credici.model.counterfactual;
 
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
 
-import java.rmi.registry.Registry;
 import java.util.*;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;

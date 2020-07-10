@@ -144,22 +144,22 @@ public class StructuralCausalModelTest {
     private static Stream<Arguments> mergeParams() {
         return Stream.of(
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        modelSimple2().counterfactual_do(0,1)
+                        CausalOps.intervention(modelSimple2(),0,1, false)
                 }),
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        modelSimple2().counterfactual_do(1,1)
+                        CausalOps.intervention(modelSimple2(),1,1, false)
                 }),
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        modelSimple2().counterfactual_do(0,1),
-                        modelSimple2().counterfactual_do(1,1)}),
+                        CausalOps.intervention(modelSimple2(),0,1, false),
+                        CausalOps.intervention(modelSimple2(),1,1, false)}),
 
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        modelSingleU().counterfactual_do(0,1)}),
+                        CausalOps.intervention(modelSingleU(),0,1, false)}),
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        modelSingleU().counterfactual_do(1,1)}),
+                        CausalOps.intervention(modelSingleU(),1,1, false)}),
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        modelSingleU().counterfactual_do(0,1),
-                        modelSingleU().counterfactual_do(1,1)})
+                        CausalOps.intervention(modelSingleU(),0,1, false),
+                        CausalOps.intervention(modelSingleU(),1,1, false)})
 
         );
     }

@@ -1,11 +1,11 @@
 package ch.idsia.credici.counterfactual;
 
+import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.rmi.registry.Registry;
+import java.util.*;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -14,6 +14,10 @@ public class WorldMapping {
     public static final int None = -1;
     public static final int ALL = -2;
     private List<int[]> worldGroup;
+
+    private GenericSparseModel model;
+
+    public static List<WorldMapping> registry = new ArrayList<WorldMapping>();
 
     /**
      * Constructor from a vector of variables
@@ -26,6 +30,7 @@ public class WorldMapping {
             arr[i][1] = None;
         }
         this.setWorldGroup(arr);
+        registry.add(this);
     }
 
 
@@ -145,6 +150,29 @@ public class WorldMapping {
      */
     public int[] getWorlds(){
         return ArraysUtil.sort(Stream.of(getWorldGroup()).mapToInt(t -> t[0]).distinct().toArray());
+    }
+
+    public void setModel(GenericSparseModel model) {
+        this.model = model;
+    }
+
+    public GenericSparseModel getModel() {
+        return model;
+    }
+
+    public static WorldMapping getMap(GenericSparseModel model){
+
+        WorldMapping[] maps = registry.stream()
+                .filter(w ->  w.getModel() == model)
+                .toArray(WorldMapping[]::new);
+
+        if(maps.length > 1)
+            throw new IllegalArgumentException("Wrong number of maps: "+maps.length);
+        else if(maps.length== 0)
+            return null;
+
+        return maps[0];
+
     }
 
 }

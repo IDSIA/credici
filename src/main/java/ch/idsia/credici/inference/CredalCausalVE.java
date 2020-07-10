@@ -1,6 +1,7 @@
 package ch.idsia.credici.inference;
 
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
@@ -20,21 +21,22 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
     private int[] elimOrder;
 
     public CredalCausalVE(StructuralCausalModel model){
-        assertTrueMarginals(model);
-        this.model = model.toVCredal(model.getEmpiricalProbs());
-        this.elimOrder = this.model.getVariables();
+        this(model.toVCredal(model.getEmpiricalProbs()));
     }
 
 
     public CredalCausalVE(StructuralCausalModel model, BayesianFactor[] empirical){
-        this.model = model.toVCredal(empirical);
-        this.elimOrder = this.model.getVariables();
-
+        this(model.toVCredal(empirical));
     }
 
 
     public CredalCausalVE(StructuralCausalModel model, Collection empirical){
-        this.model = model.toVCredal(empirical);
+        this(model.toVCredal(empirical));
+    }
+
+    public CredalCausalVE(SparseModel model){
+        CausalInfo.assertIsVCredal(model);
+        this.model = model;
         this.elimOrder = this.model.getVariables();
 
     }

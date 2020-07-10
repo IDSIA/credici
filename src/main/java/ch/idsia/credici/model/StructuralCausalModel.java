@@ -43,10 +43,6 @@ import java.util.stream.Stream;
 public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, SparseDirectedAcyclicGraph> {
 
 
-	/** mapping of each variables to other counterfactual scenarios. In case of a non counterfactual setting
-	 * this will be null*/
-	private WorldMapping map;
-
 	private String name="";
 
 	/** set of variables that are exogenous. The rest are considered to be endogenous */
@@ -694,16 +690,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	public WorldMapping getMap() {
-		return map;
-	}
-
-	/**
-	 * Assuming that this SCM is a counterfactual model, this object
-	 * associates the variables across the worlds.
-	 * @return
-	 */
-	public void setMap(WorldMapping map) {
-		this.map = map;
+		return WorldMapping.getMap(this);
 	}
 
 

@@ -71,6 +71,10 @@ public class CredalBuilder {
 
     public SparseModel build(){
 
+        // Check that P(U) is in the model
+        if(empiricalFactors == null || empiricalFactors.size() == 0 )
+            assertTrueMarginals(causalmodel);
+
         // Copy the structure of the causal model
         model = new SparseModel();
         model.addVariables(causalmodel.getSizes(causalmodel.getVariables()));
@@ -115,7 +119,6 @@ public class CredalBuilder {
             }else{
                 model.setFactor(u, constFactor);
             }
-
 
         }
 
@@ -163,6 +166,15 @@ public class CredalBuilder {
                 joinEQ.getData(), causalmodel.getSizes(u)
         ));
         return coeff;
+    }
+
+
+
+    public static void assertTrueMarginals(StructuralCausalModel causalModel){
+        for(int u: causalModel.getExogenousVars()){
+            if(causalModel.getFactor(u) == null)
+                throw new IllegalArgumentException("Empirical factors should be provided if true marginals are not in the SCM");
+        }
     }
 
 

@@ -53,11 +53,5 @@ public abstract class CausalInference<M extends GenericSparseModel, R extends Ge
     }
 
 
-    public void assertTrueMarginals(StructuralCausalModel causalModel){
-        for(int u: causalModel.getExogenousVars()){
-            if(causalModel.getFactor(u) == null)
-                throw new IllegalArgumentException("Empirical factors should be provided if true marginals are not in the SCM");
-        }
-    }
 
 }

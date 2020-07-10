@@ -75,6 +75,11 @@ public class CausalInfo {
     }
 
     public boolean isExogenous(int v){
+        // SCM
+        if(model instanceof StructuralCausalModel)
+            return ((StructuralCausalModel)model).isExogenous(v);
+
+        // Credal
         return model.getParents(v).length == 0;
     }
 

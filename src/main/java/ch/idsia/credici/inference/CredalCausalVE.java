@@ -43,7 +43,11 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
 
 
     @Override
-    public VertexFactor query(int[] target, TIntIntMap evidence, TIntIntMap intervention) {
+    public VertexFactor run(Query q) throws InterruptedException {
+
+        int[] target = q.getTarget();
+        TIntIntMap evidence = q.getEvidence();
+        TIntIntMap intervention = q.getIntervention();
 
         SparseModel do_csmodel = applyInterventions(intervention);
 
@@ -62,7 +66,6 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
         // Get the new elimination order
         int[] newElimOrder = ArraysUtil.intersection(elimOrder, do_csmodel.getVariables());
 
-        System.out.println("deleted = "+ Arrays.toString(removeBarren.getDeleted()));
         FactorVariableElimination ve = new FactorVariableElimination(newElimOrder);
         if(filteredEvidence.size()>0)
             ve.setEvidence(filteredEvidence);

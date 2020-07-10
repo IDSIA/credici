@@ -6,6 +6,7 @@ import ch.idsia.crema.factor.Factor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
 
 import java.util.Arrays;
@@ -85,11 +86,11 @@ public class CausalOps {
      */
     public static SparseModel merge(SparseModel reality, SparseModel... models) {
 
+
         //check that the variables are the same
         for(SparseModel m : models){
-            if (!Arrays.equals(CausalInfo.of(reality).getExogenousVars(), CausalInfo.of(m).getExogenousVars()) ||
-                    !Arrays.equals(CausalInfo.of(reality).getEndogenousVars(), CausalInfo.of(m).getEndogenousVars()))
-                throw new IllegalArgumentException("Error: models cannot be merged");
+            if (!Arrays.equals(reality.getVariables(), m.getVariables()))
+                throw new IllegalArgumentException("Error: models cannot be merged: different variables");
         }
 
         //Indexes of variables should be consecutive
@@ -109,23 +110,30 @@ public class CausalOps {
         SparseModel merged = (SparseModel) reality.copy();
         IntStream.of(CausalInfo.of(reality).getEndogenousVars())
                 .forEach(v->map.set(v,0,v));
+
         IntStream.of(CausalInfo.of(reality).getExogenousVars())
                 .forEach(v->map.set(v, WorldMapping.ALL,v));
 
 
         int w = 1;
         for(SparseModel m: models){
+
+            int[] m_endogenous =  ArraysUtil.intersection(
+                    CausalInfo.of(reality).getEndogenousVars(),
+                    m.getVariables());
+
             // Add all the endogenous variables
-            for(int x_0: CausalInfo.of(m).getEndogenousVars()) {
+            for(int x_0: m_endogenous)
+            {
                 int x_w = merged.addVariable(m.getSize(x_0));
                 map.set(x_w,w,x_0);
             }
             // add the arcs
-            for(int x_0:  CausalInfo.of(m).getEndogenousVars()) {
+            for(int x_0:  m_endogenous) {
                 int x_w = map.getEquivalentVars(w,x_0);
                 for(int pa_0: m.getParents(x_0)) {
                     int pa_w = pa_0;
-                    if( CausalInfo.of(m).isEndogenous(pa_0))
+                    if( ArraysUtil.contains(pa_0, m_endogenous))
                         pa_w = map.getEquivalentVars(w, pa_0);;
                     merged.addParent(x_w, pa_w);
                 }
@@ -145,7 +153,7 @@ public class CausalOps {
     }
 
 
-    private static GenericSparseModel intervention(GenericSparseModel model, int var, int state, boolean... removeDisconnected){
+    public static GenericSparseModel intervention(GenericSparseModel model, int var, int state, boolean... removeDisconnected){
         if(removeDisconnected.length == 0)
             removeDisconnected = new boolean[]{false};
         else if(removeDisconnected.length>1)

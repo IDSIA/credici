@@ -423,7 +423,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param state - state to fix.
 	 * @return
 	 */
-	@Override
 	public StructuralCausalModel intervention(int var, int state){
 		return CausalOps.intervention(this, var, state, true);
 	}

@@ -1,5 +1,6 @@
 package pgm20.examples;
 
+import ch.idsia.credici.model.CausalOps;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
@@ -222,7 +223,7 @@ public class Example9 {
         TIntIntHashMap intervention = new TIntIntHashMap();
         intervention.put(x2_,1);
 
-        SparseModel do_csmodel = m3.intervention(intervention.keys()[0], intervention.values()[0]);
+        SparseModel do_csmodel = CausalOps.intervention(m3, intervention.keys()[0], intervention.values()[0]);
 
         // cut arcs coming from an observed node and remove barren w.r.t the target
         RemoveBarren removeBarren = new RemoveBarren();

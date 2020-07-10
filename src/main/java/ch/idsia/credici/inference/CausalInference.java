@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
@@ -13,7 +14,14 @@ public abstract class CausalInference<M extends GenericSparseModel, R extends Ge
 
     protected M model;
 
-    public abstract R query(int[] target, TIntIntMap evidence, TIntIntMap intervention) throws InterruptedException;
+    public abstract R run(Query q) throws InterruptedException;
+
+    public R query(int[] target, TIntIntMap evidence, TIntIntMap intervention) throws InterruptedException {
+        return run(causalQuery()
+                .setTarget(target)
+                .setEvidence(evidence)
+                .setIntervention(intervention));
+    }
 
     public R query(int target) throws InterruptedException {
         return query(new int[]{target}, new TIntIntHashMap(), new TIntIntHashMap());
@@ -47,11 +55,21 @@ public abstract class CausalInference<M extends GenericSparseModel, R extends Ge
     public  M applyInterventions(TIntIntMap intervention){
         GenericSparseModel do_model = model;
         for(int i=0; i<intervention.size(); i++) {
-            do_model = do_model.intervention(intervention.keys()[i], intervention.values()[i]);
+            do_model =  CausalOps.intervention(do_model, intervention.keys()[i], intervention.values()[i], true);
         }
         return (M) do_model;
     }
 
+
+
+
+    public Query causalQuery(){
+        return new Query<R>(this).setCounterfactual(false);
+    }
+
+    public Query counterfactualQuery(){
+        return new Query<R>(this).setCounterfactual(true);
+    }
 
 
 }

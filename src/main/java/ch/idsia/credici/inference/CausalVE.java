@@ -23,8 +23,11 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
     }
 
 
-    @Override
-    public BayesianFactor query(int[] target, TIntIntMap evidence, TIntIntMap intervention) {
+    public BayesianFactor run(Query q){
+
+        int[] target = q.getTarget();
+        TIntIntMap evidence = q.getEvidence();
+        TIntIntMap intervention = q.getIntervention();
 
         // Get the mutilated model
         StructuralCausalModel do_model = applyInterventions(intervention);
@@ -50,7 +53,6 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         if(filteredEvidence.size()>0) ve.setEvidence(filteredEvidence);
         ve.setFactors(do_model.getFactors());
         return (BayesianFactor) ve.run(target);
-
     }
 
     public int[] getElimOrder() {
@@ -61,4 +63,9 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         this.elimOrder = elimOrder;
         return this;
     }
+
+
+
+
+
 }

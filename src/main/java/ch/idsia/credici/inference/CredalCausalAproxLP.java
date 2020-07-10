@@ -43,7 +43,11 @@ public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFa
 
 
     @Override
-    public IntervalFactor query(int[] target, TIntIntMap evidence, TIntIntMap intervention) throws InterruptedException {
+    public IntervalFactor run(Query q) throws InterruptedException {
+
+        int[] target = q.getTarget();
+        TIntIntMap evidence = q.getEvidence();
+        TIntIntMap intervention = q.getIntervention();
 
         if(target.length>1)
             throw new IllegalArgumentException("A single target variable is allowed with CredalCausalAproxLP ");

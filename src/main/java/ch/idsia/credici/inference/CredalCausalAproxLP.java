@@ -2,6 +2,7 @@ package ch.idsia.credici.inference;
 
 import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
@@ -20,7 +21,7 @@ import java.util.Collection;
 public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFactor> {
 
 
-    private double epsilon = 0.0;
+    private double epsilon = 0.000001;
 
 
     public CredalCausalAproxLP(StructuralCausalModel model){
@@ -42,54 +43,68 @@ public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFa
 
     }
 
-
     @Override
-    public IntervalFactor run(Query q) throws InterruptedException {
+    public SparseModel getInferenceModel(Query q) {
 
-        int[] target = q.getTarget();
+        target = q.getTarget();
         TIntIntMap evidence = q.getEvidence();
         TIntIntMap intervention = q.getIntervention();
 
         if(target.length>1)
             throw new IllegalArgumentException("A single target variable is allowed with CredalCausalAproxLP ");
 
-        SparseModel do_csmodel = (SparseModel) CausalOps.applyInterventions(model, intervention);
+
+        // Get the inference model (simple mutilated or twin graph)
+        SparseModel infModel=null;
+        if(!q.isCounterfactual()) {
+            infModel = (SparseModel) CausalOps.applyInterventions(model, intervention);
+        }else{
+            infModel = (SparseModel) CausalOps.counterfactualModel(model, intervention);
+            //map the target to the alternative world
+            target = WorldMapping.getMap(infModel).getEquivalentVars(1, target);
+        }
+
 
         // preprocessing
         RemoveBarren removeBarren = new RemoveBarren();
-        do_csmodel = removeBarren
-                .execute(new CutObservedSepHalfspace().execute(do_csmodel, evidence), target, evidence);
+        infModel = removeBarren
+                .execute(new CutObservedSepHalfspace().execute(infModel, evidence), target, evidence);
 
 
-
-        for(int v : do_csmodel.getVariables()) {
-             do_csmodel.setFactor(v, ((SeparateHalfspaceFactor) do_csmodel.getFactor(v)).removeNormConstraints());
-                if(epsilon>0.0){
-                   do_csmodel.setFactor(v, ((SeparateHalfspaceFactor) do_csmodel.getFactor(v)).getPerturbedZeroConstraints(epsilon));
-             }
+        for(int v : infModel.getVariables()) {
+            infModel.setFactor(v, ((SeparateHalfspaceFactor) infModel.getFactor(v)).removeNormConstraints());
+            if(epsilon>0.0){
+                infModel.setFactor(v, ((SeparateHalfspaceFactor) infModel.getFactor(v)).getPerturbedZeroConstraints(epsilon));
+            }
 
         }
+        return infModel;
 
+    }
+
+    @Override
+    public IntervalFactor run(Query q) throws InterruptedException {
+
+        SparseModel infModel = getInferenceModel(q);
 
         TIntIntHashMap filteredEvidence = new TIntIntHashMap();
 
         // update the evidence
-        for(int v: evidence.keys()){
-            if(ArrayUtils.contains(do_csmodel.getVariables(), v)){
-                filteredEvidence.put(v, evidence.get(v));
+        for(int v: q.getEvidence().keys()){
+            if(ArrayUtils.contains(infModel.getVariables(), v)){
+                filteredEvidence.put(v, q.getEvidence().get(v));
             }
         }
-
 
         IntervalFactor result = null;
         Inference lp1 = new Inference();
 
         if(filteredEvidence.size()>0) {
-            int evbin = new BinarizeEvidence().executeInline(do_csmodel, filteredEvidence, filteredEvidence.size(), false);
-            result = lp1.query(do_csmodel, target[0], evbin);
+            int evbin = new BinarizeEvidence().executeInline(infModel, filteredEvidence, filteredEvidence.size(), false);
+            result = lp1.query(infModel, target[0], evbin);
 
         }else{
-            result = lp1.query(do_csmodel, target[0]);
+            result = lp1.query(infModel, target[0]);
         }
 
         return result;

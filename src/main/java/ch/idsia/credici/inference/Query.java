@@ -1,10 +1,12 @@
 package ch.idsia.credici.inference;
 
 import ch.idsia.crema.factor.GenericFactor;
+import ch.idsia.crema.model.ObservationBuilder;
+import ch.idsia.crema.model.graphical.GenericSparseModel;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
-public class Query<R extends GenericFactor> {
+public class Query<M extends GenericSparseModel, R extends GenericFactor> {
 
     private CausalInference inf;
 
@@ -41,6 +43,15 @@ public class Query<R extends GenericFactor> {
         return this;
     }
 
+    public Query setEvidence(int var, int state) {
+        return setEvidence(ObservationBuilder.observe(var, state));
+    }
+
+    public Query setIntervention(int var, int state) {
+        return setIntervention(ObservationBuilder.observe(var, state));
+    }
+
+
     public CausalInference getInf() {
         return inf;
     }
@@ -57,12 +68,21 @@ public class Query<R extends GenericFactor> {
         return intervention;
     }
 
+    public boolean isCounterfactual() {
+        return isCounterfactual;
+    }
 
     public R run() throws InterruptedException {
         if(inf == null)
             throw new IllegalArgumentException("causal inference engine is not set");
-
         return (R) inf.run(this);
+
+    }
+
+    public M getInferenceModel() throws InterruptedException {
+        if(inf == null)
+            throw new IllegalArgumentException("causal inference engine is not set");
+        return (M) inf.getInferenceModel(this);
 
     }
 }

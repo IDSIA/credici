@@ -3,12 +3,18 @@ package ch.idsia.credici.model;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.Factor;
+import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.factor.credal.SeparatelySpecified;
+import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
+import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -115,7 +121,6 @@ public class CausalOps {
         IntStream.of(CausalInfo.of(reality).getExogenousVars())
                 .forEach(v->map.set(v, WorldMapping.ALL,v));
 
-
         int w = 1;
         for(SparseModel m: models){
 
@@ -139,8 +144,22 @@ public class CausalOps {
                     merged.addParent(x_w, pa_w);
                 }
                 // Set the factor with the new domain
-                Factor f = (Factor) m.getFactor(x_0);
-                f = f.renameDomain(map.getEquivalentVars(w,f.getDomain().getVariables()));
+                GenericFactor f = (GenericFactor) m.getFactor(x_0);
+
+                int[] leftVars;
+                int[] rightVars;
+                if(f instanceof VertexFactor) {
+                    leftVars = ((VertexFactor)f).getDataDomain() .getVariables();
+                    rightVars = ((VertexFactor)f).getSeparatingDomain() .getVariables();
+                }else{
+                    leftVars = ((SeparateHalfspaceFactor)f).getDataDomain() .getVariables();
+                    rightVars = ((SeparateHalfspaceFactor)f).getSeparatingDomain() .getVariables();
+                }
+                f = f.renameDomain(map.getEquivalentVars(w,Ints.concat(leftVars,rightVars)));
+
+                f = (GenericFactor) ((SeparatelySpecified)f).sortParents();
+
+
                 merged.setFactor(x_w, f);
             }
             w++;
@@ -195,17 +214,45 @@ public class CausalOps {
         }
         return do_model;
     }
-/*
 
 
-    public static StructuralCausalModel counterfactualModel(StructuralCausalModel model, TIntIntMap intervention){
-        return (StructuralCausalModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);
+    /**
+     * Builds the counterfactual model from a set of interventions.
+     * @param model
+     * @param intervention
+     * @return
+     */
+    private static GenericSparseModel counterfactualModel(GenericSparseModel model, TIntIntMap... intervention){
+        if(intervention.length > 1)
+            throw new NotImplementedException("Counterfactual case with multiple worlds not implemented yet ");
+        GenericSparseModel alternative =  applyInterventions(model, intervention[0]);
+        if(model instanceof SparseModel)
+            return merge((SparseModel)model, (SparseModel)alternative);
+        return merge((StructuralCausalModel) model, (StructuralCausalModel)alternative);
+
     }
 
-    public static SparseModel intervention(SparseModel model, int var, int state, boolean... removeDisconnected){
-        return (SparseModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);
+
+    /**
+     * Builds the counterfactual model from a set of interventions.
+     * @param model
+     * @param intervention
+     * @return
+     */
+    public static StructuralCausalModel counterfactualModel(StructuralCausalModel model, TIntIntMap... intervention){
+        return (StructuralCausalModel) counterfactualModel((GenericSparseModel) model, intervention);
     }
-    */
+
+    /**
+     * Builds the counterfactual model from a set of interventions.
+     * @param model
+     * @param intervention
+     * @return
+     */
+
+    public static SparseModel counterfactualModel(SparseModel model, TIntIntMap... intervention){
+        return (SparseModel) counterfactualModel((GenericSparseModel) model, intervention);
+    }
 
 
 }

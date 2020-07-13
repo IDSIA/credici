@@ -2,6 +2,7 @@ package ch.idsia.credici.inference;
 
 import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
@@ -19,7 +20,6 @@ import java.util.Collection;
 
 public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
 
-    private int[] elimOrder;
 
     public CredalCausalVE(StructuralCausalModel model){
         this(model.toVCredal(model.getEmpiricalProbs()));
@@ -38,52 +38,59 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
     public CredalCausalVE(SparseModel model){
         CausalInfo.assertIsVCredal(model);
         this.model = model;
-        this.elimOrder = this.model.getVariables();
-
     }
 
 
     @Override
-    public VertexFactor run(Query q) throws InterruptedException {
+    public SparseModel getInferenceModel(Query q) {
 
-        int[] target = q.getTarget();
+        target = q.getTarget();
         TIntIntMap evidence = q.getEvidence();
         TIntIntMap intervention = q.getIntervention();
 
-        SparseModel do_csmodel = (SparseModel) CausalOps.applyInterventions(model, intervention);
+        // Get the inference model (simple mutilated or twin graph)
+        SparseModel infModel=null;
+        if(!q.isCounterfactual()) {
+            infModel = (SparseModel) CausalOps.applyInterventions(model, intervention);
+        }else{
+            infModel = (SparseModel) CausalOps.counterfactualModel(model, intervention);
+            //map the target to the alternative world
+            target = WorldMapping.getMap(infModel).getEquivalentVars(1, target);
+        }
 
-    // cut arcs coming from an observed node and remove barren w.r.t the target
+        // cut arcs coming from an observed node and remove barren w.r.t the target
         RemoveBarren removeBarren = new RemoveBarren();
-        do_csmodel = removeBarren
-                .execute(new CutObserved().execute(do_csmodel, evidence), target, evidence);
+        infModel = removeBarren
+                .execute(new CutObserved().execute(infModel, evidence), target, evidence);
 
+        return infModel;
+    }
+
+    @Override
+    public VertexFactor run(Query q) throws InterruptedException {
+
+        //Build the inference model
+        SparseModel infModel = getInferenceModel(q);
+
+        // Update the evidence
         TIntIntHashMap filteredEvidence = new TIntIntHashMap();
         // update the evidence
-        for(int v: evidence.keys()){
-            if(ArrayUtils.contains(do_csmodel.getVariables(), v)){
-                filteredEvidence.put(v, evidence.get(v));
+        for(int v: q.getEvidence().keys()){
+            if(ArrayUtils.contains(infModel.getVariables(), v)){
+                filteredEvidence.put(v, q.getEvidence().get(v));
             }
         }
-        // Get the new elimination order
-        int[] newElimOrder = ArraysUtil.intersection(elimOrder, do_csmodel.getVariables());
+        // Get the  elimination order
+        int[] elimOrder = infModel.getVariables();
 
-        FactorVariableElimination ve = new FactorVariableElimination(newElimOrder);
+        FactorVariableElimination ve = new FactorVariableElimination(elimOrder);
         if(filteredEvidence.size()>0)
             ve.setEvidence(filteredEvidence);
         ve.setNormalize(false);
         VertexFactor.CONVEX_HULL_MARG = true;
-        ve.setFactors(do_csmodel.getFactors());
+        ve.setFactors(infModel.getFactors());
         return ((VertexFactor) ve.run(target)).normalize().convexHull(true);
 
     }
 
-
-    public CredalCausalVE setElimOrder(int[] elimOrder) {
-        this.elimOrder = elimOrder;
-        return this;
-    }
-
-    public int[] getElimOrder() {
-        return elimOrder;
-    }
 }

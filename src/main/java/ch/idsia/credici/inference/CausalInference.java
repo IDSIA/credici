@@ -2,8 +2,12 @@ package ch.idsia.credici.inference;
 
 import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
+import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.preprocess.CutObserved;
+import ch.idsia.crema.preprocess.RemoveBarren;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
@@ -13,6 +17,8 @@ import gnu.trove.map.hash.TIntIntHashMap;
 public abstract class CausalInference<M extends GenericSparseModel, R extends GenericFactor>{
 
     protected M model;
+
+    protected int[] target;
 
     public abstract R run(Query q) throws InterruptedException;
 
@@ -52,13 +58,15 @@ public abstract class CausalInference<M extends GenericSparseModel, R extends Ge
         return model;
     }
 
+    public abstract M getInferenceModel(Query q);
+
 
     public Query causalQuery(){
-        return new Query<R>(this).setCounterfactual(false);
+        return new Query<M,R>(this).setCounterfactual(false);
     }
 
     public Query counterfactualQuery(){
-        return new Query<R>(this).setCounterfactual(true);
+        return new Query<M,R>(this).setCounterfactual(true);
     }
 
 

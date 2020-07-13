@@ -2,6 +2,7 @@ package ch.idsia.credici.inference;
 
 import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
@@ -23,36 +24,48 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         this.elimOrder = model.getVariables();
     }
 
+    @Override
+    public StructuralCausalModel getInferenceModel(Query q) {
 
-    public BayesianFactor run(Query q){
-
-        int[] target = q.getTarget();
+        target = q.getTarget();
         TIntIntMap evidence = q.getEvidence();
         TIntIntMap intervention = q.getIntervention();
 
-        // Get the mutilated model
-        StructuralCausalModel do_model = (StructuralCausalModel) CausalOps.applyInterventions(model, intervention);
-
+        // Get the inference model (simple mutilated or twin graph)
+        StructuralCausalModel infModel=null;
+        if(!q.isCounterfactual()) {
+            infModel = (StructuralCausalModel) CausalOps.applyInterventions(model, intervention);
+        }else{
+            infModel = (StructuralCausalModel) CausalOps.counterfactualModel(model, intervention);
+            //map the target to the alternative world
+            target = WorldMapping.getMap(infModel).getEquivalentVars(1, target);
+        }
         RemoveBarren removeBarren = new RemoveBarren();
-        do_model = removeBarren
-                .execute(new CutObserved().execute(do_model, evidence), target, evidence);
+        infModel = removeBarren
+                .execute(new CutObserved().execute(infModel, evidence), target, evidence);
 
 
+        return infModel;
+    }
+
+    public BayesianFactor run(Query q){
+
+        StructuralCausalModel infModel = getInferenceModel(q);
 
         TIntIntHashMap filteredEvidence = new TIntIntHashMap();
         // update the evidence
-        for(int v: evidence.keys()){
+        for(int v: q.getEvidence().keys()){
             if(ArrayUtils.contains(model.getVariables(), v)){
-                filteredEvidence.put(v, evidence.get(v));
+                filteredEvidence.put(v, q.getEvidence().get(v));
             }
         }
 
-        int[] newElimOrder = ArraysUtil.intersection(elimOrder, do_model.getVariables());
+        int[] newElimOrder = ArraysUtil.intersection(elimOrder, infModel.getVariables());
 
         // run variable elimination as usual
         VariableElimination ve = new FactorVariableElimination(newElimOrder);
         if(filteredEvidence.size()>0) ve.setEvidence(filteredEvidence);
-        ve.setFactors(do_model.getFactors());
+        ve.setFactors(infModel.getFactors());
         return (BayesianFactor) ve.run(target);
     }
 

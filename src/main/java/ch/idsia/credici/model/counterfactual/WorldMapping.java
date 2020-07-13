@@ -3,6 +3,8 @@ package ch.idsia.credici.model.counterfactual;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -172,6 +174,15 @@ public class WorldMapping {
 
         return maps[0];
 
+    }
+
+
+    public TIntIntMap mapObservation(int world, TIntIntMap obs){
+        TIntIntMap newObs = new TIntIntHashMap();
+        for(int v : obs.keys()){
+            newObs.put(this.getEquivalentVars(v)[0], obs.get(v));
+        }
+        return newObs;
     }
 
 }

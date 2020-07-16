@@ -1,21 +1,18 @@
 Getting Started
 ================
 
-Installation
------------------
-
-Install from command line
-
-.. code:: bash
-
-   $ [...]
 
 
-For further details, check the `Installation <installation.html>`_ section.
-
-
-
-30 seconds to Crema
+30 seconds to Credici
 --------------------------
 
-TODO: add a very simple example
+
+
+As a short introduction to Credici, let us consider the following code snippet, in which an
+structural causal model is built from a discrete Bayesian network. A counterfactual
+query is performed using an approximate linear programming method.
+
+
+.. literalinclude:: ../../examples/docs/StartingWithCredici.java
+   :language: java
+

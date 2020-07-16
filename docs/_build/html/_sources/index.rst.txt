@@ -14,14 +14,50 @@ Credici: A Java Toolbox for Causal Inference Using Credal Methods
    	:scale: 50 %
    	:align: center
 
-|
 
 
-Credici is an open-source toolbox written in Java for....
+
+Credici is an open-source Java library for causal analysis. Inference is done
+using well-founded methods for inference on credal networks, which is done in
+a transparently to the user.
 
 The main features of Credici are:
 
-* Allows to make inference...
+* Allows to easily define Structural Causal Networks (SCM).
+
+* Causal inference: causal effects and counterfactuals.
+
+* Inference is based in methods for inference in credal networks (exact and approximate).
+
+* SCMs can me transformed in equivalent credal networks can be exported in UAI format.
+
+
+
+Installation
+-----------------
+
+Credici can be installed from maven. For further details, check the `Installation <installation.html>`_ section.
+
+
+Citation
+-----------------
+
+For the theoretical results in which this tool is based, refer to the following publication.
+
+.. code:: TeX
+
+    @InProceedings{zaffalon2020structural,
+      author    = {Zaffalon, Marco and Antonucci, Alessandro and Caba\~{n}as, Rafael},
+      title     = {Structural Causal Models Are Credal Networks},
+      booktitle = {Proceedings of the tenth International Conference on Probabilistic Graphical Models},
+      year      = {2020},
+      series    = {Proceedings of Machine Learning Research},
+      address   = {Aalborg, Denmark},
+      month     = {23--25 Sep},
+      publisher = {PMLR},
+    }
+
+
 
 
 .. .. toctree::
@@ -45,11 +81,12 @@ The main features of Credici are:
    :maxdepth: 1
    :caption: Guides
    
+   notes/causaldef
    notes/guideinference
-   notes/cheatsheet
-   notes/markdownguide
+   notes/javadoc
 
 
+.. JavaDoc <http://javadoc_url>
 
 
 

@@ -93,8 +93,7 @@
               <p class="caption"><span class="caption-text">Quick Start</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Getting Started</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#seconds-to-crema">30 seconds to Crema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#seconds-to-credici">30 seconds to Credici</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="requirements.html">Requirements</a><ul>
@@ -106,21 +105,19 @@
 </ul>
 <p class="caption"><span class="caption-text">Guides</span></p>
 <ul>
-<li class="toctree-l1"><a class="reference internal" href="guideinference.html">Guide to Approximate Inference</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="guideinference.html#variational-inference">Variational Inference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="causaldef.html">Causal Model Definition</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="causaldef.html#explicit-definition">Explicit Definition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="causaldef.html#causal-builder">Causal Builder</a></li>
 </ul>
 </li>
-<li class="toctree-l1"><a class="reference internal" href="cheatsheet.html">RST cheat sheet</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="cheatsheet.html#subsection">Subsection</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="cheatsheet.html#sub-subsection">Sub-subsection</a></li>
+<li class="toctree-l1"><a class="reference internal" href="guideinference.html">Causal Inference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="guideinference.html#causal-effects">Causal Effects</a></li>
+<li class="toctree-l2"><a class="reference internal" href="guideinference.html#conuterfactuals">Conuterfactuals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="guideinference.html#credal-network-transformation">Credal Network Transformation</a></li>
 </ul>
 </li>
-</ul>
-</li>
-<li class="toctree-l1"><a class="reference internal" href="markdownguide.html">Markdown entry</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="markdownguide.html#installation">Installation</a></li>
-</ul>
-</li>
+<li class="toctree-l1"><a class="reference internal" href="fileformat.html">UAI file format</a></li>
+<li class="toctree-l1"><a class="reference internal" href="javadoc.html">JavaDoc</a></li>
 </ul>
 <p class="caption"><span class="caption-text">Other</span></p>
 <ul>
@@ -215,17 +212,45 @@
 </style>
 <div class="section" id="getting-started">
 <h1>Getting Started<a class="headerlink" href="#getting-started" title="Permalink to this headline">¶</a></h1>
-<div class="section" id="installation">
-<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
-<p>Install from command line</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$ <span class="o">[</span>...<span class="o">]</span>
+<div class="section" id="seconds-to-credici">
+<h2>30 seconds to Credici<a class="headerlink" href="#seconds-to-credici" title="Permalink to this headline">¶</a></h2>
+<p>As a short introduction to Credici, let us consider the following code snippet, in which an
+structural causal model is built from a discrete Bayesian network. A counterfactual
+query is performed using an approximate linear programming method.</p>
+<div class="highlight-java notranslate"><div class="highlight"><pre><span></span><span class="kn">package</span> <span class="nn">docs</span><span class="p">;</span>
+
+<span class="kn">import</span> <span class="nn">ch.idsia.credici.inference.CredalCausalAproxLP</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">ch.idsia.credici.model.StructuralCausalModel</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">ch.idsia.credici.model.builder.CausalBuilder</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">ch.idsia.crema.IO</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">ch.idsia.crema.factor.credal.linear.IntervalFactor</span><span class="p">;</span>
+<span class="kn">import</span> <span class="nn">ch.idsia.crema.model.graphical.specialized.BayesianNetwork</span><span class="p">;</span>
+
+<span class="kn">import</span> <span class="nn">java.io.IOException</span><span class="p">;</span>
+
+<span class="kd">public</span> <span class="kd">class</span> <span class="nc">StartingWithCredici</span> <span class="p">{</span>
+    <span class="kd">public</span> <span class="kd">static</span> <span class="kt">void</span> <span class="nf">main</span><span class="p">(</span><span class="n">String</span><span class="o">[]</span> <span class="n">args</span><span class="p">)</span> <span class="kd">throws</span> <span class="n">IOException</span><span class="p">,</span> <span class="n">InterruptedException</span> <span class="p">{</span>
+
+        <span class="c1">// Load the empirical model</span>
+        <span class="n">BayesianNetwork</span> <span class="n">bnet</span> <span class="o">=</span> <span class="p">(</span><span class="n">BayesianNetwork</span><span class="p">)</span> <span class="n">IO</span><span class="p">.</span><span class="na">read</span><span class="p">(</span><span class="s">&quot;models/simple-chain.uai&quot;</span><span class="p">);</span>
+
+        <span class="c1">// Build the causal model</span>
+        <span class="n">StructuralCausalModel</span> <span class="n">causalModel</span> <span class="o">=</span> <span class="n">CausalBuilder</span><span class="p">.</span><span class="na">of</span><span class="p">(</span><span class="n">bnet</span><span class="p">).</span><span class="na">build</span><span class="p">();</span>
+
+        <span class="c1">// Set up the inference engine</span>
+        <span class="n">CredalCausalAproxLP</span> <span class="n">inf</span> <span class="o">=</span> <span class="k">new</span> <span class="n">CredalCausalAproxLP</span><span class="p">(</span><span class="n">causalModel</span><span class="p">,</span> <span class="n">bnet</span><span class="p">.</span><span class="na">getFactors</span><span class="p">());</span>
+
+        <span class="c1">// Run the query</span>
+        <span class="n">IntervalFactor</span> <span class="n">res</span> <span class="o">=</span> <span class="p">(</span><span class="n">IntervalFactor</span><span class="p">)</span> <span class="n">inf</span><span class="p">.</span><span class="na">counterfactualQuery</span><span class="p">()</span>
+                <span class="p">.</span><span class="na">setTarget</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+                <span class="p">.</span><span class="na">setIntervention</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span><span class="mi">0</span><span class="p">)</span>
+                <span class="p">.</span><span class="na">setEvidence</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="p">.</span><span class="na">run</span><span class="p">();</span>
+
+    <span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<p>For further details, check the <a class="reference external" href="installation.html">Installation</a> section.</p>
-</div>
-<div class="section" id="seconds-to-crema">
-<h2>30 seconds to Crema<a class="headerlink" href="#seconds-to-crema" title="Permalink to this headline">¶</a></h2>
-<p>TODO: add a very simple example</p>
 </div>
 </div>
 

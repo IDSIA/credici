@@ -36,7 +36,7 @@ The main features of Credici are:
 Installation
 -----------------
 
-Credici can be installed from maven. For further details, check the `Installation <installation.html>`_ section.
+Credici can be installed from maven. For further details, check the `Installation <notes/installation.html>`_ section.
 
 
 Citation

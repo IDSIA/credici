@@ -3,7 +3,8 @@ Installation
 
 Credici can be easily included at any maven project. For this, add the following code in the  pom.xml:
 
-```
+.. code-block:: xml
+
     <repositories>
         <repository>
             <id>cremaRepo</id>
@@ -19,4 +20,4 @@ Credici can be easily included at any maven project. For this, add the following
             <scope>compile</scope>
         </dependency>
     </dependencies>
-```
+

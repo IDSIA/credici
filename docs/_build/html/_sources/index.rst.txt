@@ -83,10 +83,7 @@ For the theoretical results in which this tool is based, refer to the following 
    
    notes/causaldef
    notes/guideinference
-   notes/javadoc
-
-
-.. JavaDoc <http://javadoc_url>
+   JavaDoc <https://idsia.github.io/credici/javadoc/>
 
 
 

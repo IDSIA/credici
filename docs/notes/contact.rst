@@ -21,6 +21,6 @@ The members of the development and research team are:
 - Marco Zaffalon (zaffalon@idsia.ch)
 
 
-If you have any question, please use `Github issues <https://github.com/IDSIA/crema/issues>`_.
+If you have any question, please use `Github issues <https://github.com/IDSIA/credici/issues>`_.
 
 

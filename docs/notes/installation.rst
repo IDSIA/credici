@@ -16,7 +16,7 @@ Credici can be easily included at any maven project. For this, add the following
         <dependency>
             <groupId>ch.idsia</groupId>
             <artifactId>credici</artifactId>
-            <version>0.1.1</version>
+            <version>0.1.2</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

@@ -26,6 +26,9 @@ public class Triangolo {
         // Get the markovian equationless SCM
         StructuralCausalModel causalModel = StructuralCausalModel.of(bnet);
 
+        // Get the endogenous variables
+        int[] x = causalModel.getEndogenousVars();
+
         System.out.println("Building (Causal)");
 
         //Get the Credal Netoworks
@@ -54,6 +57,30 @@ public class Triangolo {
         System.out.println(res);
 
         System.out.println("Computing (Credal2)");
+
+
+        // Set up the exact inference engine
+        CredalCausalAproxLP infApprox = new CredalCausalAproxLP(hcredal);
+
+
+        IntervalFactor resApprox = (IntervalFactor) infApprox
+                .causalQuery()
+                .setTarget(x[6])
+                .setIntervention(x[1],1)
+                .run();
+
+        System.out.println(resApprox);
+
+        /*resApprox = (IntervalFactor) infApprox
+                .counterfactualQuery()
+                .setTarget(x[6])
+                .setIntervention(x[1],1)
+                .setEvidence(x[1], 0)
+                .run();
+
+        System.out.println(resApprox);
+*/
+
 
 
     }

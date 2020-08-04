@@ -25,6 +25,7 @@ public class EquationlessFromFile {
         SparseModel vcredal = causalModel.toVCredal(bnet.getFactors());
         SparseModel hcredal =  causalModel.toHCredal(bnet.getFactors());
 
+
         // Set query
         TIntIntMap intervention = new TIntIntHashMap();
         intervention.put(0,1);

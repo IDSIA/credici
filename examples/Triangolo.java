@@ -14,6 +14,9 @@ import java.io.IOException;
 public class Triangolo {
     public static void main(String[] args) throws IOException, InterruptedException {
 
+        // print heap memory (change with -Xmx8g)
+        System.out.println(Runtime.getRuntime().maxMemory()/Math.pow(2,20)+" MB.");
+
         // Load the empirical model
         String fileName = "./models/empirical_triangolo.uai";
         BayesianNetwork bnet = (BayesianNetwork) IO.read(fileName);

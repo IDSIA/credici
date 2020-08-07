@@ -101,7 +101,7 @@ public class CredalBuilder {
             double[] vals = empiricalFactors.get(u).getData();
 
             SeparateHalfspaceFactor constFactor =
-                    new SeparateHalfspaceFactor(false, this.vertex, model.getDomain(u), coeff, vals);
+                    new SeparateHalfspaceFactor(false, true, model.getDomain(u), coeff, vals);
 
             // Remove unnecesary constraints
             //constFactor = constFactor.removeNormConstraints();

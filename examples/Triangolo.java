@@ -53,16 +53,16 @@ public class Triangolo {
 
         // Approx inference
         CredalCausalAproxLP inf = new CredalCausalAproxLP(hcredal);
-        IntervalFactor res = inf.doQuery(target, intervention);
+/*        IntervalFactor res = inf.doQuery(target, intervention);
         System.out.println(res);
 
         System.out.println("Computing (Credal2)");
 
-
+*/
         // Set up the exact inference engine
         CredalCausalAproxLP infApprox = new CredalCausalAproxLP(hcredal);
 
-
+/*
         IntervalFactor resApprox = (IntervalFactor) infApprox
                 .causalQuery()
                 .setTarget(x[6])
@@ -70,8 +70,8 @@ public class Triangolo {
                 .run();
 
         System.out.println(resApprox);
-
-        /*resApprox = (IntervalFactor) infApprox
+*/
+        IntervalFactor resApprox = (IntervalFactor) infApprox
                 .counterfactualQuery()
                 .setTarget(x[6])
                 .setIntervention(x[1],1)
@@ -79,7 +79,7 @@ public class Triangolo {
                 .run();
 
         System.out.println(resApprox);
-*/
+
 
 
 

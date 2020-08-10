@@ -28,6 +28,8 @@ public class CredalBuilder {
 
     private boolean vertex = true;
 
+    private boolean nonnegative = true;
+
     SparseModel model;
 
 
@@ -62,6 +64,11 @@ public class CredalBuilder {
     }
     public CredalBuilder setToHalfSpace() {
         vertex = false;
+        return this;
+    }
+
+    public CredalBuilder setNonnegative(boolean nonnegative) {
+        this.nonnegative = nonnegative;
         return this;
     }
 
@@ -101,10 +108,9 @@ public class CredalBuilder {
             double[] vals = empiricalFactors.get(u).getData();
 
             SeparateHalfspaceFactor constFactor =
-                    new SeparateHalfspaceFactor(false, true, model.getDomain(u), coeff, vals);
+                    new SeparateHalfspaceFactor(false, this.nonnegative, model.getDomain(u), coeff, vals);
 
-            // Remove unnecesary constraints
-            //constFactor = constFactor.removeNormConstraints();
+            // remove constraints with all their coefficients equal to zero
             constFactor = ConstraintsOps.removeZeroConstraints(constFactor);
 
             if(constFactor==null)

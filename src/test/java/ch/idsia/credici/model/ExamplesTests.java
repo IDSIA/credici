@@ -1,15 +1,9 @@
 package ch.idsia.credici.model;
 
-import ch.idsia.credici.model.builder.CausalBuilder;
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import tests.ChainMarkovianCase;
 import tests.ChainNonMarkovianCase;
-
-import static org.junit.Assert.assertArrayEquals;
 
 public class ExamplesTests {
 

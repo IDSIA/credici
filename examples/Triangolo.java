@@ -1,6 +1,7 @@
 import ch.idsia.credici.inference.CredalCausalAproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.builder.CredalBuilder;
 import ch.idsia.crema.IO;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
@@ -33,7 +34,15 @@ public class Triangolo {
 
         //Get the Credal Netoworks
         //SparseModel vcredal = causalModel.toVCredal(bnet.getFactors());
-        SparseModel hcredal =  causalModel.toHCredal(bnet.getFactors());
+        SparseModel hcredal = CredalBuilder.of(causalModel)
+                                .setToHalfSpace()
+                                .setNonnegative(false)
+                                .setEmpirical(bnet.getFactors())
+                                .build();
+
+        //causalModel.toHCredal(bnet.getFactors());
+
+
 
         System.out.println("Building (Credal)");
 

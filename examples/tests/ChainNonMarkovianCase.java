@@ -39,7 +39,7 @@ public class ChainNonMarkovianCase {
         int exoVarSize = 9;
 
         /** epsilon value for ApproxLP  */
-        double eps = 0.00001;
+        double eps = 0.000001;
 
         /////////////////////////////////
         //RandomUtil.getRandom().setSeed(123354);

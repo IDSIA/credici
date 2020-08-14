@@ -5,6 +5,8 @@ import org.junit.Test;
 import tests.ChainMarkovianCase;
 import tests.ChainNonMarkovianCase;
 
+import java.io.IOException;
+
 public class ExamplesTests {
 
 	String[] args = null;
@@ -17,9 +19,9 @@ public class ExamplesTests {
 	}
 
 	@Test
-	public void ChainNonMarkovianCase() throws InterruptedException {
+	public void ChainNonMarkovianCase() throws InterruptedException, IOException {
 		double[] res = ChainNonMarkovianCase.test(args);
-		double[] expected = {0.2857142857142857, 0.7142857142857143, 0.28571428571428575, 0.7142857142857142, 0.28575397509301564, 0.7142008086996112, 0.28579919130038883, 0.7142460249069844};
+		double[] expected = {0.09615384615384616, 0.9038461538461539, 0.09615384615384617, 0.9038461538461539, 0.09615384672553011, 0.9038461502681214, 0.09615384973187857, 0.9038461532744699};
 		Assert.assertArrayEquals(expected, res, 0.0001);
 	}
 

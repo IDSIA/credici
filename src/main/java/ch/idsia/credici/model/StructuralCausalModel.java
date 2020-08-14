@@ -602,6 +602,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public SparseModel toHCredal(BayesianFactor... empiricalProbs){
 		return ch.idsia.credici.model.builder.CredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
+				.setNonnegative(false)
 				.setToHalfSpace()
 				.build();
 	}
@@ -609,6 +610,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public SparseModel toHCredal(Collection empiricalProbs){
 		return ch.idsia.credici.model.builder.CredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
+				.setNonnegative(false)
 				.setToHalfSpace()
 				.build();
 	}

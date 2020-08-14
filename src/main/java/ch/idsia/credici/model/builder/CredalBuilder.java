@@ -92,12 +92,17 @@ public class CredalBuilder {
         // Set the credal sets for the endogenous variables X (structural eqs.)
         for(int x: causalmodel.getEndogenousVars()) {
             // Variable on the left should be the first
-            BayesianFactor eqx  =causalmodel.getFactor(x).reorderDomain(x);
+            BayesianFactor eqx = causalmodel.getFactor(x).reorderDomain(x);
 
-            if(vertex)
+            if (vertex) {
                 model.setFactor(x, new BayesianToVertex().apply(eqx, x));
-            else
-                model.setFactor(x, new BayesianToHalfSpace().apply(eqx, x));
+            } else{
+                SeparateHalfspaceFactor fx = new BayesianToHalfSpace().apply(eqx, x);
+                // Simplify the linear constraints
+                fx = fx.removeNormConstraints();
+                if(!this.nonnegative) fx = fx.removeNonNegativeConstraints();
+                model.setFactor(x, fx);
+            }
         }
 
         // Get the credal sets for the exogenous variables U

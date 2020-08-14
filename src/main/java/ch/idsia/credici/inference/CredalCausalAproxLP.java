@@ -2,6 +2,7 @@ package ch.idsia.credici.inference;
 
 import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.builder.CredalBuilder;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -21,7 +22,7 @@ import java.util.Collection;
 public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFactor> {
 
 
-    private double epsilon = 0.000001;
+    private double epsilon = 0.0;
 
 
     public CredalCausalAproxLP(StructuralCausalModel model){
@@ -64,12 +65,10 @@ public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFa
             target = WorldMapping.getMap(infModel).getEquivalentVars(1, target);
         }
 
-
         // preprocessing
         RemoveBarren removeBarren = new RemoveBarren();
         infModel = removeBarren
                 .execute(new CutObservedSepHalfspace().execute(infModel, evidence), target, evidence);
-
 
         for(int v : infModel.getVariables()) {
             infModel.setFactor(v, ((SeparateHalfspaceFactor) infModel.getFactor(v)).removeNormConstraints());

@@ -1,4 +1,4 @@
-package tests;
+package ch.idsia.credici.model.modelsfortest;
 
 import ch.idsia.credici.inference.CausalInference;
 import ch.idsia.credici.inference.CausalVE;

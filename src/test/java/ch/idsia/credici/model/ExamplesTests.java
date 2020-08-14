@@ -2,8 +2,8 @@ package ch.idsia.credici.model;
 
 import org.junit.Assert;
 import org.junit.Test;
-import tests.ChainMarkovianCase;
-import tests.ChainNonMarkovianCase;
+import ch.idsia.credici.model.modelsfortest.ChainMarkovianCase;
+import ch.idsia.credici.model.modelsfortest.ChainNonMarkovianCase;
 
 import java.io.IOException;
 

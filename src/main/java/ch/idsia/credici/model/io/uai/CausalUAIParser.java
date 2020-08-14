@@ -8,13 +8,15 @@ import java.io.FileNotFoundException;
 
 public class CausalUAIParser extends NetUAIParser<StructuralCausalModel> {
 
+
+
     public CausalUAIParser(String file) throws FileNotFoundException {
-        TYPE = "CAUSAL";
+        TYPE = UAITypes.CAUSAL;
         this.bufferedReader = initReader(file);
     }
 
     public CausalUAIParser(BufferedReader reader) {
-        TYPE = "CAUSAL";
+        TYPE = UAITypes.CAUSAL;
         this.bufferedReader = reader;
     }
 

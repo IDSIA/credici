@@ -106,6 +106,24 @@ public class CausalInfo {
 
     }
 
+    public boolean isMarkovian(){
+        return IntStream.of(getExogenousVars())
+                .allMatch(u -> model.getChildren(u).length <= 1);
+    }
+
+
+
+    public boolean exogenousWithoutParents(){
+        return IntStream.of(getExogenousVars())
+                .allMatch(u -> model.getParents(u).length == 0);
+    }
+
+
+    public boolean isQuasiMarkovian(){
+        return IntStream.of(getEndogenousVars())
+                .allMatch(x -> getExogenousParents(x).length == 1);
+    }
+
     public static void main(String[] args) {
 
         StructuralCausalModel causalModel = Party.buildModel();

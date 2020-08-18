@@ -1,6 +1,7 @@
 package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.ConstraintsOps;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
@@ -80,7 +81,10 @@ public class CredalBuilder {
 
         // Check that P(U) is in the model
         if(empiricalFactors == null || empiricalFactors.size() == 0 )
-            assertTrueMarginals(causalmodel);
+            assertTrueMarginals();
+
+        // Check structure
+        assertMarkovianity();
 
         // Copy the structure of the causal model
         model = new SparseModel();
@@ -181,13 +185,32 @@ public class CredalBuilder {
 
 
 
-    public static void assertTrueMarginals(StructuralCausalModel causalModel){
-        for(int u: causalModel.getExogenousVars()){
-            if(causalModel.getFactor(u) == null)
+    private void assertTrueMarginals(){
+        for(int u: causalmodel.getExogenousVars()){
+            if(causalmodel.getFactor(u) == null)
                 throw new IllegalArgumentException("Empirical factors should be provided if true marginals are not in the SCM");
         }
     }
 
+
+    private void assertMarkovianity(){
+        if(!CausalInfo.of(causalmodel).isMarkovian() && !CausalInfo.of(causalmodel).isQuasiMarkovian()){
+            throw new IllegalArgumentException("Wrong markovianity");
+        }
+    }
+
+    public boolean isSolvable(){
+        try{
+            // Check that P(U) is in the model
+            if(empiricalFactors == null || empiricalFactors.size() == 0 )
+                assertTrueMarginals();
+            // Check structure
+            assertMarkovianity();
+        }catch (Exception e){
+            return false;
+        }
+        return true;
+    }
 
 
 

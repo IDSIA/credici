@@ -48,6 +48,8 @@ public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFa
     public SparseModel getInferenceModel(Query q) {
 
         target = q.getTarget();
+        epsilon = q.getEpsilon();
+
         TIntIntMap evidence = q.getEvidence();
         TIntIntMap intervention = q.getIntervention();
 

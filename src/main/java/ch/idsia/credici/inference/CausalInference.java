@@ -23,10 +23,15 @@ public abstract class CausalInference<M extends GenericSparseModel, R extends Ge
     public abstract R run(Query q) throws InterruptedException;
 
     public R query(int[] target, TIntIntMap evidence, TIntIntMap intervention) throws InterruptedException {
-        return run(causalQuery()
-                .setTarget(target)
-                .setEvidence(evidence)
-                .setIntervention(intervention));
+        Query q = causalQuery()
+                    .setTarget(target)
+                    .setEvidence(evidence)
+                    .setIntervention(intervention);
+
+        if(this instanceof CredalCausalAproxLP)
+            q.setEpsilon(((CredalCausalAproxLP) this).getEpsilon());
+
+        return run(q);
     }
 
     public R query(int target) throws InterruptedException {

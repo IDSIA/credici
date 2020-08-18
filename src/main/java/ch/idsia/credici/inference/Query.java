@@ -18,6 +18,8 @@ public class Query<M extends GenericSparseModel, R extends GenericFactor> {
 
     private TIntIntMap intervention = new TIntIntHashMap();
 
+    private double epsilon = 0.0;
+
 
     public Query(CausalInference inf){
         this.inf = inf;
@@ -70,6 +72,15 @@ public class Query<M extends GenericSparseModel, R extends GenericFactor> {
 
     public boolean isCounterfactual() {
         return isCounterfactual;
+    }
+
+    public Query setEpsilon(double epsilon) {
+        this.epsilon = epsilon;
+        return this;
+    }
+
+    public double getEpsilon() {
+        return epsilon;
     }
 
     public R run() throws InterruptedException {

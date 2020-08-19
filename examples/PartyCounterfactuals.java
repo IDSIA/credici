@@ -43,7 +43,7 @@ public class PartyCounterfactuals {
         System.out.println(resExact);
 
 
-        // Set up the exact inference engine
+        // Set up the approximate inference engine
         CredalCausalAproxLP infApprox = new CredalCausalAproxLP(hcredal);
 
         // Set up and run a causal query

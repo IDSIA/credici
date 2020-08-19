@@ -9,7 +9,10 @@ import ch.idsia.crema.factor.convert.BayesianToVertex;
 import ch.idsia.crema.factor.convert.HalfspaceToVertex;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.inference.ve.FactorVariableElimination;
+import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
@@ -17,7 +20,10 @@ import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -57,6 +63,25 @@ public class CredalBuilder {
 
     public CredalBuilder setEmpirical(Collection factors){
         return setEmpirical((BayesianFactor[]) factors.toArray(BayesianFactor[]::new));
+    }
+
+    public CredalBuilder setEmpirical(BayesianNetwork bnet){
+        if(!ArraysUtil.equals(bnet.getVariables(),
+                causalmodel.getEndogenousVars(), true, false))
+            throw new IllegalArgumentException("Uncompatible empirical network");
+
+        List<BayesianFactor> factors = new ArrayList<>();
+        FactorVariableElimination inf = new FactorVariableElimination(bnet.getVariables());
+        inf.setFactors(bnet.getFactors());
+
+        for(int x: causalmodel.getEndogenousVars()){
+            BayesianFactor f = (BayesianFactor) inf.conditionalQuery(x, causalmodel.getEndegenousParents(x));
+            f = f.fixPrecission(10, x);
+            factors.add(f);
+        }
+
+        return setEmpirical(factors);
+
     }
 
     public CredalBuilder setToVertex() {

@@ -12,6 +12,7 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class CausalBuilder {
@@ -51,7 +52,11 @@ public class CausalBuilder {
         this(bnet.getNetwork(), bnet.getSizes(bnet.getVariables()));
     }
 
-    public static CausalBuilder of(SparseDirectedAcyclicGraph empiricalDAG, int[] endoVarSizes){
+    public static CausalBuilder of(SparseDirectedAcyclicGraph empiricalDAG, int... endoVarSizes){
+        int s = endoVarSizes[0];
+        if(endoVarSizes.length == 1)
+            endoVarSizes = IntStream.range(0,empiricalDAG.getVariables().length)
+                    .map(x -> s).toArray();
         return new CausalBuilder(empiricalDAG, endoVarSizes);
     }
     public static CausalBuilder of(BayesianNetwork bnet){

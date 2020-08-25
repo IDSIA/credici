@@ -18,15 +18,14 @@ import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
+import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -165,8 +164,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		if(exogenous)
 			this.exogenousVars.add(vid);
 		return vid;
-
-
 	}
 
 	/**
@@ -630,6 +627,17 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				.build();
 	}
 
+
+	public BayesianNetwork toBnet(){
+		BayesianNetwork bnet = new BayesianNetwork();
+		IntStream.of(getVariables()).forEach(v -> bnet.addVariable(v));
+		IntStream.of(getVariables()).forEach(v -> {
+			bnet.addParents(v, this.getParents(v));
+			bnet.setFactor(v, this.getFactor(v).copy());
+		});
+		return bnet;
+	}
+
 	/**
 	 * Transforms the structural equations associated to the childrens of a given U into a coefficient matrix.
 	 * @param u
@@ -754,6 +762,21 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return empirical;
 	}
 
+	public BayesianNetwork getEmpiricalNet(){
+		BayesianNetwork bnet = new BayesianNetwork();
+
+		// Copy the endogenous variables
+		IntStream.of(getEndogenousVars()).forEach( v -> bnet.addVariable(v, this.getSize(v)));
+
+		// Set the factors
+		for(int v: getEndogenousVars()){
+			bnet.addParents(v, getEndegenousParents(v));
+			bnet.setFactor(v, getProb(v).fixPrecission(5, v));
+		}
+
+		return bnet;
+	}
+
 
 
 	public StructuralCausalModel findModelWithEmpirical(int prob_decimals, BayesianFactor[] empirical, int[] keepFactors, long maxIterations){
@@ -784,6 +807,22 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		return smodel;
 	}
+
+
+	public TIntIntMap sample(){
+		TIntIntMap obs = new TIntIntHashMap();
+		Iterator it = this.getNetwork().iterator();
+		while(it.hasNext()){
+			int v = (int) it.next();
+			BayesianFactor f = this.getFactor(v).copy();
+			for(int pa : this.getParents(v)){
+				f = f.filter(pa, obs.get(pa));
+			}
+			obs.putAll(f.sample());
+		}
+		return obs;
+	}
+
 
 
 

@@ -2,7 +2,7 @@ package ch.idsia.credici.model.predefined;
 
 import ch.idsia.credici.inference.CausalInference;
 import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -104,7 +104,7 @@ public class RandomSquares {
         System.out.println(result2);
 
 
-        CausalInference inf3 = new CredalCausalAproxLP(model).setEpsilon(0.000001);
+        CausalInference inf3 = new CredalCausalApproxLP(model).setEpsilon(0.000001);
         IntervalFactor result3 = (IntervalFactor) inf3.query(target, evidence, intervention);
         System.out.println(result3);
 

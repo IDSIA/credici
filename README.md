@@ -5,7 +5,7 @@ for causal analysis:
 
 
 ```
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.IO;

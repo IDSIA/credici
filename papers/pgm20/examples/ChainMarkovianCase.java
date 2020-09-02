@@ -1,13 +1,10 @@
 package pgm20.examples;
 
+import ch.idsia.credici.inference.*;
 import ch.idsia.credici.model.predefined.RandomChainMarkovian;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.credici.inference.CausalInference;
-import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalAproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -81,7 +78,7 @@ public class ChainMarkovianCase {
         System.out.println(result2);
 
 
-        CausalInference inf3 = new CredalCausalAproxLP(model).setEpsilon(eps);
+        CausalInference inf3 = new CredalCausalApproxLP(model).setEpsilon(eps);
         IntervalFactor result3 = (IntervalFactor) inf3.query(target, evidence, intervention);
         System.out.println(result3);
 

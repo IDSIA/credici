@@ -1,9 +1,6 @@
 package ch.idsia.credici.model.predefined;
 
-import ch.idsia.credici.inference.CausalInference;
-import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalAproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
+import ch.idsia.credici.inference.*;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
@@ -75,7 +72,7 @@ public class RandomChainMarkovian {
         System.out.println(result2);
 
 
-        CausalInference inf3 = new CredalCausalAproxLP(model).setEpsilon(0.001);
+        CausalInference inf3 = new CredalCausalApproxLP(model).setEpsilon(0.001);
         IntervalFactor result3 = (IntervalFactor) inf3.query(target, evidence, intervention);
         System.out.println(Arrays.toString(result3.getUpper()));
         System.out.println(Arrays.toString(result3.getLower()));

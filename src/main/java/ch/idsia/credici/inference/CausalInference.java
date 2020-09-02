@@ -1,13 +1,7 @@
 package ch.idsia.credici.inference;
 
-import ch.idsia.credici.model.CausalOps;
-import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.preprocess.CutObserved;
-import ch.idsia.crema.preprocess.RemoveBarren;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
@@ -28,8 +22,8 @@ public abstract class CausalInference<M extends GenericSparseModel, R extends Ge
                     .setEvidence(evidence)
                     .setIntervention(intervention);
 
-        if(this instanceof CredalCausalAproxLP)
-            q.setEpsilon(((CredalCausalAproxLP) this).getEpsilon());
+        if(this instanceof CredalCausalApproxLP)
+            q.setEpsilon(((CredalCausalApproxLP) this).getEpsilon());
 
         return run(q);
     }

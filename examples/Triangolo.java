@@ -1,10 +1,8 @@
-import ch.idsia.credici.inference.CredalCausalAproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CredalBuilder;
 import ch.idsia.crema.IO;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import gnu.trove.map.TIntIntMap;
@@ -61,7 +59,7 @@ public class Triangolo {
         System.out.println("Computing (Credal)");
 
         // Approx inference
-        CredalCausalAproxLP inf = new CredalCausalAproxLP(hcredal);
+        CredalCausalApproxLP inf = new CredalCausalApproxLP(hcredal);
 /*        IntervalFactor res = inf.doQuery(target, intervention);
         System.out.println(res);
 
@@ -69,7 +67,7 @@ public class Triangolo {
 
 */
         // Set up the exact inference engine
-        CredalCausalAproxLP infApprox = new CredalCausalAproxLP(hcredal);
+        CredalCausalApproxLP infApprox = new CredalCausalApproxLP(hcredal);
 
 /*
         IntervalFactor resApprox = (IntervalFactor) infApprox

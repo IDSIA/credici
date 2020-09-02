@@ -1,5 +1,5 @@
 import ch.idsia.credici.inference.CausalInference;
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
@@ -53,7 +53,7 @@ public class PGMcode {
 
         // Approximate inference engine
         CausalInference infApprox =
-                new CredalCausalAproxLP(causalModel, bnet.getFactors());
+                new CredalCausalApproxLP(causalModel, bnet.getFactors());
 
 
         /////// Causal query P(X3 | do(X2 = 1))

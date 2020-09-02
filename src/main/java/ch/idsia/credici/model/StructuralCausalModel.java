@@ -630,7 +630,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	public BayesianNetwork toBnet(){
 		BayesianNetwork bnet = new BayesianNetwork();
-		IntStream.of(getVariables()).forEach(v -> bnet.addVariable(v));
+		IntStream.of(getVariables()).forEach(v -> bnet.addVariable(v, getSize(v)));
 		IntStream.of(getVariables()).forEach(v -> {
 			bnet.addParents(v, this.getParents(v));
 			bnet.setFactor(v, this.getFactor(v).copy());

@@ -1,4 +1,4 @@
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.IO;
@@ -38,7 +38,7 @@ public class EquationlessFromFile {
         System.out.println(res2);
 
         // Approx inference
-        CredalCausalAproxLP inf = new CredalCausalAproxLP(hcredal);
+        CredalCausalApproxLP inf = new CredalCausalApproxLP(hcredal);
         IntervalFactor res = inf.doQuery(target, intervention);
         System.out.println(res);
 

@@ -1,6 +1,6 @@
 package docs;
 
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
@@ -38,7 +38,7 @@ SparseModel hcredal = causalModel.toHCredal(bnet.getFactors());
 // set up the exact inference engine
 CredalCausalVE infExact = new CredalCausalVE(causalModel, bnet.getFactors());
 // set up the approximate inference engine
-CredalCausalAproxLP infApprox = new CredalCausalAproxLP(causalModel, bnet.getFactors());
+CredalCausalApproxLP infApprox = new CredalCausalApproxLP(causalModel, bnet.getFactors());
 
 /*
 // set up the exact inference engine

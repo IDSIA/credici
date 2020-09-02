@@ -1,6 +1,6 @@
 package docs;
 
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.crema.IO;
@@ -19,7 +19,7 @@ public class StartingWithCredici {
         StructuralCausalModel causalModel = CausalBuilder.of(bnet).build();
 
         // Set up the inference engine
-        CredalCausalAproxLP inf = new CredalCausalAproxLP(causalModel, bnet.getFactors());
+        CredalCausalApproxLP inf = new CredalCausalApproxLP(causalModel, bnet.getFactors());
 
         // Run the query
         IntervalFactor res = (IntervalFactor) inf.counterfactualQuery()

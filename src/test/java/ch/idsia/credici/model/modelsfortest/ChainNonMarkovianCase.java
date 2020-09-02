@@ -2,7 +2,7 @@ package ch.idsia.credici.model.modelsfortest;
 
 import ch.idsia.credici.inference.CausalInference;
 import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
@@ -73,7 +73,7 @@ public class ChainNonMarkovianCase {
 
         //model.printSummary();
 
-        CausalInference inf3 = new CredalCausalAproxLP(model);
+        CausalInference inf3 = new CredalCausalApproxLP(model);
 
         IO.write(inf3.getModel(), "./models/chain3-nonmarkov.uai");
         IntervalFactor result3 = (IntervalFactor) inf3.query(target, evidence, intervention);

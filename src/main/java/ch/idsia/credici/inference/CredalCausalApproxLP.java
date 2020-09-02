@@ -2,7 +2,6 @@ package ch.idsia.credici.inference;
 
 import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.builder.CredalBuilder;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -19,26 +18,26 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Collection;
 
-public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFactor> {
+public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalFactor> {
 
 
     private double epsilon = 0.0;
 
 
-    public CredalCausalAproxLP(StructuralCausalModel model){
+    public CredalCausalApproxLP(StructuralCausalModel model){
         this(model.toHCredal(model.getEmpiricalProbs()));
     }
 
-    public CredalCausalAproxLP(StructuralCausalModel model, BayesianFactor[] empirical){
+    public CredalCausalApproxLP(StructuralCausalModel model, BayesianFactor[] empirical){
         this(model.toHCredal(empirical));
 
     }
-    public CredalCausalAproxLP(StructuralCausalModel model, Collection empirical){
+    public CredalCausalApproxLP(StructuralCausalModel model, Collection empirical){
         this(model.toHCredal(empirical));
 
     }
 
-    public CredalCausalAproxLP(SparseModel model){
+    public CredalCausalApproxLP(SparseModel model){
         CausalInfo.assertIsHCredal(model);
         this.model = model;
 
@@ -117,7 +116,7 @@ public class CredalCausalAproxLP extends CausalInference<SparseModel, IntervalFa
         return epsilon;
     }
 
-    public CredalCausalAproxLP setEpsilon(double epsilon) {
+    public CredalCausalApproxLP setEpsilon(double epsilon) {
         this.epsilon = epsilon;
         return this;
     }

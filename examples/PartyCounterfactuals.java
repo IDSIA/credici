@@ -1,4 +1,4 @@
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
@@ -44,7 +44,7 @@ public class PartyCounterfactuals {
 
 
         // Set up the approximate inference engine
-        CredalCausalAproxLP infApprox = new CredalCausalAproxLP(hcredal);
+        CredalCausalApproxLP infApprox = new CredalCausalApproxLP(hcredal);
 
         // Set up and run a causal query
         IntervalFactor resApprox = (IntervalFactor) infApprox

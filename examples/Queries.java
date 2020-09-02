@@ -1,15 +1,11 @@
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.IO;
-import ch.idsia.crema.factor.Factor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.io.IOException;
 
@@ -43,7 +39,7 @@ public class Queries {
 
 
         // Approx inference
-        CredalCausalAproxLP inf = new CredalCausalAproxLP(hcredal);
+        CredalCausalApproxLP inf = new CredalCausalApproxLP(hcredal);
         IntervalFactor res = (IntervalFactor) inf.causalQuery()
                                                 .setTarget(x[1])
                                                 .setIntervention(x[0],1)

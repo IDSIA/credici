@@ -1,13 +1,10 @@
 package pgm20.experiments;
 
+import ch.idsia.credici.inference.*;
 import ch.idsia.credici.model.predefined.RandomSquares;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.credici.inference.CausalInference;
-import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalAproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.utility.InvokerWithTimeout;
 import ch.idsia.crema.utility.RandomUtil;
@@ -264,7 +261,7 @@ public class RunExperiments {
 
 
         }else if (method.startsWith("CCALP")) {
-            CausalInference inf3 = new CredalCausalAproxLP(model).setEpsilon(eps);
+            CausalInference inf3 = new CredalCausalApproxLP(model).setEpsilon(eps);
             queryStart = Instant.now();
             IntervalFactor result3 = (IntervalFactor) inf3.query(target, evidence, intervention);
             if(verbose) System.out.println(result3);

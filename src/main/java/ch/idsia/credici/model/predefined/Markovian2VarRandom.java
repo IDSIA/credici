@@ -1,7 +1,7 @@
 package ch.idsia.credici.model.predefined;
 
 import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalAproxLP;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -53,7 +53,7 @@ public class Markovian2VarRandom {
         VertexFactor res2 = inf2.doQuery(y, intervention);
         System.out.println(res2);
 
-        CredalCausalAproxLP inf3 = new CredalCausalAproxLP(model);
+        CredalCausalApproxLP inf3 = new CredalCausalApproxLP(model);
         IntervalFactor res3 = inf3.doQuery(y, intervention);
         System.out.println(res3);
 

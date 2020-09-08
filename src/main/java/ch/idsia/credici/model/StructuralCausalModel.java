@@ -2,12 +2,15 @@ package ch.idsia.credici.model;
 
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.CredalBuilder;
+import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
 import ch.idsia.crema.factor.convert.HalfspaceToVertex;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.inference.ve.FactorVariableElimination;
+import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
@@ -397,18 +400,26 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		BayesianFactor pvar = null;
 
-		for(int var : vars){
-			BayesianFactor p = this.getFactor(var);
-			if(pvar==null) pvar = p;
-			else pvar = pvar.combine(p);
-		}
 
-		for (int u : this.getExogenousParents(vars)) {
-			pvar = pvar.combine(this.getFactor(u));
-		}
+		if(CausalInfo.of(this).isMarkovian() || (vars.length==1 && this.getEndegenousParents(vars).length==0)) {
+			for (int var : vars) {
+				BayesianFactor p = this.getFactor(var);
+				if (pvar == null) pvar = p;
+				else pvar = pvar.combine(p);
+			}
 
-		for (int u : this.getExogenousParents(vars)) {
-			pvar = pvar.marginalize(u);
+			for (int u : this.getExogenousParents(vars)) {
+				pvar = pvar.combine(this.getFactor(u));
+			}
+
+			for (int u : this.getExogenousParents(vars)) {
+				pvar = pvar.marginalize(u);
+			}
+		}else{
+			VariableElimination inf = new FactorVariableElimination(this.getVariables());
+			inf.setFactors(this.getFactors());
+			pvar = (BayesianFactor) inf.conditionalQuery(vars, this.getEndegenousParents(vars));
+
 		}
 
 		return pvar;

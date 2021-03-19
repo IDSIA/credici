@@ -1,4 +1,4 @@
-import ch.idsia.credici.model.builder.CredalBuilder;
+import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
@@ -39,7 +39,7 @@ public class BuildCredal {
         /* Flexible but complex API*/
 
         /// From a causal model to Vertex Credal Network
-        SparseModel m3 = CredalBuilder.of(causalModel)
+        SparseModel m3 = ExactCredalBuilder.of(causalModel)
                 .setEmpirical(bnet.getFactors())
                 .setToVertex()
                 .build();
@@ -50,7 +50,7 @@ public class BuildCredal {
 
 
         /// From causal model to HalfSpace Credal Network
-        SparseModel m4 = CredalBuilder.of(causalModel)
+        SparseModel m4 = ExactCredalBuilder.of(causalModel)
                 .setEmpirical(bnet.getFactors())
                 .setToHalfSpace()
                 .build();

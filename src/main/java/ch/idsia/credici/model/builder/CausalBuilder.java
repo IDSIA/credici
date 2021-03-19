@@ -2,16 +2,20 @@ package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
+import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 
+import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -304,6 +308,74 @@ public class CausalBuilder {
 
     }
 
+
+    public static StructuralCausalModel transformFrom(BayesianNetwork bnet){
+
+        for(int x: CausalInfo.of(bnet).getEndogenousVars()) {
+            if (!bnet.getFactor(x).isDeterministic(bnet.getParents(x)))
+                throw new IllegalArgumentException("Variable " + x + " does not contain a deterministic function as factor");
+        }
+
+        StructuralCausalModel model = new StructuralCausalModel();
+
+        for(int v: bnet.getVariables()){
+            model.addVariable(v, bnet.getSize(v), CausalInfo.of(bnet).isExogenous(v));
+        }
+
+        for(int v: bnet.getVariables()) {
+            model.addParents(v, bnet.getParents(v));
+            model.setFactor(v, bnet.getFactor(v));
+        }
+
+        return model;
+    }
+
+
+    public static StructuralCausalModel random(SparseDirectedAcyclicGraph empDAG, int endoVarSize, int exoVarSize ){
+
+        Random r = RandomUtil.getRandom();
+        StructuralCausalModel scm = new StructuralCausalModel();
+
+        // build endogenous part
+        int[] X = empDAG.getVariables();
+        for(int x: X)
+            scm.addVariable(x, endoVarSize, false);
+
+        for(int x:X)
+            scm.addParents(x, empDAG.getParents(x));
+
+        // get a random number of co-founders (U variables)
+        // between 1 and the number of endog. vars
+
+
+
+        int Usize = r.nextInt(X.length)+1;
+        int[] U = new int[Usize];
+        for(int i = 0; i<Usize; i++){
+            U[i] = i + X.length;
+            scm.addVariable(U[i], exoVarSize, true);
+        }
+
+
+        // each X node should have at least a U parent
+        for(int x : X){
+            int u = U[r.nextInt(U.length)];
+            scm.addParent(x,u);
+        }
+
+        //each U node should have at least a child
+        for(int u : U){
+            if(scm.getChildren(u).length==0){
+                int x = X[r.nextInt(X.length)];
+                scm.addParent(x,u);
+            }
+
+        }
+
+        scm.fillWithRandomFactors(3);
+        return scm;
+
+    }
 
 
 }

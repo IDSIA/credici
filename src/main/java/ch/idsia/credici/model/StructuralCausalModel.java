@@ -1,8 +1,9 @@
 package ch.idsia.credici.model;
 
 import ch.idsia.credici.model.builder.CausalBuilder;
-import ch.idsia.credici.model.builder.CredalBuilder;
+import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
@@ -27,8 +28,10 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
+import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -608,7 +611,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public SparseModel toHCredal(BayesianFactor... empiricalProbs){
-		return ch.idsia.credici.model.builder.CredalBuilder.of(this)
+		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setNonnegative(false)
 				.setToHalfSpace()
@@ -616,7 +619,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public SparseModel toHCredal(Collection empiricalProbs){
-		return ch.idsia.credici.model.builder.CredalBuilder.of(this)
+		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setNonnegative(false)
 				.setToHalfSpace()
@@ -625,14 +628,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 
 	public SparseModel toVCredal(BayesianFactor... empiricalProbs){
-		return ch.idsia.credici.model.builder.CredalBuilder.of(this)
+		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToVertex()
 				.build();
 	}
 
 	public SparseModel toVCredal(Collection empiricalProbs){
-		return CredalBuilder.of(this)
+		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToVertex()
 				.build();
@@ -773,6 +776,20 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return empirical;
 	}
 
+	public HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap(){
+
+		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
+		int i = 0;
+		for(int u : getExogenousVars()){
+			int[] ch_u = getEndogenousChildren(u);
+			empirical.put(Arrays.stream(ch_u).boxed().collect(Collectors.toSet()),
+							getProb(ch_u).fixPrecission(5,ch_u));
+			i++;
+		}
+		return empirical;
+	}
+
+
 	public BayesianNetwork getEmpiricalNet(){
 		BayesianNetwork bnet = new BayesianNetwork();
 
@@ -819,8 +836,11 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return smodel;
 	}
 
+	public TIntIntMap[] samples(int N, int... vars) {
+		return IntStream.range(0, N).mapToObj(i -> sample()).toArray(TIntIntMap[]::new);
+	}
+	public TIntIntMap sample(int... vars){
 
-	public TIntIntMap sample(){
 		TIntIntMap obs = new TIntIntHashMap();
 		Iterator it = this.getNetwork().iterator();
 		while(it.hasNext()){
@@ -831,16 +851,96 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			}
 			obs.putAll(f.sample());
 		}
+
+		if(vars.length==0)
+			vars = this.getVariables();
+
+		for(int v:obs.keys())
+			if(!ArraysUtil.contains(v, vars))
+				obs.remove(v);
+
 		return obs;
 	}
 
+	public Strides endogenousMarkovBlanket(int v){
+		return this.getDomain(ArraysUtil.intersection(
+				this.getNetwork().markovBlanket(v),
+				this.getEndogenousVars()
+		));
+	}
 
+	public String edgesToString(){
+		Set edgeSet = this.getNetwork().edgeSet();
+		String edgesStr = edgeSet.toString();
+		Map<String, String> replacements = Map.of(" ","", ":",",");
+
+		for (Map.Entry<String, String> entry : replacements.entrySet()) {
+			edgesStr.replace(entry.getKey(), entry.getValue());
+		}
+		return edgesStr;
+	}
+
+
+	public StructuralCausalModel reverseEdge(int from, int to) {
+
+		int a = from, b = to;
+
+		//the edge should exist
+		if (!ArraysUtil.contains(a, this.getParents(b)))
+			throw new IllegalArgumentException("Wrong edge");
+
+		if (new AllDirectedPaths(this.getNetwork()).getAllPaths(a, b, true, null).size() > 1)
+			throw new IllegalArgumentException("There are other directed paths");
+
+		StructuralCausalModel out = this.copy();
+
+		// remove the current edge
+		out.removeParent(b, a);
+
+		// parents are now shared
+		out.addParents(a, out.getParents(b));
+		out.addParents(b, out.getParents(a));
+
+		// add the reversed edge
+		out.addParent(a, b);
+
+		// define the new factors
+
+		BayesianFactor fab = BayesianFactor.combineAll(this.getFactors(a, b));
+		BayesianFactor fb = fab.marginalize(a);
+		BayesianFactor fa_b = fab.divide(fb);
+
+		out.setFactor(a, fa_b);
+		out.setFactor(b, fb);
+		return out;
+
+	}
+
+	public StructuralCausalModel reverseExoEdges(){
+		StructuralCausalModel rmodel = this;
+		for(int u : this.getExogenousVars()) {
+			int chU[] = this.getEndogenousChildren(u);
+			for (int x : DAGUtil.getTopologicalOrder(this.getNetwork(), chU)) {
+				rmodel = rmodel.reverseEdge(u, x);
+			}
+		}
+		return rmodel;
+	}
+
+	public HashMap<Integer, BayesianFactor> endogenousBlanketProb(){
+
+
+		FactorVariableElimination inf = new FactorVariableElimination(this.getVariables());
+		inf.setFactors(this.getFactors());
+
+		HashMap probs = new HashMap();
+		for(int u: this.getExogenousVars()){
+			int[] blanket = this.endogenousMarkovBlanket(u).getVariables();
+			probs.put(u, ((BayesianFactor)inf.conditionalQuery(blanket)));
+		}
+		return probs;
+
+	}
 
 
 }
-
-
-
-
-
-

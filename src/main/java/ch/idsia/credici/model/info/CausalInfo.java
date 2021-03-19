@@ -1,10 +1,7 @@
 package ch.idsia.credici.model.info;
 
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.builder.CredalBuilder;
 import ch.idsia.credici.model.predefined.Party;
-import ch.idsia.credici.utility.DAGUtil;
-import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
@@ -30,9 +27,9 @@ public class CausalInfo {
 
     private static TIntObjectHashMap<CausalInfo> builders = new TIntObjectHashMap<>();
 
-    public static CausalInfo of(SparseModel model){
+    public static CausalInfo of(GenericSparseModel model){
 
-        assertIsCredal(model);
+        //assertIsCredal(model);
 
         int hash = model.hashCode();
         if(!builders.containsKey(hash))

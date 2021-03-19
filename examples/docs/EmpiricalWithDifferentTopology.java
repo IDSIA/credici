@@ -5,7 +5,7 @@ import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
-import ch.idsia.credici.model.builder.CredalBuilder;
+import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
@@ -37,7 +37,7 @@ public class EmpiricalWithDifferentTopology {
 
         int[] x = causalModel.getEndogenousVars();
 
-        SparseModel hcredal = CredalBuilder.of(causalModel)
+        SparseModel hcredal = ExactCredalBuilder.of(causalModel)
                                 .setEmpirical(bnet)
                                 .setToHalfSpace()
                                 .build();

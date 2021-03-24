@@ -43,8 +43,8 @@ public class ExactCredalBuilder extends CredalBuilder {
         return new ExactCredalBuilder(causalModel);
     }
 
-    public ExactCredalBuilder setEmpirical(THashMap factors) {
-        this.empiricalFactors = (TIntObjectMap<BayesianFactor>) factors;
+    public ExactCredalBuilder setEmpirical(TIntObjectMap<BayesianFactor> factors) {
+        this.empiricalFactors = factors;
         return this;
     }
 
@@ -94,7 +94,7 @@ public class ExactCredalBuilder extends CredalBuilder {
     }
 
 
-    public SparseModel build(){
+    public ExactCredalBuilder build(){
 
         // Check that P(U) is in the model
         if(empiricalFactors == null || empiricalFactors.size() == 0 )
@@ -154,7 +154,7 @@ public class ExactCredalBuilder extends CredalBuilder {
 
         }
 
-        return model;
+        return this;
 
     }
 

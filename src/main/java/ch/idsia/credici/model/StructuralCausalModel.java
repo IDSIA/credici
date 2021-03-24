@@ -615,7 +615,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				.setEmpirical(empiricalProbs)
 				.setNonnegative(false)
 				.setToHalfSpace()
-				.build();
+				.build().getModel();
 	}
 
 	public SparseModel toHCredal(Collection empiricalProbs){
@@ -623,7 +623,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				.setEmpirical(empiricalProbs)
 				.setNonnegative(false)
 				.setToHalfSpace()
-				.build();
+				.build().getModel();
 	}
 
 
@@ -631,14 +631,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToVertex()
-				.build();
+				.build().getModel();
 	}
 
 	public SparseModel toVCredal(Collection empiricalProbs){
 		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToVertex()
-				.build();
+				.build().getModel();
 	}
 
 
@@ -942,5 +942,23 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	}
 
+
+	public StructuralCausalModel average(StructuralCausalModel model, int... vars) {
+
+		if (vars.length == 0)
+			vars = this.getVariables();
+
+		if (!this.edgesToString().equals(model.edgesToString()))
+			throw new IllegalArgumentException("Incompatible models");
+
+		StructuralCausalModel out = model.copy();
+
+		for (int v : vars) {
+			BayesianFactor f1 = this.getFactor(v);
+			BayesianFactor f2 = model.getFactor(v);
+			out.setFactor(v, f1.addition(f2).scalarMultiply(0.5));
+		}
+		return out;
+	}
 
 }

@@ -2,24 +2,19 @@ package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
-import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.THashMap;
-import gnu.trove.map.hash.TIntIntHashMap;
 
 public abstract class CredalBuilder {
 
 	// input SCM
 	protected  StructuralCausalModel causalmodel;
-	// input empirical distributions
-	protected THashMap empiricalFactors;
+
 	// output credal model
 	protected SparseModel model;
 
 	// abstract methods to implemented
-	abstract public SparseModel build();
-	abstract public CredalBuilder setEmpirical(THashMap factors);
+	abstract public CredalBuilder build() throws InterruptedException;
 
 	// method for getting the generated model.
 	public SparseModel getModel() {

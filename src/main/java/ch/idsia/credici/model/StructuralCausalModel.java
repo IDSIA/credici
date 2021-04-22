@@ -776,21 +776,27 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return empirical;
 	}
 
-	public HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap(){
+	public HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap(boolean fix){
 
 		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
 		int i = 0;
 		for(int u : getExogenousVars()){
 			int[] ch_u = getEndogenousChildren(u);
-			empirical.put(Arrays.stream(ch_u).boxed().collect(Collectors.toSet()),
-							getProb(ch_u).fixPrecission(5,ch_u));
+
+			BayesianFactor p = getProb(ch_u);
+			if(fix) p = p.fixPrecission(5, ch_u);
+			empirical.put(Arrays.stream(ch_u).boxed().collect(Collectors.toSet()), p);
 			i++;
 		}
 		return empirical;
 	}
 
+	public HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap() {
+		return this.getEmpiricalMap(true);
+	}
 
-	public BayesianNetwork getEmpiricalNet(){
+
+		public BayesianNetwork getEmpiricalNet(){
 		BayesianNetwork bnet = new BayesianNetwork();
 
 		// Copy the endogenous variables

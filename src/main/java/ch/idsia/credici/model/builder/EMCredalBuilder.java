@@ -1,16 +1,18 @@
 package ch.idsia.credici.model.builder;
 
+import ch.idsia.credici.inference.CausalMultiVE;
+import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.BayesianCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.learning.ExpectationMaximization;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntObjectMap;
-import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -21,39 +23,43 @@ import java.util.stream.Collectors;
 public class EMCredalBuilder extends CredalBuilder{
 
 	//todo getters and setters
+	// todo: make private
+	public TIntObjectMap<BayesianFactor> empiricalFactors;
 
-	protected TIntObjectMap<BayesianFactor> empiricalFactors;
+	public List<StructuralCausalModel>  selectedPoints;
 
-	private List<StructuralCausalModel>  selectedPoints;
+	public List<List<StructuralCausalModel>> trajectories;
 
-	private List<List<StructuralCausalModel>> trayectories;
+	private boolean[] mask;
 
-	private HashMap<Integer, BayesianFactor> endogJointProbs;
+	public HashMap<Integer, BayesianFactor> endogJointProbs;
 
-	private HashMap<Set<Integer>, BayesianFactor> targetGenDist;
+	public HashMap<Set<Integer>, BayesianFactor> targetGenDist;
 
-	private int maxEMIter = 200;
+	public int maxEMIter = 200;
 
-	private int numTrayectories = 10;
+	public int numTrajectories = 10;
 
-	private boolean discardNonConverging = false;
+	public boolean discardNonConverging = false;
+
+	public int splits = 10;
+
+	private SparseModel trueCredalModel;
 
 	public enum SelectionPolicy {
 		LAST,	// Selects the last point in the trajectory.
 		BISECTION_BORDER_SAME_PATH, // Bisection with the 2 points in the same path closer to the border.
 		BISECTION_BORDER,	// Bisection with 2 points from any point such that these are close to the border.
-		BISECTION_ALL, // Bisection with all posible pair of points.
+		BISECTION_ALL, // Bisection with all possible pair of points.
 
 	}
 
 	SelectionPolicy selPolicy = SelectionPolicy.LAST;
 
-
-
 	public EMCredalBuilder(StructuralCausalModel causalModel){
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
-		this.targetGenDist = causalModel.getEmpiricalMap();
+		this.targetGenDist = causalModel.getEmpiricalMap(false);
 	}
 
 	public static EMCredalBuilder of(StructuralCausalModel causalModel){
@@ -63,34 +69,132 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	@Override
 	public EMCredalBuilder build() throws InterruptedException {
-		buildTrayectories();
+		buildTrajectories();
+		selectPoints();
+		mergePoints();
+		return this;
+	}
+	public EMCredalBuilder selectAndMerge(){
 		selectPoints();
 		mergePoints();
 		return this;
 	}
 
-
-	private void buildTrayectories() throws InterruptedException {
-		trayectories = new ArrayList<>();
-		for(int i=0; i<numTrayectories; i++)
-			trayectories.add(runEM());
-
+	public EMCredalBuilder buildTrajectories() throws InterruptedException {
+		trajectories = new ArrayList<>();
+		for(int i = 0; i< numTrajectories; i++)
+			trajectories.add(runEM());
+		return this;
 	}
+
 
 	private void selectPoints(){
 		// If there is not any inner point, apply LAST,
 		// which can always be applyed but the inner approximation is not guaranteed.
 
-		if(selPolicy == SelectionPolicy.LAST){
-			selectedPoints = trayectories.stream().map(t -> t.get(t.size()-1)).collect(Collectors.toList());
-		}else{
-			throw new IllegalArgumentException("Wrong selection policy");
+
+		if(selPolicy == SelectionPolicy.LAST || !hasInnerPoint()) {
+			selectedPoints = getTrajectories().stream().map(t -> t.get(t.size() - 1)).collect(Collectors.toList());
+		}else {
+			if (selPolicy == SelectionPolicy.BISECTION_ALL) {
+
+				List<StructuralCausalModel> in = getTrajectories().stream()
+						.flatMap(t -> t.stream().filter(this::isInside))
+						.collect(Collectors.toList());
+
+				List<StructuralCausalModel> out = getTrajectories().stream()
+						.flatMap(t -> t.stream().filter(this::isOutside))
+						.collect(Collectors.toList());
+
+				selectedPoints = bisection(out, in);
+			} else if (selPolicy == SelectionPolicy.BISECTION_BORDER) {
+
+				List<StructuralCausalModel> in = getTrajectories().stream()
+						.map(t -> getFirstInside(t))
+						.filter(p -> p != null)
+						.collect(Collectors.toList());
+
+				List<StructuralCausalModel> out = getTrajectories().stream()
+						.map(t -> getLastOutside(t))
+						.filter(p -> p != null)
+						.collect(Collectors.toList());
+
+				selectedPoints = bisection(out, in);
+
+			} else if (selPolicy == SelectionPolicy.BISECTION_BORDER_SAME_PATH) {
+
+				selectedPoints = new ArrayList<>();
+
+				for (List<StructuralCausalModel> t : getConvergingTrajectories()) {
+					StructuralCausalModel out = getLastOutside(t);
+					StructuralCausalModel in = getFirstInside(t);
+					if (out != null && in != null)
+						selectedPoints.add(bisection(out, in));
+				}
+
+
+
+			} else {
+				throw new IllegalArgumentException("Wrong selection policy");
+			}
+
+
+			//selectedPoints = selectedPoints.stream().filter(m-> ratioLk(m)==1.0).collect(Collectors.toList());
+
+
+			/*
+			// add last points that are inside:
+			selectedPoints.addAll(
+					trayectories.stream()
+							.map(t -> t.get(t.size() - 1))
+							.filter(this::isInside)
+							.collect(Collectors.toList())
+			);*/
 		}
 
+	}
 
+	private StructuralCausalModel getFirstInside(List<StructuralCausalModel> t){
+		return t.stream().filter(this::isInside).reduce((f, s) -> f).orElse(null);
+	}
 
+	private StructuralCausalModel getLastOutside(List<StructuralCausalModel> t){
+		return t.stream().filter(this::isOutside).reduce((f, s) -> s).orElse(null);
+	}
+
+	public List<List<StructuralCausalModel>> getTrajectories(){
+
+		List<List<StructuralCausalModel>> out;
+		if(mask == null)
+			out = this.trajectories;
+		else{
+			out = new ArrayList<>();
+			for(int i=0; i<mask.length; i++){
+				if(mask[i])
+					out.add(trajectories.get(i));
+			}
+		}
+
+		return out;
 
 	}
+
+	public List<List<StructuralCausalModel>> getConvergingTrajectories(){
+		return getTrajectories().stream()
+				.filter(t -> isInside(t.get(t.size()-1)))
+				.collect(Collectors.toList());
+	}
+
+	private boolean hasInnerPoint(){
+		for(List<StructuralCausalModel> t : trajectories){
+			if(isInside(t.get(t.size()-1))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+
 	private void mergePoints(){
 
 		BayesianNetwork[] bnets =
@@ -100,27 +204,84 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	}
 
-	private StructuralCausalModel bisection(StructuralCausalModel out, StructuralCausalModel in, int splits){
+	private List<StructuralCausalModel> bisection(List<StructuralCausalModel> out, List<StructuralCausalModel> in){
+
+		System.out.println("\tNumber of bisections = "+out.size()+"*"+in.size()+" = "+(out.size()*in.size()));
+		List<StructuralCausalModel> midPoints  = new ArrayList<>();
+		for(StructuralCausalModel pOut : out){
+			for(StructuralCausalModel pIn : in){
+				midPoints.add(bisection(pOut, pIn));
+			}
+		}
+		return midPoints;
+	}
+
+	private StructuralCausalModel bisection(StructuralCausalModel out, StructuralCausalModel in){
+
+		if(isOutside(in) || isInside(out))
+			throw new IllegalArgumentException("Bad points for bisection");
+
 		StructuralCausalModel p1 = out;
 		StructuralCausalModel p2 = in;
+/*
+		double ratio = Probability.ratioLogLikelihood(p1.getEmpiricalMap(false), p2.getEmpiricalMap(false), 1);
 
-		for(int i=0; i<splits; i++){
+		if(ratio==1)
+			return p2;
+		else if(ratio>1){
+			p1 = in;
+			p2 = out;
+		}
+*/
+		double ratio =  0;
+
+		for(int i=0; i<this.splits; i++){
 			StructuralCausalModel mid = p1.average(p2, p1.getExogenousVars());
-			double ratio = Probability.ratioLogLikelihood(mid.getEmpiricalMap(), in.getEmpiricalMap(), 1);
+			/*ratio = Probability.ratioLogLikelihood(mid.getEmpiricalMap(false), p2.getEmpiricalMap(false), 1);
+			//System.out.println(ratio);
 			if(ratio<1.0)
 				p1 = mid;
 			else
+				p2 = mid;*/
+
+			if(isOutside(mid))
+				p1 = mid;
+			else
 				p2 = mid;
+
+		}
+
+		if(isOutside(p2)) {
+			System.out.println("bad bisection");
+			System.out.println(ratio);
+
 		}
 		return p2;
 	}
 
-	private boolean isInside(StructuralCausalModel m){
-		return Probability.ratioLogLikelihood(m.getEmpiricalMap(), targetGenDist, 1) == 1.0;
+	public boolean isInside(StructuralCausalModel m){
+		/*f(trueCredalModel != null) {
+			for (int u : m.getExogenousVars())
+				if (!Probability.vertexInside(m.getFactor(u), (VertexFactor) trueCredalModel.getFactor(u)))
+					return false;
+			return true;
+		}*/
+		return ratioLk(m) >= 1.0;
+	}
+	public boolean isOutside(StructuralCausalModel m){
+		return !isInside(m);
+	}
+	public double ratioLk(StructuralCausalModel m){
+		return Probability.ratioLogLikelihood(m.getEmpiricalMap(false), targetGenDist, 1);
 	}
 
 	public List<StructuralCausalModel> getSelectedPoints() {
 		return selectedPoints;
+	}
+
+	public EMCredalBuilder setTrueCredalModel(SparseModel trueCredalModel) {
+		this.trueCredalModel = trueCredalModel;
+		return this;
 	}
 
 	/**
@@ -147,61 +308,175 @@ public class EMCredalBuilder extends CredalBuilder{
 						.setVerbose(false)
 						.setRecordIntermediate(true)
 						.setRegularization(0.0)
+						//.setStopAtConvergence(false)
+						//.setKlthreshold(0.000001) //default 0.00001;
 						.setTrainableVars(causalmodel.getExogenousVars());
+						//.setTargetGenDist(targetGenDist);
 
 		// run the method
 		em.run(endogJointProbs.values(), maxEMIter);
 
-		// Return the trayectories
-		return em.getIntermediateModels();
+		List<StructuralCausalModel> t = em.getIntermediateModels();
+		isInside(t.get(t.size()-1));
+
+		// Return the trajectories
+		return t;
 
 	}
 
+	public EMCredalBuilder setSelPolicy(SelectionPolicy selPolicy) {
+		this.selPolicy = selPolicy;
+		return this;
+	}
+
+	public EMCredalBuilder setMaxEMIter(int maxEMIter) {
+		this.maxEMIter = maxEMIter;
+		return this;
+	}
+
+	public EMCredalBuilder setNumTrajectories(int numTrajectories) {
+		this.numTrajectories = numTrajectories;
+		return this;
+	}
 
 	public static void main(String[] args) throws InterruptedException {
 
+		StructuralCausalModel m = null;
+		int[] X = null;
+		int[] U = null;
 
+		int s = 7;
+		//for(s = 0; s<100; s++) {
 
-		RandomUtil.setRandomSeed(1);
+		RandomUtil.setRandomSeed(s);
 
-		StructuralCausalModel m = new StructuralCausalModel();
+		m = new StructuralCausalModel();
 
 		// Xs
 		m.addVariable(2, false);
 		//m.addVariable(3, false);
 		m.addVariable(3, false);
-		//   m.addVariable(3, false);
+		m.addVariable(2, false);
 
 		// Us
-		m.addVariable(2, true);
-		m.addVariable(5, true);
-		//m.addVariable(6, true);
+		m.addVariable(3, true);
+		m.addVariable(7, true);
+		//m.addVariable(4, true);
 
-		int[] X = m.getEndogenousVars();
-		int[] U = m.getExogenousVars();
+		X = m.getEndogenousVars();
+		U = m.getExogenousVars();
 
-		for(int i=1; i<X.length; i++)
-			m.addParents(X[i], X[i-1]);
+		for (int i = 1; i < X.length; i++)
+			m.addParents(X[i], X[i - 1]);
 
 		m.addParents(X[0], U[0]);
 		m.addParents(X[1], U[1]);
+		m.addParents(X[2], U[1]);
 
 		// m.addParents(X[2], U[0]);
 		// m.addParents(X[3], U[1]);
 
-		m.fillWithRandomFactors(3);
+		m.fillWithRandomFactors(4);
+		try {
+			CredalCausalVE ve = new CredalCausalVE(m);
+			VertexFactor exactRes = (VertexFactor) ve.causalQuery()
+					.setTarget(X[2])
+					.setIntervention(X[1], 0)
+					.run();
+			System.out.println(s);
+			System.out.println(exactRes);
+		}catch (Exception e){
+			System.out.println("Exception");
+		}
+		//}
 
-		EMCredalBuilder builder = EMCredalBuilder.of(m).build();
+		SparseModel vmodel = m.toVCredal(m.getEmpiricalProbs());
+		System.out.println(vmodel);
+		System.out.println("True Empirical");
+		System.out.println(m.getEmpiricalMap(false));
 
-		builder.getSelectedPoints().forEach(System.out::println);
 
-		System.out.println(builder.isInnerApproximation());
+		for(SelectionPolicy pol : SelectionPolicy.values()) {
 
-		System.out.println(builder.getModel());
+			System.out.println(pol);
+			System.out.println("--------------------------------------------------------");
+			EMCredalBuilder builder = EMCredalBuilder.of(m)
+					.setSelPolicy(pol)
+					.setMaxEMIter(500)
+					.setNumTrajectories(40)
+					.setTrueCredalModel(vmodel)
+					.build();
 
+			//builder.getSelectedPoints().forEach(System.out::println);
+			//System.out.println(builder.getModel());
+			System.out.println("\tIs Inner approximation = " + builder.isInnerApproximation());
+			System.out.println("\tConverging Trajectories = " +builder.getConvergingTrajectories().size());
+			System.out.println("\tSelected points = " + builder.getSelectedPoints().size());
+
+
+			CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints());
+			IntervalFactor res = (IntervalFactor) inf.causalQuery()
+					.setTarget(X[2])
+					.setIntervention(X[1], 0)
+					.run();
+
+			System.out.println("\n\nResult running multiple precise VE:\n\n"+res);
+
+			CredalCausalVE inf2 = new CredalCausalVE(builder.getModel());
+			VertexFactor res2 =
+					(VertexFactor) inf2.causalQuery()
+					.setTarget(X[2])
+					.setIntervention(X[1], 0)
+					.run();
+
+			System.out.println("\n\nResult credal VE:\n\n"+res2);
+			System.out.println("\n\n");
+
+		}
 	}
 
+/*
 
+LAST 20
+P([2] | [])
+	[0.44405466205941935, 0.06018842810796025]
+	[0.9398115718920401, 0.5559453379405808]
+
+BISECTION_BORDER_SAME_PATH 20
+P([2] | [])
+	[0.2645509341604673, 0.5678434545043037]
+	[0.43215654549569626, 0.7354490658395326]
+
+BISECTION_BORDER 20
+P([2] | [])
+	[0.09013191122681088, 0.5921845767715432]
+	[0.4078154232284568, 0.9098680887731891]
+
+BISECTION_ALL 20
+P([2] | [])
+	[0.09013191122681088, 0.5921845767715432]
+	[0.4078154232284568, 0.9098680887731891]
+-----
+
+BISECTION_BORDER_SAME_PATH 5
+
+K(vars[2]|[]) [0.7880478416277151, 0.21195215837228487]
+              [0.8736064623032311, 0.12639353769676887]
+BISECTION_BORDER_SAME_PATH 10
+
+K(vars[2]|[]) [0.7880478416277151, 0.21195215837228487]
+              [0.8736064623032311, 0.12639353769676887]
+
+BISECTION_BORDER_SAME_PATH 20
+K(vars[2]|[]) [0.7880096677408601, 0.21199033225913994]
+              [0.8749604785507616, 0.12503952144923844]
+
+BISECTION_BORDER_SAME_PATH 40
+K(vars[2]|[]) [0.7880096677408601, 0.21199033225913994]
+              [0.8749746323988837, 0.12502536760111635]
+
+
+ */
 
 
 

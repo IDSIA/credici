@@ -138,7 +138,6 @@ public class ExactCredalBuilder extends CredalBuilder {
 
             // remove constraints with all their coefficients equal to zero
             constFactor = ConstraintsOps.removeZeroConstraints(constFactor);
-
             if(constFactor==null)
                 throw new NoFeasibleSolutionException();
 

@@ -1,7 +1,10 @@
 package ch.idsia.credici.utility;
 
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.factor.convert.BayesianToVertex;
+import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.Strides;
+import com.google.common.primitives.Doubles;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -49,7 +52,7 @@ public class Probability {
 										 HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
 		double l = 0.0;
 		for(Set<Integer> k : emp.keySet())
-			l = Probability.logLikelihood((BayesianFactor) prob.get(k), (BayesianFactor)emp.get(k), counts);
+			l += Probability.logLikelihood((BayesianFactor) prob.get(k), (BayesianFactor)emp.get(k), counts);
 
 		return l;
 	}
@@ -77,6 +80,35 @@ public class Probability {
 		return Arrays.equals(dom1.getVariables(), dom2.getVariables()) &&
 					Arrays.equals(dom1.getSizes(), dom2.getSizes());
 	}
+
+
+	public static boolean vertexInside(BayesianFactor f, VertexFactor vf){
+
+		int[] leftVars = vf.getDataDomain().getVariables();
+		if(leftVars.length>1)
+			throw new IllegalArgumentException("No more than 1 variables in the data domain.");
+
+		VertexFactor merged = vf.merge(new BayesianToVertex().apply(f, leftVars[0]));
+
+		for(int i=0; i<vf.getSeparatingDomain().getCombinations(); i++){
+
+			System.out.println(Doubles.concat(merged.getData()[i]));
+			System.out.println(Doubles.concat(vf.getData()[i]));
+			if(!Arrays.equals(
+					Doubles.concat(merged.getData()[i]),
+					Doubles.concat(vf.getData()[i])))
+				return false;
+		}
+		return true;
+
+	}
+
+	/*
+
+	List<StructuralCausalModel> t = em.getIntermediateModels();
+
+Probability.vertexInside(t.get(31).getFactor(4), (VertexFactor) this.trueCredalModel.getFactor(4));
+	 */
 
 
 

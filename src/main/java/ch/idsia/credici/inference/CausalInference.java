@@ -8,7 +8,7 @@ import gnu.trove.map.hash.TIntIntHashMap;
 /**
  * Author:  Rafael Cabañas
  */
-public abstract class CausalInference<M extends GenericSparseModel, R extends GenericFactor>{
+public abstract class CausalInference<M, R extends GenericFactor>{
 
     protected M model;
 

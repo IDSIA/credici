@@ -1,17 +1,13 @@
 package ch.idsia.credici.learning;
 
-import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
+import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.JoinInference;
-import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.learning.DiscreteEM;
-import ch.idsia.crema.learning.ExpectationMaximization;
-import ch.idsia.crema.model.GraphicalModel;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.SparseModel;
@@ -21,11 +17,9 @@ import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.*;
-import java.util.stream.IntStream;
 
 
 public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
@@ -41,6 +35,9 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
     //private StructuralCausalModel priorModel;
 
     //private StructuralCausalModel posteriorModel;
+
+    public HashMap<Set<Integer>, BayesianFactor> targetGenDist;
+
 
 
 
@@ -85,13 +82,18 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
                     pu = pu.addition(((BayesianFactor) inferenceEngine.apply(posteriorModel, u, obs)).scalarMultiply(emp_i));
             }
 
-
-
             // Update the model
-            if(pu.KLdivergence(posteriorModel.getFactor(u)) > klthreshold) {
+            if(pu.KLdivergence(posteriorModel.getFactor(u)) > klthreshold || targetGenDist != null) {
                 posteriorModel.setFactor(u, pu);
                 updated = true;
             }
+        }
+
+        if(targetGenDist != null){
+            if(Probability.ratioLogLikelihood(
+                    ((StructuralCausalModel)posteriorModel).getEmpiricalMap(), targetGenDist
+                    , 1) == 1.0)
+                updated = false;
         }
 
     }
@@ -130,7 +132,6 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
 
 
 
-
     BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException {
 
         String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, obs.keys(), obs.values()));
@@ -165,6 +166,10 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
         return (StructuralCausalModel) this.posteriorModel;
     }
 
+    public BayesianCausalEM setTargetGenDist(HashMap<Set<Integer>, BayesianFactor> targetGenDist) {
+        this.targetGenDist = targetGenDist;
+        return this;
+    }
 
     public static void main(String[] args) throws InterruptedException {
 

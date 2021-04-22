@@ -6,7 +6,7 @@ import ch.idsia.crema.model.graphical.GenericSparseModel;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
-public class Query<M extends GenericSparseModel, R extends GenericFactor> {
+public class Query<M, R extends GenericFactor> {
 
     private CausalInference inf;
 

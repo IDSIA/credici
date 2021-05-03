@@ -62,7 +62,6 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
 
     protected void stepPrivate(Collection stepArgs) throws InterruptedException {
 
-        updated = false;
         for (int u : trainableVars) {
 
             BayesianFactor pu = new BayesianFactor(priorModel.getDomain(u));

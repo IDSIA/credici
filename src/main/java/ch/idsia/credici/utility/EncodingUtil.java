@@ -3,6 +3,7 @@ package ch.idsia.credici.utility;
 import com.google.common.primitives.Booleans;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,5 +56,20 @@ public class EncodingUtil {
 		return elements;
 	}
 
+	public static List<boolean[]> getRandomSeqMask(int size) {
+
+		List out = new ArrayList();
+
+		List idx = IntStream.range(0, size).boxed().collect(Collectors.toList());
+		Collections.shuffle(idx);
+		boolean[] m = new boolean[size];
+
+		for (int i : idx.stream().mapToInt(i -> ((Integer) i).intValue()).toArray()) {
+			m[i] = true;
+			out.add(m.clone());
+		}
+
+		return out;
+	}
 
 }

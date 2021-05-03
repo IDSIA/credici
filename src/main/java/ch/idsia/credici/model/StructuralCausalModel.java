@@ -843,7 +843,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public TIntIntMap[] samples(int N, int... vars) {
-		return IntStream.range(0, N).mapToObj(i -> sample()).toArray(TIntIntMap[]::new);
+		return IntStream.range(0, N).mapToObj(i -> sample(vars)).toArray(TIntIntMap[]::new);
 	}
 	public TIntIntMap sample(int... vars){
 

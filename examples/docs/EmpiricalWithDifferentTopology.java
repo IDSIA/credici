@@ -40,7 +40,7 @@ public class EmpiricalWithDifferentTopology {
         SparseModel hcredal = ExactCredalBuilder.of(causalModel)
                                 .setEmpirical(bnet)
                                 .setToHalfSpace()
-                                .build();
+                                .build().getModel();
 
 
         /////// Causal query P(X3 | do(X2 = 1))

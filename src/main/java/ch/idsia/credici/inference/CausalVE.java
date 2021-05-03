@@ -21,7 +21,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
 
     public CausalVE(StructuralCausalModel model){
         this.model = model.copy();
-        this.elimOrder = model.getVariables();
+        this.elimOrder = null;
     }
 
     @Override
@@ -44,7 +44,8 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         infModel = removeBarren
                 .execute(new CutObserved().execute(infModel, evidence), target, evidence);
 
-
+        if(elimOrder==null)
+            elimOrder = infModel.getVariables();
         return infModel;
     }
 

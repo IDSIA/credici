@@ -31,8 +31,9 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 		// Run each query independently
 		List<BayesianFactor> factors = inf.stream().map(i->i.run(q)).collect(Collectors.toList());
 
+
 		// Merge the results
-		VertexFactor vf = FactorUtil.mergeFactors(factors, q.getTarget()[0], !toInterval);
+		VertexFactor vf = FactorUtil.mergeFactors(factors, inf.get(0).target[0], !toInterval);
 
 		if(toInterval)
 			return new VertexToInterval().apply(vf, q.getTarget()[0]);

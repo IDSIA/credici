@@ -70,10 +70,11 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
             counts.put(variable, new BayesianFactor(posteriorModel.getFactor(variable).getDomain(), false));
         }
 
+        clearPosteriorCache();
+
 
         for (TIntIntMap observation : observations) {
             for (int var : trainableVars) {
-                //clearPosteriorCache();
 
 
                 int[] relevantVars = ArraysUtil.addToSortedArray(posteriorModel.getParents(var), var);
@@ -146,7 +147,6 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
 
     BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException {
-
         String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, obs.keys(), obs.values()));
 
         if(!posteriorCache.containsKey(hash) || !usePosteriorCache) {

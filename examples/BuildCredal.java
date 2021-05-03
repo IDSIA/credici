@@ -42,7 +42,7 @@ public class BuildCredal {
         SparseModel m3 = ExactCredalBuilder.of(causalModel)
                 .setEmpirical(bnet.getFactors())
                 .setToVertex()
-                .build();
+                .build().getModel();
 
         for(int v : m3.getVariables()){
             System.out.println(m3.getFactor(v));
@@ -53,7 +53,7 @@ public class BuildCredal {
         SparseModel m4 = ExactCredalBuilder.of(causalModel)
                 .setEmpirical(bnet.getFactors())
                 .setToHalfSpace()
-                .build();
+                .build().getModel();
 
 
         for(int v : m4.getVariables()){

@@ -36,7 +36,7 @@ public class Triangolo {
                                 .setToHalfSpace()
                                 .setNonnegative(false)
                                 .setEmpirical(bnet.getFactors())
-                                .build();
+                                .build().getModel();
 
         //causalModel.toHCredal(bnet.getFactors());
 

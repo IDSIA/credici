@@ -3,7 +3,10 @@ package ch.idsia.credici.model.builder;
 import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.BayesianCausalEM;
+import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
@@ -12,12 +15,11 @@ import ch.idsia.crema.learning.ExpectationMaximization;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.RandomUtil;
+import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import javax.xml.crypto.Data;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class EMCredalBuilder extends CredalBuilder{
@@ -44,7 +46,11 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public int splits = 10;
 
+	private int numDecimalsRound = 5;
+
 	private SparseModel trueCredalModel;
+
+	private TIntIntMap[] data = null;
 
 	public enum SelectionPolicy {
 		LAST,	// Selects the last point in the trajectory.
@@ -60,10 +66,25 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
 		this.targetGenDist = causalModel.getEmpiricalMap(false);
-	}
 
+		if(this.numDecimalsRound>0)
+			this.targetGenDist = FactorUtil.fixEmpiricalMap(targetGenDist, numDecimalsRound);
+
+	}
 	public static EMCredalBuilder of(StructuralCausalModel causalModel){
 		return new EMCredalBuilder(causalModel);
+	}
+
+
+	public EMCredalBuilder(StructuralCausalModel causalModel, TIntIntMap[] data){
+		this.causalmodel = causalModel;
+		this.endogJointProbs = causalModel.endogenousBlanketProb();
+		this.targetGenDist = DataUtil.getEmpiricalMap(causalModel, data);
+		this.data = data;
+	}
+
+	public static EMCredalBuilder of(StructuralCausalModel causalModel, TIntIntMap[] data){
+		return new EMCredalBuilder(causalModel, data);
 	}
 
 
@@ -92,6 +113,19 @@ public class EMCredalBuilder extends CredalBuilder{
 		// If there is not any inner point, apply LAST,
 		// which can always be applyed but the inner approximation is not guaranteed.
 
+		for(List<StructuralCausalModel> t : this.trajectories){
+			StructuralCausalModel m = t.get(t.size()-1);
+
+			System.out.println(m.getEmpiricalMap(false));
+
+
+			System.out.print(Probability.logLikelihood(targetGenDist, targetGenDist, 1));
+
+			System.out.print("\t"+Probability.logLikelihood(m.getEmpiricalMap(false), targetGenDist, 1));
+			System.out.println("\t"+ratioLk(t.get(t.size()-1)));
+
+
+		}
 
 		if(selPolicy == SelectionPolicy.LAST || !hasInnerPoint()) {
 			selectedPoints = getTrajectories().stream().map(t -> t.get(t.size() - 1)).collect(Collectors.toList());
@@ -223,27 +257,11 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		StructuralCausalModel p1 = out;
 		StructuralCausalModel p2 = in;
-/*
-		double ratio = Probability.ratioLogLikelihood(p1.getEmpiricalMap(false), p2.getEmpiricalMap(false), 1);
 
-		if(ratio==1)
-			return p2;
-		else if(ratio>1){
-			p1 = in;
-			p2 = out;
-		}
-*/
 		double ratio =  0;
 
 		for(int i=0; i<this.splits; i++){
 			StructuralCausalModel mid = p1.average(p2, p1.getExogenousVars());
-			/*ratio = Probability.ratioLogLikelihood(mid.getEmpiricalMap(false), p2.getEmpiricalMap(false), 1);
-			//System.out.println(ratio);
-			if(ratio<1.0)
-				p1 = mid;
-			else
-				p2 = mid;*/
-
 			if(isOutside(mid))
 				p1 = mid;
 			else
@@ -272,7 +290,11 @@ public class EMCredalBuilder extends CredalBuilder{
 		return !isInside(m);
 	}
 	public double ratioLk(StructuralCausalModel m){
-		return Probability.ratioLogLikelihood(m.getEmpiricalMap(false), targetGenDist, 1);
+		HashMap<Set<Integer>, BayesianFactor> map_i = m.getEmpiricalMap(false);
+		if(numDecimalsRound>0)
+			map_i = FactorUtil.fixEmpiricalMap(map_i, numDecimalsRound);
+
+		return Probability.ratioLogLikelihood(map_i, targetGenDist, 1);
 	}
 
 	public List<StructuralCausalModel> getSelectedPoints() {
@@ -301,23 +323,23 @@ public class EMCredalBuilder extends CredalBuilder{
 						,causalmodel.getExogenousVars()
 		);
 
+		ExpectationMaximization em = null;
+		Collection stepArgs = null;
+		if(this.data==null) {
+			em = new BayesianCausalEM(startingModel).setRegularization(0.0);
+			stepArgs = (Collection) endogJointProbs.values();
+		}else{
+			em = new FrequentistCausalEM(startingModel).setRegularization(0.0).usePosteriorCache(true);
+			stepArgs = (Collection) Arrays.asList(data);
+		}
 
-		// Run EM in the causal model
-		ExpectationMaximization em =
-				new BayesianCausalEM(startingModel)
-						.setVerbose(false)
-						.setRecordIntermediate(true)
-						.setRegularization(0.0)
-						//.setStopAtConvergence(false)
-						//.setKlthreshold(0.000001) //default 0.00001;
-						.setTrainableVars(causalmodel.getExogenousVars());
-						//.setTargetGenDist(targetGenDist);
+		em.setVerbose(false)
+				.setRecordIntermediate(true)
+				.setTrainableVars(causalmodel.getExogenousVars());
+		em.run(stepArgs, maxEMIter);
 
-		// run the method
-		em.run(endogJointProbs.values(), maxEMIter);
 
 		List<StructuralCausalModel> t = em.getIntermediateModels();
-		isInside(t.get(t.size()-1));
 
 		// Return the trajectories
 		return t;
@@ -339,6 +361,17 @@ public class EMCredalBuilder extends CredalBuilder{
 		return this;
 	}
 
+
+	public EMCredalBuilder setMask(boolean[] mask) {
+		this.mask = mask;
+		return this;
+	}
+
+	public EMCredalBuilder setNumDecimalsRound(int numDecimalsRound) {
+		this.numDecimalsRound = numDecimalsRound;
+		return this;
+	}
+
 	public static void main(String[] args) throws InterruptedException {
 
 		StructuralCausalModel m = null;
@@ -355,12 +388,12 @@ public class EMCredalBuilder extends CredalBuilder{
 		// Xs
 		m.addVariable(2, false);
 		//m.addVariable(3, false);
-		m.addVariable(3, false);
 		m.addVariable(2, false);
+//		m.addVariable(2, false);
 
 		// Us
-		m.addVariable(3, true);
-		m.addVariable(7, true);
+		m.addVariable(2, true);
+		m.addVariable(4, true);
 		//m.addVariable(4, true);
 
 		X = m.getEndogenousVars();
@@ -371,19 +404,25 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		m.addParents(X[0], U[0]);
 		m.addParents(X[1], U[1]);
-		m.addParents(X[2], U[1]);
+		
+		
+//		m.addParents(X[2], U[1]);
 
 		// m.addParents(X[2], U[0]);
 		// m.addParents(X[3], U[1]);
+		
+		
+		int target = X[1];
+		int intervention = X[0];
 
-		m.fillWithRandomFactors(4);
+		m.fillWithRandomFactors(2);
 		try {
 			CredalCausalVE ve = new CredalCausalVE(m);
 			VertexFactor exactRes = (VertexFactor) ve.causalQuery()
-					.setTarget(X[2])
-					.setIntervention(X[1], 0)
+					.setTarget(target)
+					.setIntervention(intervention, 0)
 					.run();
-			System.out.println(s);
+			System.out.println("Exact result:");
 			System.out.println(exactRes);
 		}catch (Exception e){
 			System.out.println("Exception");
@@ -392,18 +431,35 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		SparseModel vmodel = m.toVCredal(m.getEmpiricalProbs());
 		System.out.println(vmodel);
-		System.out.println("True Empirical");
+
+		TIntIntMap[] data = m.samples(1000, m.getEndogenousVars());
+
+		//System.out.println("PGM v-model:");
+		//System.out.println(m.toVCredal(DataUtil.getEmpiricalMap(m,data).values()));
+
+
+		System.out.println("Empirical from generative model");
 		System.out.println(m.getEmpiricalMap(false));
 
+		System.out.println("Empirical from data");
+		System.out.println(DataUtil.getEmpiricalMap(m,data));
 
-		for(SelectionPolicy pol : SelectionPolicy.values()) {
+
+		// Even with the equationless it does not work
+		//StructuralCausalModel m2 = CausalBuilder.of(m.getEmpiricalNet()).build();
+
+
+		for(SelectionPolicy pol : List.of(SelectionPolicy.LAST)) {
+
+
+
 
 			System.out.println(pol);
 			System.out.println("--------------------------------------------------------");
 			EMCredalBuilder builder = EMCredalBuilder.of(m)
 					.setSelPolicy(pol)
-					.setMaxEMIter(500)
-					.setNumTrajectories(40)
+					.setMaxEMIter(200)
+					.setNumTrajectories(20)
 					.setTrueCredalModel(vmodel)
 					.build();
 
@@ -416,8 +472,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 			CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints());
 			IntervalFactor res = (IntervalFactor) inf.causalQuery()
-					.setTarget(X[2])
-					.setIntervention(X[1], 0)
+					.setTarget(target)
+					.setIntervention(intervention, 0)
 					.run();
 
 			System.out.println("\n\nResult running multiple precise VE:\n\n"+res);
@@ -425,8 +481,8 @@ public class EMCredalBuilder extends CredalBuilder{
 			CredalCausalVE inf2 = new CredalCausalVE(builder.getModel());
 			VertexFactor res2 =
 					(VertexFactor) inf2.causalQuery()
-					.setTarget(X[2])
-					.setIntervention(X[1], 0)
+					.setTarget(target)
+					.setIntervention(intervention, 0)
 					.run();
 
 			System.out.println("\n\nResult credal VE:\n\n"+res2);

@@ -35,7 +35,7 @@ public class ModelGenerator {
 
 		for(int[] p : pairs) {
 			// Cardinality of the new U variable
-			int card = m.getDomain(Ints.concat(p, m.getEndegenousParents(p))).getCombinations();
+			int card = m.getDomain(Ints.concat(p, m.getEndegenousParents(p))).getCombinations()+1;
 			int u_new = m.addVariable(card, true);
 			m.addParent(p[0], u_new);
 			m.addParent(p[1], u_new);
@@ -59,7 +59,7 @@ public class ModelGenerator {
 			StructuralCausalModel m2 = endogenousModel.copy();
 
 			// Cardinality of the new U variable
-			int card = m2.getDomain(Ints.concat(p, m2.getEndegenousParents(p))).getCombinations();
+			int card = m2.getDomain(Ints.concat(p, m2.getEndegenousParents(p))).getCombinations()+1;
 			int u_new = m2.addVariable(card, true);
 			m2.addParent(p[0], u_new);
 			m2.addParent(p[1], u_new);
@@ -84,7 +84,7 @@ public class ModelGenerator {
 		// Add U nodes to those X without a U parent
 		for(int x: endogenousModel.getEndogenousVars()){
 			if(endogenousModel.getExogenousParents(x).length==0){
-				int card = endogenousModel.getDomain(Ints.concat(new int[]{x}, endogenousModel.getEndegenousParents(x))).getCombinations();
+				int card = endogenousModel.getDomain(Ints.concat(new int[]{x}, endogenousModel.getEndegenousParents(x))).getCombinations()+1;
 				int u_new = endogenousModel.addVariable(card, true);
 				endogenousModel.addParent(x, u_new);
 			}

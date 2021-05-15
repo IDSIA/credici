@@ -27,9 +27,9 @@ public class modelGen {
 
 		// set1
 		String[] topologies = new String[]{"chain"};
-		int[] treeWidthExo = new int[]{0,1}; //
+		int[] treeWidthExo = new int[]{1,0}; //
 		int[] numEndogenous = new int[]{4,6};
-		int[] index = IntStream.range(0,10).toArray();
+		int[] index = IntStream.range(0,20).toArray();
 
 
 		for(String top : topologies){

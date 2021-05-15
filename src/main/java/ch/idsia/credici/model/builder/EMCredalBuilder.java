@@ -36,6 +36,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public HashMap<Integer, BayesianFactor> endogJointProbs;
 
+	public HashMap<Set<Integer>, BayesianFactor> inputGenDist;
+
 	public HashMap<Set<Integer>, BayesianFactor> targetGenDist;
 
 	public int maxEMIter = 200;
@@ -65,10 +67,8 @@ public class EMCredalBuilder extends CredalBuilder{
 	public EMCredalBuilder(StructuralCausalModel causalModel){
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
-		this.targetGenDist = causalModel.getEmpiricalMap(false);
-
-		if(this.numDecimalsRound>0)
-			this.targetGenDist = FactorUtil.fixEmpiricalMap(targetGenDist, numDecimalsRound);
+		this.inputGenDist = causalModel.getEmpiricalMap(false);
+		setTargetGenDist();
 
 	}
 	public static EMCredalBuilder of(StructuralCausalModel causalModel){
@@ -79,8 +79,11 @@ public class EMCredalBuilder extends CredalBuilder{
 	public EMCredalBuilder(StructuralCausalModel causalModel, TIntIntMap[] data){
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
-		this.targetGenDist = DataUtil.getEmpiricalMap(causalModel, data);
 		this.data = data;
+
+		this.inputGenDist = causalModel.getEmpiricalMap(false);
+		setTargetGenDist();
+
 	}
 
 	public static EMCredalBuilder of(StructuralCausalModel causalModel, TIntIntMap[] data){
@@ -112,20 +115,15 @@ public class EMCredalBuilder extends CredalBuilder{
 	private void selectPoints(){
 		// If there is not any inner point, apply LAST,
 		// which can always be applyed but the inner approximation is not guaranteed.
-
+/*
 		for(List<StructuralCausalModel> t : this.trajectories){
 			StructuralCausalModel m = t.get(t.size()-1);
-
-			System.out.println(m.getEmpiricalMap(false));
-
-
 			System.out.print(Probability.logLikelihood(targetGenDist, targetGenDist, 1));
-
 			System.out.print("\t"+Probability.logLikelihood(m.getEmpiricalMap(false), targetGenDist, 1));
-			System.out.println("\t"+ratioLk(t.get(t.size()-1)));
-
-
+			System.out.println("\tratio="+ratioLk(t.get(t.size()-1)));
 		}
+
+ */
 
 		if(selPolicy == SelectionPolicy.LAST || !hasInnerPoint()) {
 			selectedPoints = getTrajectories().stream().map(t -> t.get(t.size() - 1)).collect(Collectors.toList());
@@ -369,8 +367,19 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public EMCredalBuilder setNumDecimalsRound(int numDecimalsRound) {
 		this.numDecimalsRound = numDecimalsRound;
+		setTargetGenDist();
 		return this;
 	}
+
+	private void setTargetGenDist(){
+		if(this.numDecimalsRound>0)
+			this.targetGenDist = FactorUtil.fixEmpiricalMap(this.inputGenDist, numDecimalsRound);
+		else
+			this.targetGenDist = this.inputGenDist;
+
+	}
+
+
 
 	public static void main(String[] args) throws InterruptedException {
 

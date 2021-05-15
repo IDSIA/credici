@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
@@ -12,6 +13,8 @@ public class Query<M, R extends GenericFactor> {
 
     private boolean isCounterfactual = false;
 
+    private WorldMapping counterfactualMapping = null;
+
     private int[] target;
 
     private TIntIntMap evidence = new TIntIntHashMap();
@@ -21,7 +24,7 @@ public class Query<M, R extends GenericFactor> {
     private double epsilon = 0.0;
 
 
-    public Query(CausalInference inf){
+    public Query(CausalInference inf) {
         this.inf = inf;
     }
 
@@ -74,6 +77,14 @@ public class Query<M, R extends GenericFactor> {
         return isCounterfactual;
     }
 
+    public WorldMapping getCounterfactualMapping() {
+        return counterfactualMapping;
+    }
+
+    public void setCounterfactualMapping(WorldMapping counterfactualMapping) {
+        this.counterfactualMapping = counterfactualMapping;
+    }
+
     public Query setEpsilon(double epsilon) {
         this.epsilon = epsilon;
         return this;
@@ -84,16 +95,20 @@ public class Query<M, R extends GenericFactor> {
     }
 
     public R run() throws InterruptedException {
-        if(inf == null)
+        if (inf == null)
             throw new IllegalArgumentException("causal inference engine is not set");
         return (R) inf.run(this);
 
     }
 
-    public M getInferenceModel() throws InterruptedException {
-        if(inf == null)
+    public M getInferenceModel(boolean simplify) throws InterruptedException {
+        if (inf == null)
             throw new IllegalArgumentException("causal inference engine is not set");
-        return (M) inf.getInferenceModel(this);
+        return (M) inf.getInferenceModel(this, simplify);
 
+    }
+
+    public M getInferenceModel() throws InterruptedException {
+        return getInferenceModel(true);
     }
 }

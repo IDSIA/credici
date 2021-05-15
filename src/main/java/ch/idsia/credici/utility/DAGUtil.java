@@ -7,7 +7,9 @@ import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
+import org.jgrapht.Graph;
 import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DefaultUndirectedGraph;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.jgrapht.traverse.TopologicalOrderIterator;
 
@@ -161,6 +163,25 @@ public class DAGUtil {
         }
 
         return dag;
+    }
+
+
+    public static Graph moral(SparseDirectedAcyclicGraph dag){
+
+        Graph moral = new DefaultUndirectedGraph(DefaultEdge.class);
+        for(int x : dag.getVariables())
+            moral.addVertex(x);
+
+        for(int x: dag.getVariables()){
+            for(int y: dag.getParents(x)){
+                moral.addEdge(y,x);
+                for(int y2: dag.getParents(x)){
+                    if(y!=y2 && !moral.containsEdge(y,y2))
+                        moral.addEdge(y, y2);
+                }
+            }
+        }
+        return moral;
     }
 
 

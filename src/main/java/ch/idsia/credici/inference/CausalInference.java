@@ -1,9 +1,21 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.model.CausalOps;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.GenericFactor;
+import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.inference.approxlp.CredalApproxLP;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
+import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.user.credal.Interval;
+import ch.idsia.crema.user.credal.IntervalFactor;
+import com.google.common.primitives.Doubles;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import jdk.jshell.spi.ExecutionControl;
 
 /**
  * Author:  Rafael Cabañas
@@ -57,7 +69,12 @@ public abstract class CausalInference<M, R extends GenericFactor>{
         return model;
     }
 
-    public abstract M getInferenceModel(Query q);
+    public abstract M getInferenceModel(Query q, boolean simplify);
+
+    public M getInferenceModel(Query q) {
+        return getInferenceModel(q, true);
+    }
+
 
 
     public Query causalQuery(){
@@ -68,5 +85,50 @@ public abstract class CausalInference<M, R extends GenericFactor>{
         return new Query<M,R>(this).setCounterfactual(true);
     }
 
+    public R probNecessity(int cause, int effect) throws InterruptedException {
+        return probNecessity(cause, effect, 0,1);
+    }
+    public R probNecessity(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+
+        Query q = this.counterfactualQuery()
+                .setTarget(effect)
+                .setIntervention(cause, falseState)
+                .setEvidence(ObservationBuilder.observe(new int[]{effect, cause}, new int[]{trueState, trueState}))
+                .setTarget(effect);
+
+        R res = (R) q.run();
+        int var = q.getCounterfactualMapping().getEquivalentVars(1,effect);
+        res = (R) FactorUtil.filter(res, var, falseState);
+
+        return res;
+
+    }
+
+    public R probSufficiency(int cause, int effect) throws InterruptedException {
+        return probSufficiency(cause, effect, 0,1);
+    }
+    public R probSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+
+        Query q = this.counterfactualQuery()
+                .setTarget(effect)
+                .setIntervention(cause, trueState)
+                .setEvidence(ObservationBuilder.observe(new int[]{effect, cause}, new int[]{falseState, falseState}))
+                .setTarget(effect);
+
+        R res = (R) q.run();
+        int var = q.getCounterfactualMapping().getEquivalentVars(1,effect);
+        res = (R) FactorUtil.filter(res, var, trueState);
+
+        return res;
+
+    }
+
+    public R probNecessityAndSufficiency(int cause, int effect) throws InterruptedException, ExecutionControl.NotImplementedException {
+        return this.probNecessityAndSufficiency(cause, effect, 0, 1);
+    }
+
+    public R probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
+        throw new ExecutionControl.NotImplementedException("Not implemented");
+    }
 
 }

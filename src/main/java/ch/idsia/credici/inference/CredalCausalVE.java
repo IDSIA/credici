@@ -4,6 +4,7 @@ import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
@@ -13,6 +14,7 @@ import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import jdk.jshell.spi.ExecutionControl;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Arrays;
@@ -42,7 +44,7 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
 
 
     @Override
-    public SparseModel getInferenceModel(Query q) {
+    public SparseModel getInferenceModel(Query q, boolean simplify) {
 
         target = q.getTarget();
         TIntIntMap evidence = q.getEvidence();
@@ -55,14 +57,16 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
         }else{
             infModel = (SparseModel) CausalOps.counterfactualModel(model, intervention);
             //map the target to the alternative world
-            target = WorldMapping.getMap(infModel).getEquivalentVars(1, target);
+            q.setCounterfactualMapping(WorldMapping.getMap(infModel));
+            target = q.getCounterfactualMapping().getEquivalentVars(1, target);
         }
 
         // cut arcs coming from an observed node and remove barren w.r.t the target
-        RemoveBarren removeBarren = new RemoveBarren();
-        infModel = removeBarren
-                .execute(new CutObserved().execute(infModel, evidence), target, evidence);
-
+        if (simplify) {
+            RemoveBarren removeBarren = new RemoveBarren();
+            infModel = removeBarren
+                    .execute(new CutObserved().execute(infModel, evidence), target, evidence);
+        }
         return infModel;
     }
 
@@ -90,6 +94,23 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
         VertexFactor.CONVEX_HULL_MARG = true;
         ve.setFactors(infModel.getFactors());
         return ((VertexFactor) ve.run(target)).normalize().convexHull(true);
+
+    }
+
+
+    public VertexFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
+        SparseModel reality = (SparseModel) this.getModel();
+        SparseModel doTrue = (SparseModel)this.causalQuery().setIntervention(cause, trueState).getInferenceModel(false);
+        SparseModel doFalse = (SparseModel)this.causalQuery().setIntervention(cause, falseState).getInferenceModel(false);
+
+        SparseModel pns_model = (SparseModel) CausalOps.merge(reality, doTrue, doFalse);
+
+        WorldMapping map = WorldMapping.getMap(pns_model);
+        int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
+
+        CausalInference infInternal =  new CredalCausalVE(pns_model);
+        VertexFactor prob = (VertexFactor) infInternal.causalQuery().setTarget(target).run();
+        return (VertexFactor) FactorUtil.filter(FactorUtil.filter(prob, target[0], trueState), target[1], falseState);
 
     }
 

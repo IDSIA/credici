@@ -7,9 +7,7 @@ import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -17,8 +15,6 @@ import java.util.stream.Stream;
 public class DataUtil {
 
 	public static BayesianFactor getCounts(TIntIntMap[] data, Strides dom) {
-
-
 		// sort the variables in the domain
 		dom = dom.sort();
 
@@ -39,6 +35,38 @@ public class DataUtil {
 		}
 		return counts;
 	}
+
+	public static TIntIntMap[] dataFromCounts(BayesianFactor counts){
+		return dataFromCounts(counts, true);
+	}
+
+	public static TIntIntMap[] dataFromCounts(BayesianFactor counts, boolean shuffle){
+
+		Strides dom = counts.getDomain();
+		int[] vars = dom.getVariables();
+
+
+		List data = new ArrayList();
+
+		for (int i = 0; i < dom.getCombinations(); i++) {
+
+			int[] states = dom.statesOf(i);
+			int n = (int) counts.getValue(states);
+
+			for(int k=0; k<n; k++){
+				TIntIntMap assignament = new TIntIntHashMap();
+				for (int j = 0; j < vars.length; j++)
+					assignament.put(vars[j], states[j]);
+				data.add(assignament);
+			}
+		}
+
+		if(shuffle)
+			Collections.shuffle(data);
+
+		return (TIntIntMap[])data.toArray(TIntIntMap[]::new);
+	}
+
 
 
 	public static BayesianFactor getJointProb(TIntIntMap[] data, Strides dom) {

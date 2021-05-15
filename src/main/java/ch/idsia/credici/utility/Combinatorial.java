@@ -83,4 +83,17 @@ public class Combinatorial {
                 .map(v -> Doubles.concat(v, new double[]{1.0-DoubleStream.of(v).sum()}))
                 .toArray(double[][]::new);
     }
+
+    public static int[][] randomPairs(int[] elements){
+        int[] aux = CollectionTools.shuffle(elements);
+        int N = aux.length/2;
+        int[][] pairs = new int[N][2];
+
+        for(int i=0; i<N; i++){
+            pairs[i][0] = aux[i*2];
+            pairs[i][1] = aux[i*2 + 1];
+        }
+
+        return pairs;
+    }
 }

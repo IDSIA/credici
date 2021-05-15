@@ -72,4 +72,18 @@ public class EncodingUtil {
 		return out;
 	}
 
+	public static List<boolean[]> getSequentialMask(int size) {
+
+		List out = new ArrayList();
+
+		boolean[] m = new boolean[size];
+
+		for (int i =0; i<size; i++) {
+			m[i] = true;
+			out.add(m.clone());
+		}
+
+		return out;
+	}
+
 }

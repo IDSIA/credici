@@ -44,7 +44,7 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
     }
 
     @Override
-    public SparseModel getInferenceModel(Query q) {
+    public SparseModel getInferenceModel(Query q, boolean simplify) {
 
         target = q.getTarget();
         epsilon = q.getEpsilon();
@@ -63,13 +63,16 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
         }else{
             infModel = (SparseModel) CausalOps.counterfactualModel(model, intervention);
             //map the target to the alternative world
-            target = WorldMapping.getMap(infModel).getEquivalentVars(1, target);
+            q.setCounterfactualMapping(WorldMapping.getMap(infModel));
+            target = q.getCounterfactualMapping().getEquivalentVars(1, target);
         }
 
         // preprocessing
-        RemoveBarren removeBarren = new RemoveBarren();
-        infModel = removeBarren
-                .execute(new CutObservedSepHalfspace().execute(infModel, evidence), target, evidence);
+        if (simplify) {
+            RemoveBarren removeBarren = new RemoveBarren();
+            infModel = removeBarren
+                    .execute(new CutObservedSepHalfspace().execute(infModel, evidence), target, evidence);
+        }
 
         for(int v : infModel.getVariables()) {
             infModel.setFactor(v, ((SeparateHalfspaceFactor) infModel.getFactor(v)).removeNormConstraints());

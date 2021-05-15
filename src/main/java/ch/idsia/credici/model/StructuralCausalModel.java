@@ -28,6 +28,8 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
+import org.jgrapht.Graph;
+import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
 
 import java.util.*;
@@ -965,6 +967,27 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			out.setFactor(v, f1.addition(f2).scalarMultiply(0.5));
 		}
 		return out;
+	}
+
+	public SparseDirectedAcyclicGraph getExogenousDAG(){
+		SparseDirectedAcyclicGraph dag = this.getNetwork().copy();
+		for(int x : this.getEndogenousVars()){
+			for(int y: this.getEndegenousParents(x)){
+				dag.removeLink(y,x);
+			}
+		}
+		return dag;
+	}
+
+	public int getExogenousTreewidth(){
+		Graph moral = DAGUtil.moral(this.getExogenousDAG());
+		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() - 1;
+
+	}
+	public int getTreewidth(){
+		Graph moral = DAGUtil.moral(this.getNetwork());
+		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() - 1;
+
 	}
 
 }

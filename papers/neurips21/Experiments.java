@@ -163,7 +163,7 @@ public class Experiments implements Runnable{
 
 		if(outputFolder != null) {
 
-			outputFile = new File(outputFolder + "/" + output.get("file") + "_x" + executions + "_d" + dataSize + "_m" + maxiter + ".py");
+			outputFile = new File(outputFolder + "/" +output.get("folder")+"_"+output.get("file") + "_x" + executions + "_d" + dataSize + "_m" + maxiter + ".py");
 			outPrinter = new PrintWriter(new BufferedWriter(new FileWriter(outputFile, false)));
 		}
 

@@ -26,6 +26,7 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Random;
 
 import ch.idsia.credici.utility.experiments.Watch;
 
@@ -37,6 +38,16 @@ public class Experiments implements Runnable{
 /*
 --executions 20 --datasize 1000 --selectpol LAST ./papers/neurips21/models/set1/chain_twExo0_nEndo4_5.uai
 --executions 20 --datasize 1000 --selectpol LAST ./papers/neurips21/models/set1/chain_twExo1_nEndo4_6.uai
+
+case with ratio==0 but good results:
+--executions 20 --datasize 500 --policy LAST --seed 1234 ./papers/neurips21/models/set1/chain_twExo1_nEndo6_3.uai
+
+case with ratios of 0.0 and of 0.99, unfeasible:
+--executions 20 --datasize 500 --policy LAST ./papers/neurips21/models/set1/chain_twExo1_nEndo6_4.uai
+
+case with ratios of 0.99, unfeasible:
+--executions 20 --datasize 500 --policy LAST ./papers/neurips21/models/set1/chain_twExo1_nEndo6_6.uai
+
 
 
 */
@@ -59,7 +70,10 @@ public class Experiments implements Runnable{
 	@CommandLine.Option(names = {"-m", "--maxiter"}, description = "Maximum EM iterations per execution. Default 200")
 	private int maxiter = 200;
 
-	@CommandLine.Option(names = {"-s", "--selectpol"}, description = "Selection Policy: ${COMPLETION-CANDIDATES}")
+	@CommandLine.Option(names = {"-s", "--seed"}, description = "Random seed. Default 0")
+	private long seed = 0;
+
+	@CommandLine.Option(names = {"-p", "--policy"}, description = "Selection Policy: ${COMPLETION-CANDIDATES}")
 	private EMCredalBuilder.SelectionPolicy method = EMCredalBuilder.SelectionPolicy.LAST;
 
 	@CommandLine.Option(names={"-o", "--output"}, description = "Output folder for the results.")
@@ -124,6 +138,8 @@ public class Experiments implements Runnable{
 	@Override
 	public void run(){
 
+		RandomUtil.setRandomSeed(seed);
+
 		// Get model filename and folder
 		String[] split =  modelPath.split("/");
 		output.put("file", split[split.length-1]);
@@ -161,9 +177,11 @@ public class Experiments implements Runnable{
 		if(logfile!=null)
 			logger.setLogfile(logfile);
 
-		if(outputFolder != null) {
+		String expStr = "_x" + executions +"_p"+method+ "_d" + dataSize + "_m" + maxiter +"_s"+seed;
+		logger.info(expStr);
 
-			outputFile = new File(outputFolder + "/" +output.get("folder")+"_"+output.get("file") + "_x" + executions + "_d" + dataSize + "_m" + maxiter + ".py");
+		if(outputFolder != null) {
+			outputFile = new File(outputFolder + "/" +output.get("folder")+"_"+output.get("file") + expStr + ".py");
 			outPrinter = new PrintWriter(new BufferedWriter(new FileWriter(outputFile, false)));
 		}
 
@@ -215,7 +233,9 @@ public class Experiments implements Runnable{
 
 		List masks = getSequentialMask(executions);
 		//int i=10;
-		double[][] pnsEM = new double[masks.size()][];
+		double[] pnsEM_l= new double[masks.size()];
+		double[] pnsEM_u= new double[masks.size()];
+
 		int[] innerPoints = new int[masks.size()];
 		int[] iterEM = new int[masks.size()];
 		long[] timeQuery = new long[masks.size()];
@@ -230,30 +250,36 @@ public class Experiments implements Runnable{
 			boolean[] m = (boolean[]) masks.get(i);
 			builder.setMask(m).selectAndMerge();
 			CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints());
-			pnsEM[i] = calculatePNS(inf);
+			double[] pnsEM = calculatePNS(inf);
+			pnsEM_l[i] = pnsEM[0];
+			pnsEM_u[i] = pnsEM[1];
 			time = Watch.stop();
 
 			innerPoints[i] = builder.getConvergingTrajectories().size();
 			timeQuery[i] = time;
 
-			iterEM[i] = builder.getTrajectories().get(i).size()-2;
+			iterEM[i] = builder.getTrajectories().get(i).size()-1;
 			llkratio[i] = builder.ratioLk(builder.getSelectedPoints().get(i));
 
 			logger.info("Approx PSN with "+(i+1)+" " +
-					"points: \t"+ Arrays.toString(pnsEM[i])+"\t (ratio="+llkratio[i]+", "+iterEM[i]+" iter. "+time+" ms.)");
+					"points: \t"+ Arrays.toString(pnsEM)+"\t (ratio="+llkratio[i]+", "+iterEM[i]+" iter. "+time+" ms.)");
 		}
 
 
 		logger.info("Done "+executions+" counterfactual queries in "+Arrays.stream(timeQuery).sum()+" ms.");
 
 		output.put("timeQuery", timeQuery);
-		output.put("pnsEM", pnsEM);
+		output.put("pnsEM_l", pnsEM_l);
+		output.put("pnsEM_u", pnsEM_u);
 		output.put("innerPoints", innerPoints);
 		output.put("iterEM", iterEM);
 		output.put("llkratio", llkratio);
 
-		if(infGroundTruth == InferenceMethod.saturation)
-			output.put("groundtruth", pnsEM[masks.size()-1]);
+		if(infGroundTruth == InferenceMethod.saturation) {
+			output.put("pnsExact_l", pnsEM_l[masks.size() - 1]);
+			output.put("pnsExact_u", pnsEM_u[masks.size() - 1]);
+
+		}
 
 	}
 
@@ -266,21 +292,26 @@ public class Experiments implements Runnable{
 			logger.info("Running exact method: "+infGroundTruth);
 
 			CausalInference inf = null;
+			double[] pnsExact = new double[]{-1,-1};
+			try {
+				if (infGroundTruth == InferenceMethod.cve)
+					inf = new CredalCausalVE(model, empData.values());
+				else
+					inf = new CredalCausalApproxLP(model, empData.values());
 
-			if(infGroundTruth==InferenceMethod.cve)
-				inf = new CredalCausalVE(model, empData.values());
-			else
-				inf = new CredalCausalApproxLP(model, empData.values());
 
-
-			double[] pnsExact = calculatePNS(inf);
+				pnsExact = calculatePNS(inf);
+			}catch(Exception e){
+				logger.severe("Exact method cannot be applied: Unfeasible solution");
+			}
 
 			long time = Watch.stop();
 
 			logger.info("Exact PSN \t: \t" + Arrays.toString(pnsExact) + " in " + time + " ms.");
 
 			// Save to output
-			output.put("pnsExact", pnsExact);
+			output.put("pnsExact_l", pnsExact[0]);
+			output.put("pnsExact_u", pnsExact[1]);
 			output.put("timeExact", time);
 		}
 		output.put("groundtruth", infGroundTruth.name());
@@ -297,10 +328,6 @@ public class Experiments implements Runnable{
 	}
 
 	private void init() throws IOException {
-
-
-
-
 
 		logger.info("Reading model at "+modelPath);
 		model = (StructuralCausalModel) IO.read(modelPath);
@@ -326,101 +353,19 @@ public class Experiments implements Runnable{
 		stats.put("nExo",  model.getExogenousVars().length);
 		stats.put("nEndo", model.getEndogenousVars().length);
 		stats.put("markovian", CausalInfo.of(model).isMarkovian());
+		stats.put("seed", seed);
 
-		output.put("stats", stats);
 
-		//String strStats = stats.keySet().stream().map(k -> k+": "+stats.get(k)).collect( Collectors.joining( "," ) );
 		logger.info("Model statistics: "+stats+"");
 
+
+		for(String k : stats.keySet())
+			output.put(k, stats.get(k));
+
+		//String strStats = stats.keySet().stream().map(k -> k+": "+stats.get(k)).collect( Collectors.joining( "," ) );
+
 	}
 
-
-
-
-	private static void run_(String modelPath, int executions, int maxIter, int dataSize) throws InterruptedException, IOException {
-		//Sample data
-		StructuralCausalModel model = (StructuralCausalModel) IO.read(modelPath);
-
-		System.out.println(model);
-		System.out.println("Exo tw: "+model.getExogenousTreewidth());
-		System.out.println("Exogenous DAG:");
-		System.out.println(model.getExogenousDAG());
-
-		System.out.println("True empirical:");
-		HashMap empTrue = 	model.getEmpiricalMap();
-		System.out.println(empTrue);
-
-		System.out.println("Data empirical:");
-		TIntIntMap[] data = model.samples(dataSize, model.getEndogenousVars());
-		HashMap empData = DataUtil.getEmpiricalMap(model, data);
-		System.out.println(empData);
-
-
-		int[] X = model.getEndogenousVars();
-
-
-		RandomUtil.setRandomSeed(0);
-		EMCredalBuilder builder = EMCredalBuilder.of(model, data)
-				.setMaxEMIter(maxIter)
-				.setNumTrajectories(executions)
-				//.setNumDecimalsRound(-1)
-				.buildTrajectories();
-
-		System.out.println("built trajectories");
-
-
-		// todo set masks
-		//builder.setNumDecimalsRound(10);
-		//builder.selectAndMerge()
-
-
-		//System.out.println("\tIs Inner approximation = " + builder.isInnerApproximation());
-		//System.out.println("\tConverging Trajectories = " +builder.getConvergingTrajectories().size());
-		//System.out.println("\tSelected points = " + builder.getSelectedPoints().size());
-
-		System.out.println("trajectories sizes:");
-		System.out.println(Arrays.toString(builder.getTrajectories().stream().map(t -> t.size()-1).toArray()));
-
-
-		List masks = getRandomSeqMask(executions);
-		//int i=10;
-		double[][] results = new double[masks.size()][];
-		for(int i=0; i<masks.size(); i++) {
-			System.out.print(".");
-			boolean[] m = (boolean[]) masks.get(i);
-			builder.setMask(m).selectAndMerge();
-			CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints());
-
-			VertexFactor pn = (VertexFactor) inf.probNecessity(X[0], X[X.length - 1]);
-			VertexFactor ps = (VertexFactor) inf.probSufficiency(X[0], X[X.length - 1]);
-			double[] pn_bounds = null;
-			double[] ps_bounds = null;
-
-			if(pn.getData()[0].length>1) {
-				pn_bounds = Doubles.concat(pn.getData()[0][0], pn.getData()[0][1]);
-				Arrays.sort(pn_bounds);
-			}else{
-				pn_bounds = Doubles.concat(pn.getData()[0][0], pn.getData()[0][0]);
-			}
-			if(ps.getData()[0].length>1) {
-				ps_bounds = Doubles.concat(ps.getData()[0][0], ps.getData()[0][1]);
-				Arrays.sort(ps_bounds);
-			}else{
-				ps_bounds = Doubles.concat(ps.getData()[0][0], ps.getData()[0][0]);
-			}
-
-			results[i] = Doubles.concat(pn_bounds, ps_bounds);
-		}
-
-
-		String s[] = modelPath.split("/");
-
-/*
-		new WriterCSV(results, wdir+resFolder+s[s.length-1]+".csv" )
-				.setVarNames("pn_low", "pn_up","ps_low", "ps_up")
-				.withIndex(true)
-				.write();*/
-	}
 
 	public static void disableWarning() {
 		try {

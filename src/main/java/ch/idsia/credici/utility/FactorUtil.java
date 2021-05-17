@@ -6,14 +6,13 @@ import ch.idsia.crema.factor.convert.BayesianToVertex;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.utility.ArraysUtil;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 
 public class FactorUtil {
@@ -35,7 +34,7 @@ public class FactorUtil {
 		HashMap out = new HashMap();
 
 		for(Set<Integer> s : emp.keySet()){
-			out.put(s, ((BayesianFactor)emp.get(s)).fixPrecission(numDecimals, Ints.toArray(s)));
+			out.put(s, FactorUtil.fixPrecission(((BayesianFactor)emp.get(s)), numDecimals, false, Ints.toArray(s)));
 		}
 		return out;
 
@@ -80,6 +79,23 @@ public class FactorUtil {
 
 	}
 
+
+	public static BayesianFactor  fixPrecission(BayesianFactor f, int num_decimals, boolean newZeros, int... left_vars){
+
+		Strides left = f.getDomain().intersection(left_vars);
+		Strides right = f.getDomain().remove(left);
+		BayesianFactor newFactor = f.reorderDomain(left.concat(right));
+		double[][] newData = new double[right.getCombinations()][left.getCombinations()];
+		double[][] oldData = ArraysUtil.reshape2d(newFactor.getData(), right.getCombinations());
+
+		for(int i=0; i<right.getCombinations(); i++){
+			newData[i] = CollectionTools.roundNonZerosToTarget(oldData[i], 1.0, newZeros, num_decimals);
+		}
+
+		newFactor.setData(Doubles.concat(newData));
+		return newFactor.reorderDomain(f.getDomain());
+
+	}
 
 
 }

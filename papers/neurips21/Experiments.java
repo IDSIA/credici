@@ -370,7 +370,8 @@ case with ratios of 0.99, unfeasible:
 		// Experiment global stats
 
 		stats = new HashMap<>();
-		stats.put("exoTW", model.getExogenousTreewidth());
+		int tw = model.getExogenousTreewidth();
+		stats.put("exoTW", tw);
 		stats.put("nExo",  model.getExogenousVars().length);
 		stats.put("nEndo", model.getEndogenousVars().length);
 		stats.put("markovian", CausalInfo.of(model).isMarkovian());
@@ -378,6 +379,11 @@ case with ratios of 0.99, unfeasible:
 
 
 		logger.info("Model statistics: "+stats+"");
+
+		// Change ground truth if needed
+		if(tw>1)
+			this.infGroundTruth = InferenceMethod.saturation;
+
 
 
 		for(String k : stats.keySet())

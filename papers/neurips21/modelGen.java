@@ -27,7 +27,7 @@ public class modelGen {
 
 		// set1
 		String[] topologies = new String[]{"chain"};
-		int[] treeWidthExo = new int[]{1,0}; //
+		int[] treeWidthExo = new int[]{2,3}; //
 		int[] numEndogenous = new int[]{4,6};
 		int[] index = IntStream.range(0,20).toArray();
 
@@ -88,6 +88,8 @@ public class modelGen {
 				i++;
 			}
 		}while(!feasible);
+
+		System.out.println("tw="+m.getExogenousTreewidth());
 
 
 

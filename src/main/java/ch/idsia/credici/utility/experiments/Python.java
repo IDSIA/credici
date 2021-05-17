@@ -3,6 +3,7 @@ package ch.idsia.credici.utility.experiments;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 
 public class Python {
@@ -21,7 +22,7 @@ public class Python {
 			}else if(v instanceof long[]) {
 					items[i] += Arrays.toString((long[]) v);
 			}else if(v instanceof double[]) {
-				items[i] += Arrays.toString((double[]) v);
+				items[i] += Arrays.toString((double[]) v).replace("Infinity", "float('inf')");;
 			}else if(v instanceof int[][] ){
 				items[i] += "["+ Stream.of((int[][]) v)
 						.map(r -> Arrays.toString(r))
@@ -47,6 +48,7 @@ public class Python {
 		return "dict("+Stream.of(items).collect(Collectors.joining(", "))+")";
 
 	}
+
 
 	public static void main(String[] args) {
 

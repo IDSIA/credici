@@ -101,6 +101,7 @@ case with ratios of 0.99, unfeasible:
 	StructuralCausalModel model;
 	TIntIntMap[] data;
 	HashMap empData;
+	int empSize;
 
 	int cause;
 	int effect;
@@ -119,6 +120,7 @@ case with ratios of 0.99, unfeasible:
 
 	HashMap<String, Object> stats;
 	HashMap<String, Object> output = new HashMap<>();
+
 
 	PrintWriter outPrinter = null;
 	File outputFile = null;
@@ -153,7 +155,7 @@ case with ratios of 0.99, unfeasible:
 		}catch (Exception e){
 			errMsg = e.toString();
 			logger.severe(errMsg);
-			//e.printStackTrace();
+			e.printStackTrace();
 
 		}catch (Error e){
 			errMsg = e.toString();
@@ -241,9 +243,16 @@ case with ratios of 0.99, unfeasible:
 		long[] timeQuery = new long[masks.size()];
 		double[] llkratio = new double[masks.size()];
 
+		double[] klqp = new double[masks.size()];
+		double[] klpq = new double[masks.size()];
+		double[] klsym = new double[masks.size()];
+
+
 
 
 		for(int i=0; i<masks.size(); i++) {
+
+
 
 			Watch.start();
 
@@ -260,9 +269,16 @@ case with ratios of 0.99, unfeasible:
 
 			iterEM[i] = builder.getTrajectories().get(i).size()-1;
 			llkratio[i] = builder.ratioLk(builder.getSelectedPoints().get(i));
+			klqp[i] = builder.klQP(builder.getSelectedPoints().get(i), false)/empSize;
+			klpq[i] = builder.klPQ(builder.getSelectedPoints().get(i), false)/empSize;
+			klsym[i] = builder.klsym(builder.getSelectedPoints().get(i), true)/empSize;
+
+
 
 			logger.info("Approx PSN with "+(i+1)+" " +
-					"points: \t"+ Arrays.toString(pnsEM)+"\t (ratio="+llkratio[i]+", "+iterEM[i]+" iter. "+time+" ms.)");
+					"points: \t"+ Arrays.toString(pnsEM)+"\t (ratio="+llkratio[i]+", " + "klqp="+klqp[i]+", "
+					+"klpq="+klpq[i]+", "+"klsym="+klsym[i]+", "+
+					" "+iterEM[i]+" iter. "+time+" ms.)");
 		}
 
 
@@ -274,6 +290,9 @@ case with ratios of 0.99, unfeasible:
 		output.put("innerPoints", innerPoints);
 		output.put("iterEM", iterEM);
 		output.put("llkratio", llkratio);
+		output.put("klpq", klpq);
+		output.put("klqp", klqp);
+		output.put("klsym", klsym);
 
 		if(infGroundTruth == InferenceMethod.saturation) {
 			output.put("pnsExact_l", pnsEM_l[masks.size() - 1]);
@@ -346,6 +365,8 @@ case with ratios of 0.99, unfeasible:
 		empData = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data), numDecimalsRound);
 		logger.info("Data empirical distribution: "+empData);
 
+		empSize = FactorUtil.EmpiricalMapSize(empTrue);
+		empTrue.put("empSize", empSize);
 		// Experiment global stats
 
 		stats = new HashMap<>();

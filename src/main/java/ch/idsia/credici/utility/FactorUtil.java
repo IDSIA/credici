@@ -41,6 +41,10 @@ public class FactorUtil {
 
 	}
 
+	public static int EmpiricalMapSize(HashMap<Set<Integer>, BayesianFactor> map){
+		return map.values().stream().mapToInt(p -> p.getData().length).sum();
+	}
+
 	public static GenericFactor filter(GenericFactor f, int var, int state) {
 		GenericFactor res = null;
 
@@ -75,5 +79,7 @@ public class FactorUtil {
 
 
 	}
+
+
 
 }

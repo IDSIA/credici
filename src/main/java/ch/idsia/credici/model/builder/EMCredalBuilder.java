@@ -295,6 +295,25 @@ public class EMCredalBuilder extends CredalBuilder{
 		return Probability.ratioLogLikelihood(map_i, targetGenDist, 1);
 	}
 
+	public double klPQ(StructuralCausalModel m, boolean zeroSafe){
+		HashMap<Set<Integer>, BayesianFactor> map_i = m.getEmpiricalMap(false);
+		if(numDecimalsRound>0)
+			map_i = FactorUtil.fixEmpiricalMap(map_i, numDecimalsRound);
+		return Probability.KL(targetGenDist, map_i, zeroSafe);
+	}
+	public double klQP(StructuralCausalModel m, boolean zeroSafe){
+		HashMap<Set<Integer>, BayesianFactor> map_i = m.getEmpiricalMap(false);
+		if(numDecimalsRound>0)
+			map_i = FactorUtil.fixEmpiricalMap(map_i, numDecimalsRound);
+		return Probability.KL(map_i, targetGenDist, zeroSafe);
+	}
+	public double klsym(StructuralCausalModel m, boolean zeroSafe){
+		HashMap<Set<Integer>, BayesianFactor> map_i = m.getEmpiricalMap(false);
+		if(numDecimalsRound>0)
+			map_i = FactorUtil.fixEmpiricalMap(map_i, numDecimalsRound);
+		return Probability.KLsymmetrized(map_i, targetGenDist, zeroSafe);
+	}
+
 	public List<StructuralCausalModel> getSelectedPoints() {
 		return selectedPoints;
 	}

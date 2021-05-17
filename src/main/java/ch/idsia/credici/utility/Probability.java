@@ -82,6 +82,72 @@ public class Probability {
 	}
 
 
+
+	// Compute the symmetrized KL distance between v1 and v2
+	public static double KLsymmetrized(double[] p, double[] q, boolean... zeroSafe){
+		return KL(p,q,zeroSafe) + KL(q,p,zeroSafe);
+	}
+
+	public static double KL(double[] p, double[] q, boolean... zeroSafe){
+
+		if(zeroSafe.length>1) throw new IllegalArgumentException("Wrong number of arguments,");
+		if(zeroSafe.length==0) zeroSafe = new boolean[]{false};
+		if(p.length != q.length) throw new IllegalArgumentException("Arrays of different sizes.");
+
+		double distance = 0;
+		int n = p.length;
+		for(int i=0; i<n; i++){
+
+			// p and q is 0, distance is o
+			if(p[i]!=0 || q[i]!=0) {
+				if(p[i]==0 && q[i]>0) {
+					if(!zeroSafe[0])
+						distance += Double.POSITIVE_INFINITY;
+				}
+				else if(!(p[i]>0 && q[i]==0)) {	// otherwise is not defined
+					distance += p[i] * (Math.log(p[i]) - Math.log(q[i]));
+				}
+
+			}
+
+
+			if(!zeroSafe[0] || (p[i]!=0 && q[i]!=0)) {
+			}
+		}
+		return distance;
+	}
+
+
+	public static double KLsymmetrized(BayesianFactor p, BayesianFactor q, boolean... zeroSafe){
+		return KLsymmetrized(p.getData(), q.getData(), zeroSafe);
+	}
+
+	public static double KL(BayesianFactor p, BayesianFactor q, boolean... zeroSafe){
+		return KL(p.getData(), q.getData(), zeroSafe);
+	}
+
+
+	public static double KLsymmetrized(HashMap<Set<Integer>, BayesianFactor> p,
+									   HashMap<Set<Integer>, BayesianFactor> q, boolean... zeroSafe) {
+		double l = 0.0;
+		for(Set<Integer> k : q.keySet())
+			l += Probability.KLsymmetrized((BayesianFactor) p.get(k), (BayesianFactor)q.get(k), zeroSafe);
+
+		return l;
+	}
+
+	public static double KL(HashMap<Set<Integer>, BayesianFactor> p,
+							HashMap<Set<Integer>, BayesianFactor> q, boolean... zeroSafe) {
+		double l = 0.0;
+		for(Set<Integer> k : q.keySet())
+			l += Probability.KL((BayesianFactor) p.get(k), (BayesianFactor)q.get(k), zeroSafe);
+
+		return l;
+	}
+
+
+
+
 	public static boolean vertexInside(BayesianFactor f, VertexFactor vf){
 
 		int[] leftVars = vf.getDataDomain().getVariables();

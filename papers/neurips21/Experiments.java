@@ -14,6 +14,7 @@ import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.credici.utility.experiments.Python;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.utility.InvokerWithTimeout;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
 import gnu.trove.map.TIntIntMap;
@@ -73,6 +74,10 @@ case with ratios of 0.99, unfeasible:
 	@CommandLine.Option(names = {"-s", "--seed"}, description = "Random seed. Default 0")
 	private long seed = 0;
 
+
+	@CommandLine.Option(names = {"-t", "--timeout"}, description = "Timeout in seconds. Default 6000s.")
+	private long timeout = 6000;
+
 	@CommandLine.Option(names = {"-p", "--policy"}, description = "Selection Policy: ${COMPLETION-CANDIDATES}")
 	private EMCredalBuilder.SelectionPolicy method = EMCredalBuilder.SelectionPolicy.LAST;
 
@@ -93,6 +98,7 @@ case with ratios of 0.99, unfeasible:
 
 	//////
 
+	public static Experiments exp;
 	private static String errMsg = "";
 	private static String argStr;
 	private static ch.idsia.credici.utility.experiments.Logger logger;
@@ -151,11 +157,13 @@ case with ratios of 0.99, unfeasible:
 		try {
 			setUpIO();
 			logger.info("Input args: " + argStr);
-			experiments();
+			ch.idsia.crema.utility.InvokerWithTimeout<double[]> invoker = new InvokerWithTimeout<>();
+			exp = this;
+			invoker.run(Experiments::pipline, timeout);
 		}catch (Exception e){
 			errMsg = e.toString();
 			logger.severe(errMsg);
-			e.printStackTrace();
+			//e.printStackTrace();
 
 		}catch (Error e){
 			errMsg = e.toString();
@@ -191,10 +199,11 @@ case with ratios of 0.99, unfeasible:
 	}
 
 
-	private void experiments() throws IOException, ExecutionControl.NotImplementedException, InterruptedException {
-		init();
-		runExact();
-		runApprox();
+	public static double[] pipline() throws IOException, ExecutionControl.NotImplementedException, InterruptedException {
+		exp.init();
+		exp.runExact();
+		exp.runApprox();
+		return null;
 		
 	}
 

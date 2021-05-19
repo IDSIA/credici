@@ -300,34 +300,13 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public void fillWithRandomFactors(int prob_decimals, boolean EqCheck, boolean fillEqs){
 
 		for(int u : this.getExogenousVars()){
-			this.setFactor(u,
-					BayesianFactor.random(this.getDomain(u),
-							this.getDomain(this.getParents(u)),
-							prob_decimals, false)
-			);
-
-			// todo: implement in a wiser way
+			randomizeExoFactor(u, prob_decimals);
 			if(fillEqs) {
 				do {
-					for (int x : getEndogenousChildren(u)) {
-						Strides pa_x = this.getDomain(this.getParents(x));
-						int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
-
-						this.setFactor(x,
-								BayesianFactor.deterministic(
-										this.getDomain(x),
-										pa_x,
-										assignments)
-						);
-					}
+					randomizeEndoChildren(u);
 				} while (EqCheck && !areValidSE(u));
 			}
-
-
-
 		}
-
-
 	}
 
 	/**
@@ -337,14 +316,32 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public void fillExogenousWithRandomFactors(int prob_decimals){
 
 		for(int u : this.getExogenousVars()){
-			this.setFactor(u,
-					BayesianFactor.random(this.getDomain(u),
-							this.getDomain(this.getParents(u)),
-							prob_decimals, false)
-			);
-
+				randomizeExoFactor(u, prob_decimals);
 		}
 	}
+
+
+	public void randomizeExoFactor(int u, int prob_decimals){
+		this.setFactor(u,
+				BayesianFactor.random(this.getDomain(u),
+						this.getDomain(this.getParents(u)),
+						prob_decimals, false)
+		);
+
+	}
+	public void randomizeEndoChildren(int u){
+		for (int x : getEndogenousChildren(u)) {
+			Strides pa_x = this.getDomain(this.getParents(x));
+			int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
+			this.setFactor(x,
+					BayesianFactor.deterministic(
+							this.getDomain(x),
+							pa_x,
+							assignments)
+			);
+		}
+	}
+
 
 		/**
 		 * Attach to each variable (endogenous) a random factor.
@@ -988,6 +985,26 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		Graph moral = DAGUtil.moral(this.getNetwork());
 		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() - 1;
 
+	}
+
+	public StructuralCausalModel incrementVarIDs(int increment){
+		StructuralCausalModel newModel = new StructuralCausalModel();
+
+		for(int v: this.getVariables()){
+			newModel.addVariable(v+increment, this.getSize(v), this.isExogenous(v));
+		}
+
+		for(int v: this.getVariables()){
+			int vnew = v+increment;
+			int[] parentsNew = IntStream.of(this.getParents(v)).map(i -> i+increment).toArray();
+			int[] newDomain = IntStream.of(this.getFactor(v).getDomain().getVariables()).map(i -> i+increment).toArray();
+			BayesianFactor newFactor = this.getFactor(v).copy().renameDomain(newDomain);
+
+			newModel.addParents(vnew, parentsNew);
+			newModel.setFactor(vnew, newFactor);
+		}
+
+		return newModel;
 	}
 
 }

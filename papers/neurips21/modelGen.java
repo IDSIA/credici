@@ -3,11 +3,13 @@ package neurips21;
 import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.builder.ModelGenerator;
+import ch.idsia.credici.model.builder.ChainGenerator;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.crema.data.WriterCSV;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 
@@ -19,7 +21,7 @@ public class modelGen {
 
 	//static String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
 	static String wdir = "./";
-	static String modelFolder = "papers/neurips21/models/set1b/";
+	static String modelFolder = "papers/neurips21/models/set6/";
 
 
 
@@ -27,16 +29,23 @@ public class modelGen {
 
 		// set1
 		String[] topologies = new String[]{"chain"};
-		int[] treeWidthExo = new int[]{0,1}; //
-		int[] numEndogenous = new int[]{4,6};
-		int[] index = IntStream.range(20,40).toArray();
+		int[] treeWidthExo = new int[]{1,0}; //
+		int[] numEndogenous = new int[]{25};
+		int[] index = IntStream.range(0,10).toArray();
 
 
 		for(String top : topologies){
 			for(int twExo : treeWidthExo){
 				for(int nEndo: numEndogenous){
 					for(int idx: index){
-						buildModel(top, twExo, nEndo, idx);
+
+						boolean dataCheck = false;
+						boolean empCheck = false;
+
+						if(twExo==0 || (twExo==1 && nEndo<8)) dataCheck = true;
+						if(twExo<2) empCheck = false;
+
+						buildModel(top, twExo, nEndo, idx, dataCheck, empCheck);
 					}
 				}
 			}
@@ -56,7 +65,7 @@ public class modelGen {
 
 	}
 
-	private static void buildModel(String top, int twExo, int nEndo, int idx) throws IOException {
+	private static void buildModel(String top, int twExo, int nEndo, int idx, boolean dataCheck, boolean empCheck) throws IOException {
 		String name = top+"_twExo"+twExo+"_nEndo"+nEndo+"_"+idx;
 		boolean feasible = true;
 
@@ -64,6 +73,7 @@ public class modelGen {
 
 		StructuralCausalModel m = null;
 		RandomUtil.setRandomSeed(name.hashCode());
+		TIntIntMap[] data = null;
 
 
 		int i = 0;
@@ -72,15 +82,17 @@ public class modelGen {
 			//RandomUtil.setRandomSeed(name.hashCode()+i);
 
 			feasible = true;
-			m = ModelGenerator.RandomChain(nEndo, twExo);
+			m = ChainGenerator.build(nEndo, twExo);
 
 			try {
-				if(twExo<2){
+				if(dataCheck){
 					//RandomUtil.setRandomSeed(0);
-					TIntIntMap[] data = m.samples(1000, m.getEndogenousVars());
+					data = m.samples(1000, m.getEndogenousVars());
 					HashMap empMap = DataUtil.getEmpiricalMap(m, data);
 					empMap = FactorUtil.fixEmpiricalMap(empMap, 5);
 					m.toVCredal(empMap.values());
+				}else if(empCheck){
+					m.toVCredal(FactorUtil.fixEmpiricalMap(m.getEmpiricalMap(), 5).values());
 				}
 			} catch (Exception e) {
 				feasible = false;
@@ -94,8 +106,13 @@ public class modelGen {
 
 
 
-		String filename = wdir+modelFolder+name+".uai";
-		IO.write(m, filename);
+		String filename = wdir+modelFolder+name;
 		System.out.println(filename);
+		IO.write(m, filename+".uai");
+
+		if(dataCheck)
+			DataUtil.toCSV(filename+".csv", data);
+
+
 	}
 }

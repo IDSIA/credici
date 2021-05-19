@@ -32,7 +32,10 @@ public class ExactCredalBuilder extends CredalBuilder {
 
     private boolean nonnegative = true;
 
+    private boolean raiseNoFeasible = true;
+
     protected TIntObjectMap<BayesianFactor> empiricalFactors;
+
 
 
     public ExactCredalBuilder(StructuralCausalModel causalModel){
@@ -93,9 +96,36 @@ public class ExactCredalBuilder extends CredalBuilder {
         return this;
     }
 
+    public ExactCredalBuilder setRaiseNoFeasible(boolean raiseNoFeasible) {
+        this.raiseNoFeasible = raiseNoFeasible;
+        return this;
+    }
 
     public ExactCredalBuilder build(){
+        initModel();
 
+        // Set the credal sets for the endogenous variables X (structural eqs.)
+        for(int x: causalmodel.getEndogenousVars()) {
+            buildEndoFactor(x);
+        }
+
+        // Get the credal sets for the exogenous variables U
+        for(int u: causalmodel.getExogenousVars()) {
+            try {
+                buildExoFactor(u);
+            }catch (NoFeasibleSolutionException e){
+                if(raiseNoFeasible)
+                    throw new NoFeasibleSolutionException();
+
+
+            }
+        }
+
+        return this;
+
+    }
+
+    private void initModel() {
         // Check that P(U) is in the model
         if(empiricalFactors == null || empiricalFactors.size() == 0 )
             assertTrueMarginals();
@@ -109,54 +139,46 @@ public class ExactCredalBuilder extends CredalBuilder {
         for (int v : model.getVariables()){
             model.addParents(v, causalmodel.getParents(v));
         }
-
-        // Set the credal sets for the endogenous variables X (structural eqs.)
-        for(int x: causalmodel.getEndogenousVars()) {
-            // Variable on the left should be the first
-            BayesianFactor eqx = causalmodel.getFactor(x).reorderDomain(x);
-
-            if (vertex) {
-                model.setFactor(x, new BayesianToVertex().apply(eqx, x));
-            } else{
-                SeparateHalfspaceFactor fx = new BayesianToHalfSpace().apply(eqx, x);
-                // Simplify the linear constraints
-                fx = fx.removeNormConstraints();
-                if(!this.nonnegative) fx = fx.removeNonNegativeConstraints();
-                model.setFactor(x, fx);
-            }
-        }
-
-        // Get the credal sets for the exogenous variables U
-        for(int u: causalmodel.getExogenousVars()) {
-
-            // Define the constraints in matrix form
-            double[][] coeff = getCoeff(u);
-            double[] vals = empiricalFactors.get(u).getData();
-
-            SeparateHalfspaceFactor constFactor =
-                    new SeparateHalfspaceFactor(false, this.nonnegative, model.getDomain(u), coeff, vals);
-
-            // remove constraints with all their coefficients equal to zero
-            constFactor = ConstraintsOps.removeZeroConstraints(constFactor);
-            if(constFactor==null)
-                throw new NoFeasibleSolutionException();
-
-            // Transforms the factor if needed and set it to the model
-            if(vertex){
-                VertexFactor fu = new HalfspaceToVertex().apply(constFactor);
-                if(fu.getData()[0]==null)
-                    throw new NoFeasibleSolutionException();
-                model.setFactor(u, fu);
-            }else{
-                model.setFactor(u, constFactor);
-            }
-
-        }
-
-        return this;
-
     }
 
+    private void buildEndoFactor(int x) {
+        // Variable on the left should be the first
+        BayesianFactor eqx = causalmodel.getFactor(x).reorderDomain(x);
+
+        if (vertex) {
+            model.setFactor(x, new BayesianToVertex().apply(eqx, x));
+        } else{
+            SeparateHalfspaceFactor fx = new BayesianToHalfSpace().apply(eqx, x);
+            // Simplify the linear constraints
+            fx = fx.removeNormConstraints();
+            if(!this.nonnegative) fx = fx.removeNonNegativeConstraints();
+            model.setFactor(x, fx);
+        }
+    }
+
+    public void buildExoFactor(int u) {
+        // Define the constraints in matrix form
+        double[][] coeff = getCoeff(u);
+        double[] vals = empiricalFactors.get(u).getData();
+
+        SeparateHalfspaceFactor constFactor =
+                new SeparateHalfspaceFactor(false, this.nonnegative, model.getDomain(u), coeff, vals);
+
+        // remove constraints with all their coefficients equal to zero
+        constFactor = ConstraintsOps.removeZeroConstraints(constFactor);
+        if(constFactor==null)
+            throw new NoFeasibleSolutionException();
+
+        // Transforms the factor if needed and set it to the model
+        if(vertex){
+            VertexFactor fu = new HalfspaceToVertex().apply(constFactor);
+            if(fu.getData()[0]==null)
+                throw new NoFeasibleSolutionException();
+            model.setFactor(u, fu);
+        }else{
+            model.setFactor(u, constFactor);
+        }
+    }
 
 
     private BayesianFactor getAssociatedEmpirical(int u, BayesianFactor[] factors){

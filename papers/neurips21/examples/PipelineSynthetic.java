@@ -2,7 +2,7 @@ package neurips21.examples;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
-import ch.idsia.credici.model.builder.ModelGenerator;
+import ch.idsia.credici.model.builder.ChainGenerator;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
@@ -13,7 +13,7 @@ import java.util.HashMap;
 public class PipelineSynthetic {
 	public static void main(String[] args) throws InterruptedException {
 		RandomUtil.setRandomSeed(1);
-		StructuralCausalModel model = ModelGenerator.RandomChain(5, 3);
+		StructuralCausalModel model = ChainGenerator.build(5, 3);
 
 		System.out.println(model);
 		System.out.println("Exo tw: "+model.getExogenousTreewidth());

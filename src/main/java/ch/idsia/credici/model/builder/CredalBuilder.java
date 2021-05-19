@@ -5,6 +5,9 @@ import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.model.graphical.SparseModel;
 import gnu.trove.map.hash.THashMap;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class CredalBuilder {
 
 	// input SCM
@@ -21,6 +24,14 @@ public abstract class CredalBuilder {
 		return model;
 	}
 
+	public List<Integer> getUnfeasibleNodes(){
+		List<Integer> out = new ArrayList<>();
+		for(int u : causalmodel.getExogenousVars()){
+			if(model.getFactor(u) == null)
+				out.add(u);
+		}
+		return out;
+	}
 
 	protected void assertTrueMarginals(){
 		for(int u: causalmodel.getExogenousVars()){

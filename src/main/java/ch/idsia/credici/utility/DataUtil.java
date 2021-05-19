@@ -1,12 +1,17 @@
 package ch.idsia.credici.utility;
 
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.crema.data.ReaderCSV;
+import ch.idsia.crema.data.WriterCSV;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
+import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -100,6 +105,23 @@ public class DataUtil {
 		}
 
 	 	return empirical;
+	}
+
+	public static void toCSV(String filename, TIntIntMap... data) throws IOException {
+
+		int[] dataVars = data[0].keys();
+		String[] varNames = IntStream.of(dataVars).mapToObj(i -> String.valueOf(i)).toArray(String[]::new);
+
+		int[][] dataArray = Stream.of(ObservationBuilder.toDoubles(data, dataVars))
+				.map(d -> ArraysUtil.toIntVector(d)).toArray(int[][]::new);
+
+		new WriterCSV(dataArray, filename)
+				.setVarNames(varNames).write();
+	}
+
+	public static TIntIntMap[] fromCSV(String filename) throws IOException, CsvException {
+		ReaderCSV reader = new ReaderCSV(filename).read();
+		return ObservationBuilder.observe(reader.getVarNames(), reader.getData());
 	}
 
 }

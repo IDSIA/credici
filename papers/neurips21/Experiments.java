@@ -329,7 +329,7 @@ case with ratios of 0.99, unfeasible:
 				if (infGroundTruth == InferenceMethod.cve)
 					inf = new CredalCausalVE(model, empData.values());
 				else if (infGroundTruth == InferenceMethod.cve)
-					inf = new CredalCausalVE(model, model.getEmpiricalProbs());
+					inf = new CredalCausalVE(model, FactorUtil.fixEmpiricalMap(model.getEmpiricalMap(), 5).values());
 				else
 					inf = new CredalCausalApproxLP(model, empData.values());
 

@@ -17,6 +17,7 @@ import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.InvokerWithTimeout;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
+import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
 import picocli.CommandLine;
@@ -53,7 +54,7 @@ case with ratios of 0.99, unfeasible:
 
 */
 
-	enum InferenceMethod {approxlp, cve, saturation}
+	enum InferenceMethod {approxlp, cve, saturation, cve_true}
 
 
 	/* command line arguments */
@@ -67,6 +68,9 @@ case with ratios of 0.99, unfeasible:
 
 	@CommandLine.Option(names = {"-d", "--datasize"}, description = "Size of the sampled data. Default 1000")
 	private int dataSize = 1000;
+
+	@CommandLine.Option(names = {"-f", "--datafile"}, description = "CSV file with the data. Default null")
+	private String datafile = null;
 
 	@CommandLine.Option(names = {"-m", "--maxiter"}, description = "Maximum EM iterations per execution. Default 200")
 	private int maxiter = 200;
@@ -187,7 +191,7 @@ case with ratios of 0.99, unfeasible:
 		if(logfile!=null)
 			logger.setLogfile(logfile);
 
-		String expStr = "_x" + executions +"_p"+method+ "_d" + dataSize + "_m" + maxiter +"_s"+seed;
+		String expStr = "_x" + executions +"_p"+method+"_m" + maxiter +"_s"+seed;
 		logger.info(expStr);
 
 		if(outputFolder != null) {
@@ -199,7 +203,7 @@ case with ratios of 0.99, unfeasible:
 	}
 
 
-	public static double[] pipline() throws IOException, ExecutionControl.NotImplementedException, InterruptedException {
+	public static double[] pipline() throws IOException, ExecutionControl.NotImplementedException, InterruptedException, CsvException {
 		exp.init();
 		exp.runExact();
 		exp.runApprox();
@@ -314,7 +318,7 @@ case with ratios of 0.99, unfeasible:
 	private void runExact() throws InterruptedException, ExecutionControl.NotImplementedException {
 		// True results with PGM method
 		
-		if(List.of(InferenceMethod.cve, InferenceMethod.approxlp).contains(infGroundTruth)) {
+		if(List.of(InferenceMethod.cve, InferenceMethod.cve_true, InferenceMethod.approxlp).contains(infGroundTruth)) {
 			Watch.start();
 			SparseModel vmodel = null;
 			logger.info("Running exact method: "+infGroundTruth);
@@ -324,6 +328,8 @@ case with ratios of 0.99, unfeasible:
 			try {
 				if (infGroundTruth == InferenceMethod.cve)
 					inf = new CredalCausalVE(model, empData.values());
+				else if (infGroundTruth == InferenceMethod.cve)
+					inf = new CredalCausalVE(model, model.getEmpiricalProbs());
 				else
 					inf = new CredalCausalApproxLP(model, empData.values());
 
@@ -355,7 +361,7 @@ case with ratios of 0.99, unfeasible:
 
 	}
 
-	private void init() throws IOException {
+	private void init() throws IOException, CsvException {
 
 		logger.info("Reading model at "+modelPath);
 		model = (StructuralCausalModel) IO.read(modelPath);
@@ -369,8 +375,15 @@ case with ratios of 0.99, unfeasible:
 		logger.info("True empirical distribution: "+empTrue);
 
 		// Sample data
-		logger.info("Sampling "+dataSize+" instances");
-		data = model.samples(dataSize, model.getEndogenousVars());
+
+		if(datafile  == null) {
+			logger.info("Sampling " + dataSize + " instances");
+			data = model.samples(dataSize, model.getEndogenousVars());
+		}else{
+			data = DataUtil.fromCSV(datafile);
+			logger.info("Loaded data with "+data.length+" from " + datafile + "");
+
+		}
 		empData = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data), numDecimalsRound);
 		logger.info("Data empirical distribution: "+empData);
 

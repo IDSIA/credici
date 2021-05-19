@@ -1,6 +1,7 @@
 package neurips21;
 
 import ch.idsia.credici.IO;
+import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.ChainGenerator;
@@ -29,8 +30,8 @@ public class modelGen {
 
 		// set1
 		String[] topologies = new String[]{"chain"};
-		int[] treeWidthExo = new int[]{1,0}; //
-		int[] numEndogenous = new int[]{25};
+		int[] treeWidthExo = new int[]{1}; //
+		int[] numEndogenous = new int[]{10};
 		int[] index = IntStream.range(0,10).toArray();
 
 
@@ -69,7 +70,7 @@ public class modelGen {
 		String name = top+"_twExo"+twExo+"_nEndo"+nEndo+"_"+idx;
 		boolean feasible = true;
 
-
+		dataCheck = true;
 
 		StructuralCausalModel m = null;
 		RandomUtil.setRandomSeed(name.hashCode());
@@ -91,6 +92,10 @@ public class modelGen {
 					HashMap empMap = DataUtil.getEmpiricalMap(m, data);
 					empMap = FactorUtil.fixEmpiricalMap(empMap, 5);
 					m.toVCredal(empMap.values());
+
+					//CredalCausalApproxLP inf = new CredalCausalApproxLP(m, empMap.values());
+					//System.out.println(inf.causalQuery().setTarget(nEndo-1).setIntervention(0,1).run());
+
 				}else if(empCheck){
 					m.toVCredal(FactorUtil.fixEmpiricalMap(m.getEmpiricalMap(), 5).values());
 				}
@@ -108,11 +113,11 @@ public class modelGen {
 
 		String filename = wdir+modelFolder+name;
 		System.out.println(filename);
-		IO.write(m, filename+".uai");
+/*		IO.write(m, filename+".uai");
 
 		if(dataCheck)
 			DataUtil.toCSV(filename+".csv", data);
 
-
+*/
 	}
 }

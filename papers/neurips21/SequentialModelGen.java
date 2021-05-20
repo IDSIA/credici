@@ -15,16 +15,25 @@ import java.util.stream.IntStream;
 public class SequentialModelGen {
 
 
-	static String modelFolder = "./papers/neurips21/models/tmp/";
+	static String modelFolder = "./papers/neurips21/models/tmp2/";
 	static String top = "chain";
 
 	public static void main(String[] args) throws IOException {
+
+
 		int[] treeWidthExo = new int[]{1}; //
-		int[] index = IntStream.range(1,20).toArray();
+		int[] index = IntStream.range(0,1).toArray();
+
+		if(args.length>0){
+			System.out.println("args: "+Arrays.toString(args));
+			treeWidthExo = new int[]{Integer.valueOf(args[0])};
+			index = IntStream.range(Integer.valueOf(args[1]),Integer.valueOf(args[2])).toArray();
+		}
+
 
 			for(int twExo : treeWidthExo){
 					for(int idx: index){
-						buildModel(1000, twExo, 5,15, true, idx);
+						buildModel(1000, twExo, 5,15, false, idx);
 					}
 				}
 	}

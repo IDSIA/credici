@@ -1,0 +1,1 @@
+results=dict(seed=0, markovian=True, pnsExact_u=0.0023282316937788834, error=True, nEndo=15, errorMsg='java.util.concurrent.ExecutionException: java.lang.NegativeArraySizeException: -1365279796', timeExact=72884, file='chain_twExo0_nEndo15_7.uai', folder='set5', exoTW=1, groundtruth='cve', nExo=15, pnsExact_l=0.0023282316937788834)

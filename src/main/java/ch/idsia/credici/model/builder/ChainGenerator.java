@@ -14,6 +14,7 @@ public class ChainGenerator {
 	int n;
 	int treeWidth;
 	StructuralCausalModel m = null;
+	boolean doubleCard = false;
 
 	public ChainGenerator(int n, int treeWidth){
 		this.n = n;
@@ -50,6 +51,11 @@ public class ChainGenerator {
 		return new ChainGenerator(n, treeWidth).build();
 	}
 
+	public ChainGenerator setDoubleCard(boolean doubleCard) {
+		this.doubleCard = doubleCard;
+		return this;
+	}
+
 	private void addQuasiMarkCoFounders(){
 		int[][] pairs = Combinatorial.randomPairs(m.getEndogenousVars());
 
@@ -63,7 +69,11 @@ public class ChainGenerator {
 	}
 
 	private int getExoCard(StructuralCausalModel model, int... X){
-		return model.getDomain(Ints.concat(X, model.getEndegenousParents(X))).getCombinations()+1;
+		int card = model.getDomain(Ints.concat(X, model.getEndegenousParents(X))).getCombinations();
+		if(this.doubleCard)
+			return card*2;
+		return card+1;
+
 	}
 
 	private void addRandomCoFounders() {

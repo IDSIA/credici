@@ -4,6 +4,8 @@ import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.DAGUtil;
+import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
@@ -329,8 +331,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		);
 
 	}
-	public void randomizeEndoChildren(int u){
-		for (int x : getEndogenousChildren(u)) {
+
+	public void randomizeEndoFactor(int x){
+		try {
 			Strides pa_x = this.getDomain(this.getParents(x));
 			int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
 			this.setFactor(x,
@@ -339,6 +342,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 							pa_x,
 							assignments)
 			);
+		}catch (Exception e){
+			System.out.println();
+
+		}
+	}
+	public void randomizeEndoChildren(int u){
+		for (int x : getEndogenousChildren(u)) {
+			randomizeEndoFactor(x);
 		}
 	}
 
@@ -844,17 +855,35 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public TIntIntMap[] samples(int N, int... vars) {
 		return IntStream.range(0, N).mapToObj(i -> sample(vars)).toArray(TIntIntMap[]::new);
 	}
-	public TIntIntMap sample(int... vars){
+	public TIntIntMap[] samples(TIntIntMap[] observations, int... vars) {
+		return Stream.of(observations).map(obs -> this.sample(obs, vars)).toArray(TIntIntMap[]::new);
+	}
 
-		TIntIntMap obs = new TIntIntHashMap();
+
+	public TIntIntMap[] samples(int N, TIntIntMap obs, int... vars) {
+		return IntStream.range(0, N).mapToObj(i -> this.sample(obs, vars)).toArray(TIntIntMap[]::new);
+	}
+
+	public TIntIntMap sample(int... vars) {
+		return sample(new TIntIntHashMap(), vars);
+	}
+	public TIntIntMap sample(TIntIntMap obs, int... vars){
+
+
+
 		Iterator it = this.getNetwork().iterator();
 		while(it.hasNext()){
 			int v = (int) it.next();
-			BayesianFactor f = this.getFactor(v).copy();
-			for(int pa : this.getParents(v)){
-				f = f.filter(pa, obs.get(pa));
+			if(!obs.containsKey(v)) {
+				BayesianFactor f = this.getFactor(v).copy();
+				//if(obs.size()>0 && v==9)
+				//	System.out.println();
+				//System.out.println("\t"+v);
+				for (int pa : this.getParents(v)) {
+					f = f.filter(pa, obs.get(pa));
+				}
+				obs.putAll(f.sample());
 			}
-			obs.putAll(f.sample());
 		}
 
 		if(vars.length==0)
@@ -1006,5 +1035,56 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		return newModel;
 	}
+
+	public boolean isCompatible(TIntIntMap[] data, int fixDecimals){
+		boolean compatible = false;
+		try {
+			HashMap empMap = DataUtil.getEmpiricalMap(this, data);
+
+			//System.out.println(empMap);
+
+			if(fixDecimals>0)
+				empMap = FactorUtil.fixEmpiricalMap(empMap, fixDecimals);
+
+
+			ExactCredalBuilder builder =
+					ExactCredalBuilder.of(this)
+							.setEmpirical(empMap.values())
+							.setToVertex()
+							.setRaiseNoFeasible(false)
+							.build();
+
+
+			if (builder.getUnfeasibleNodes().size() == 0)
+				compatible = true;
+			//else
+			//	System.out.println(builder.getUnfeasibleNodes());
+		}catch(Exception e){
+			//if(data[0].keys().length>5)
+			//	System.out.println(e);
+/*
+			HashMap empMap = DataUtil.getEmpiricalMap(this, data);
+
+			if(fixDecimals>0)
+				empMap = FactorUtil.fixEmpiricalMap(empMap, fixDecimals);
+
+			System.out.println(empMap);
+
+			ExactCredalBuilder builder =
+					ExactCredalBuilder.of(this)
+							.setEmpirical(empMap.values())
+							.setToVertex()
+							.setRaiseNoFeasible(false)
+							.build();
+
+*/
+
+
+		}
+
+		return compatible;
+	}
+
+
 
 }

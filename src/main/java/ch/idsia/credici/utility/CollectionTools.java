@@ -46,7 +46,11 @@ public class CollectionTools {
 
 		BigDecimal sum = BigDecimal.valueOf(0.0);
 		for (int i = 0; i < data.length; i++) {
-			sum = sum.add(BigDecimal.valueOf(data[i]));
+			//try {
+				sum = sum.add(BigDecimal.valueOf(data[i]));
+			//}catch(Exception e){
+			//	System.out.println();
+			//}
 		}
 		for (int i = data.length - 1; i >= 0; i--) {
 			if (data[i] != 0) {

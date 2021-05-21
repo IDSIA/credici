@@ -12,6 +12,7 @@ import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.credici.utility.experiments.Python;
+import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.InvokerWithTimeout;
@@ -25,10 +26,7 @@ import sun.misc.Unsafe;
 
 import java.io.*;
 import java.lang.reflect.Field;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
 import ch.idsia.credici.utility.experiments.Watch;
 
@@ -37,9 +35,10 @@ import static ch.idsia.credici.utility.EncodingUtil.getRandomSeqMask;
 import static ch.idsia.credici.utility.EncodingUtil.getSequentialMask;
 
 public class Experiments implements Runnable{
+
 /*
---executions 20 --datasize 1000 --selectpol LAST ./papers/neurips21/models/set1/chain_twExo0_nEndo4_5.uai
---executions 20 --datasize 1000 --selectpol LAST ./papers/neurips21/models/set1/chain_twExo1_nEndo4_6.uai
+--executions 20 --datasize 1000 --policy LAST ./papers/neurips21/models/set1/chain_twExo0_nEndo4_5.uai
+--executions 20 --datasize 1000 --policy LAST ./papers/neurips21/models/set1/chain_twExo1_nEndo4_6.uai
 
 case with ratio==0 but good results:
 --executions 20 --datasize 500 --policy LAST --seed 1234 ./papers/neurips21/models/set1/chain_twExo1_nEndo6_3.uai
@@ -54,7 +53,7 @@ case with ratios of 0.99, unfeasible:
 
 */
 
-	enum InferenceMethod {approxlp, cve, saturation, cve_true}
+	enum InferenceMethod {approxlp, cve, saturation}
 
 
 	/* command line arguments */
@@ -318,32 +317,45 @@ case with ratios of 0.99, unfeasible:
 	private void runExact() throws InterruptedException, ExecutionControl.NotImplementedException {
 		// True results with PGM method
 		
-		if(List.of(InferenceMethod.cve, InferenceMethod.cve_true, InferenceMethod.approxlp).contains(infGroundTruth)) {
+		if(List.of(InferenceMethod.cve, InferenceMethod.approxlp).contains(infGroundTruth)) {
 			Watch.start();
 			SparseModel vmodel = null;
 			logger.info("Running exact method: "+infGroundTruth);
 
+			boolean compatible = false;
+
 			CausalInference inf = null;
 			double[] pnsExact = new double[]{-1,-1};
 			try {
-				if (infGroundTruth == InferenceMethod.cve)
-					inf = new CredalCausalVE(model, empData.values());
-				else if (infGroundTruth == InferenceMethod.cve)
-					inf = new CredalCausalVE(model, FactorUtil.fixEmpiricalMap(model.getEmpiricalMap(), 5).values());
+
+				Collection inputProbs = null;
+				compatible = model.isCompatible(data, 5);
+
+				if(compatible)
+					inputProbs = FactorUtil.fixEmpiricalMap(empData, 5).values();
 				else
-					inf = new CredalCausalApproxLP(model, empData.values());
+					inputProbs = FactorUtil.fixEmpiricalMap(model.getEmpiricalMap(), 5).values();
+
+
+				if (infGroundTruth == InferenceMethod.cve)
+					inf = new CredalCausalVE(model, inputProbs);
+				else
+					inf = new CredalCausalApproxLP(model, inputProbs);
 
 
 				pnsExact = calculatePNS(inf);
 			}catch(Exception e){
 				logger.severe("Exact method cannot be applied: Unfeasible solution");
+				compatible = false;
 			}
 
 			long time = Watch.stop();
 
 			logger.info("Exact PSN \t: \t" + Arrays.toString(pnsExact) + " in " + time + " ms.");
+			logger.info("Compatible data: "+compatible);
 
 			// Save to output
+			output.put("compatible", compatible);
 			output.put("pnsExact_l", pnsExact[0]);
 			output.put("pnsExact_u", pnsExact[1]);
 			output.put("timeExact", time);
@@ -386,6 +398,9 @@ case with ratios of 0.99, unfeasible:
 		}
 		empData = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data), numDecimalsRound);
 		logger.info("Data empirical distribution: "+empData);
+
+
+
 
 		empSize = FactorUtil.EmpiricalMapSize(empTrue);
 		empTrue.put("empSize", empSize);
@@ -430,5 +445,5 @@ case with ratios of 0.99, unfeasible:
 		}
 	}
 
-}
 
+}

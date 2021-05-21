@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class ChainGenerator {
 
@@ -57,7 +58,8 @@ public class ChainGenerator {
 	}
 
 	private void addQuasiMarkCoFounders(){
-		int[][] pairs = Combinatorial.randomPairs(m.getEndogenousVars());
+		int[][] pairs = Combinatorial.randomPairs(m.getEndogenousVars(), 2);
+		//int [][] pairs = IntStream.range(0, m.getEndogenousVars().length/2).mapToObj(i -> new int[]{i*2,i*2+1}).toArray(int[][]::new);
 
 		for(int[] p : pairs) {
 			// Cardinality of the new U variable

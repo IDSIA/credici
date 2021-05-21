@@ -8,6 +8,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
+import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -50,7 +51,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
                     .execute(new CutObserved().execute(infModel, evidence), target, evidence);
         }
         if(elimOrder==null)
-            elimOrder = infModel.getVariables();
+            elimOrder = new MinFillOrdering().apply(infModel);
         return infModel;
     }
 

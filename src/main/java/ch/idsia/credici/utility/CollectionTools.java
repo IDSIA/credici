@@ -20,6 +20,10 @@ public class CollectionTools {
 		return Ints.toArray(aux);
 	}
 
+	public static int[] toIntArray(List<Integer> list){
+		return list.stream().mapToInt(x-> (int)x).toArray();
+	}
+
 
 
 	/**

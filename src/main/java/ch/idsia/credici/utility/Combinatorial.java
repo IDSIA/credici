@@ -1,11 +1,14 @@
 package ch.idsia.credici.utility;
 
+import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.DoubleStream;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class Combinatorial {
@@ -95,5 +98,31 @@ public class Combinatorial {
         }
 
         return pairs;
+    }
+
+
+    public static int[][] randomPairs(int[] elements, int maxDist) {
+
+        List out = new ArrayList();
+        List<Integer> aux = CollectionTools.asList(elements);
+        Collections.shuffle(aux, RandomUtil.getRandom());
+
+// ([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15], [(10,4), (10,3), (11,8), (11,9), (12,2), (12,1), (13,6), (13,7), (14,0), (15,5)])
+        while(aux.size()>0){
+            int xi = aux.get(0);
+            aux.remove(0);
+
+            for(int j=0; j<aux.size(); j++) {
+                int xj = (int) aux.get(j);
+                if (Math.abs(xi - xj) <= maxDist) {
+                    //System.out.println(xi+" "+xj);
+                    aux.remove(j);
+                    out.add(new int[]{xi, xj});
+                    break;
+                }
+            }
+        }
+
+        return (int[][]) out.stream().toArray(int[][]::new);
     }
 }

@@ -22,9 +22,7 @@ public class modelGen {
 
 	//static String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
 	static String wdir = "./";
-	static String modelFolder = "papers/neurips21/models/set6/";
-
-
+	static String modelFolder = "papers/neurips21/models/tmp2/";
 
 
 
@@ -32,9 +30,11 @@ public class modelGen {
 
 		// set1
 		String[] topologies = new String[]{"chain"};
-		int[] treeWidthExo = new int[]{1}; //
-		int[] numEndogenous = new int[]{10};
-		int[] index = IntStream.range(0,10).toArray();
+		int[] treeWidthExo = new int[]{1,0}; //
+		int[] numEndogenous = new int[]{5,10,15};
+		int[] index = IntStream.range(0,20).toArray();
+
+
 
 
 		for(String top : topologies){
@@ -45,10 +45,13 @@ public class modelGen {
 						boolean dataCheck = false;
 						boolean empCheck = false;
 
-						if(twExo==0 || (twExo==1 && nEndo<8)) dataCheck = true;
-						if(twExo<2) empCheck = false;
+						//if(twExo==0 || (twExo==1 && nEndo<8)) dataCheck = true;
+						//if(twExo<2) empCheck = false;
 
-						buildModel(top, twExo, nEndo, idx, dataCheck, empCheck);
+						dataCheck = true;
+						empCheck = false;
+
+						buildModel(top, twExo, nEndo, idx, dataCheck);
 					}
 				}
 			}
@@ -68,7 +71,7 @@ public class modelGen {
 
 	}
 
-	private static void buildModel(String top, int twExo, int nEndo, int idx, boolean dataCheck, boolean empCheck) throws IOException {
+	private static void buildModel(String top, int twExo, int nEndo, int idx, boolean dataCheck) throws IOException {
 		String name = top+"_twExo"+twExo+"_nEndo"+nEndo+"_"+idx;
 		boolean feasible = true;
 
@@ -79,42 +82,67 @@ public class modelGen {
 		TIntIntMap[] data = null;
 
 
+
 		int i = 0;
 
 		do {
-			//RandomUtil.setRandomSeed(name.hashCode()+i);
-
 			feasible = true;
-			m = ChainGenerator.build(nEndo, twExo);
+
+			if(i%2==0)
+				m = ChainGenerator.build(nEndo, twExo);
+			else
+				m.fillWithRandomFactors(3);
+
 
 			try {
 				if(dataCheck){
-					//RandomUtil.setRandomSeed(0);
+
+/*
+
 					data = m.samples(1000, m.getEndogenousVars());
 					HashMap empMap = DataUtil.getEmpiricalMap(m, data);
 					empMap = FactorUtil.fixEmpiricalMap(empMap, 5);
-					m.toVCredal(empMap.values());
 
-					//CredalCausalApproxLP inf = new CredalCausalApproxLP(m, empMap.values());
-					//System.out.println(inf.causalQuery().setTarget(nEndo-1).setIntervention(0,1).run());
+					// If the data is not compatible, try with the exact empiricals
+					if(!m.isCompatible(data, 5)) {
+						data = null;
+						m.toVCredal(FactorUtil.fixEmpiricalMap(m.getEmpiricalMap(), 5).values());
+					}
 
-				}else if(empCheck){
+ */
 					m.toVCredal(FactorUtil.fixEmpiricalMap(m.getEmpiricalMap(), 5).values());
+
 				}
 			} catch (Exception e) {
 				feasible = false;
 				System.out.print("*");
 				i++;
 			}
+			 catch (Error e) {
+				feasible = false;
+				System.out.print("#");
+			i++;
+		}
 		}while(!feasible);
 
 		System.out.println("tw="+m.getExogenousTreewidth());
+		System.out.println(m.getExogenousDAG());
 
 
 
 
 		String filename = wdir+modelFolder+name;
-		System.out.println(filename);
+		System.out.println(filename+".uai");
+		IO.write(m, filename+".uai");
+
+
+		if(data != null) {
+			System.out.println(filename + ".csv");
+			DataUtil.toCSV(filename+".csv", data);
+
+		}
+
+
 /*		IO.write(m, filename+".uai");
 
 		if(dataCheck)

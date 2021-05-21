@@ -14,12 +14,15 @@ import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
+import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.preprocess.CutObserved;
+import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.ImmutableSet;
@@ -429,7 +432,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				pvar = pvar.marginalize(u);
 			}
 		}else{
-			VariableElimination inf = new FactorVariableElimination(this.getVariables());
+			VariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(this));
 			inf.setFactors(this.getFactors());
 			pvar = (BayesianFactor) inf.conditionalQuery(vars, this.getEndegenousParents(vars));
 
@@ -964,7 +967,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public HashMap<Integer, BayesianFactor> endogenousBlanketProb(){
 
 
-		FactorVariableElimination inf = new FactorVariableElimination(this.getVariables());
+		FactorVariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(this));
 		inf.setFactors(this.getFactors());
 
 		HashMap probs = new HashMap();

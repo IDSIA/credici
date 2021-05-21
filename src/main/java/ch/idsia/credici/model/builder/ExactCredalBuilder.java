@@ -10,6 +10,7 @@ import ch.idsia.crema.factor.convert.HalfspaceToVertex;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
+import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -69,7 +70,7 @@ public class ExactCredalBuilder extends CredalBuilder {
             throw new IllegalArgumentException("Uncompatible empirical network");
 
         List<BayesianFactor> factors = new ArrayList<>();
-        FactorVariableElimination inf = new FactorVariableElimination(bnet.getVariables());
+        FactorVariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(bnet));
         inf.setFactors(bnet.getFactors());
 
         for(int x: causalmodel.getEndogenousVars()){

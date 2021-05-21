@@ -8,6 +8,7 @@ import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
+import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
@@ -85,7 +86,7 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
             }
         }
         // Get the  elimination order
-        int[] elimOrder = infModel.getVariables();
+        int[] elimOrder = new MinFillOrdering().apply(infModel);
 
         FactorVariableElimination ve = new FactorVariableElimination(elimOrder);
         if(filteredEvidence.size()>0)

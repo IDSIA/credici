@@ -93,8 +93,7 @@ public class DataUtil {
 
 		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
 
-		for(int u: model.getExogenousVars()){
-			int[] right = model.getEndogenousChildren(u);
+		for(int[] right : model.endoConnectComponents()) {
 			int[] left = model.getEndegenousParents(right);
 			BayesianFactor p = null;
 			if(left.length>0)

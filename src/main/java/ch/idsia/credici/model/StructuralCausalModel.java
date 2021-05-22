@@ -793,12 +793,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
 		int i = 0;
-		for(int u : getExogenousVars()){
-			int[] ch_u = getEndogenousChildren(u);
-
-			BayesianFactor p = getProb(ch_u);
-			if(fix) p = p.fixPrecission(5, ch_u);
-			empirical.put(Arrays.stream(ch_u).boxed().collect(Collectors.toSet()), p);
+		for(int[] x : this.endoConnectComponents()) {
+			BayesianFactor p = getProb(x);
+			if(fix) p = p.fixPrecission(5, x);
+			empirical.put(Arrays.stream(x).boxed().collect(Collectors.toSet()), p);
 			i++;
 		}
 		return empirical;
@@ -809,7 +807,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 
-		public BayesianNetwork getEmpiricalNet(){
+
+	public BayesianNetwork getEmpiricalNet(){
+
+		if(this.getExogenousTreewidth()>1)
+			throw new IllegalArgumentException("Non quasi markovian model");
+
 		BayesianNetwork bnet = new BayesianNetwork();
 
 		// Copy the endogenous variables
@@ -827,6 +830,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 
 	public StructuralCausalModel findModelWithEmpirical(int prob_decimals, BayesianFactor[] empirical, int[] keepFactors, long maxIterations){
+
+
+		if(this.getExogenousTreewidth()>1)
+			throw new IllegalArgumentException("Non quasi markovian model");
 
 		StructuralCausalModel smodel = this.copy();
 		SparseModel cmodel = null;
@@ -1086,6 +1093,20 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		}
 
 		return compatible;
+	}
+
+	public List<int[]> endoConnectComponents(){
+		return DAGUtil.connectComponents(this.getExogenousDAG())
+				.stream()
+				.map(c-> IntStream.of(c).filter(i -> this.isEndogenous(i)).toArray())
+				.collect(Collectors.toList());
+	}
+
+	public List<int[]> exoConnectComponents(){
+		return DAGUtil.connectComponents(this.getExogenousDAG())
+				.stream()
+				.map(c-> IntStream.of(c).filter(i -> this.isExogenous(i)).toArray())
+				.collect(Collectors.toList());
 	}
 
 

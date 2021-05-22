@@ -22,7 +22,7 @@ public class modelGen {
 
 	//static String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
 	static String wdir = "./";
-	static String modelFolder = "papers/neurips21/models/tmp2/";
+	static String modelFolder = "papers/neurips21/models/s1b_2";
 
 
 
@@ -30,10 +30,9 @@ public class modelGen {
 
 		// set1
 		String[] topologies = new String[]{"chain"};
-		int[] treeWidthExo = new int[]{1,0}; //
+		int[] treeWidthExo = new int[]{1}; //
 		int[] numEndogenous = new int[]{5,10,15};
-		int[] index = IntStream.range(0,20).toArray();
-
+		int[] index = IntStream.range(31,40).toArray();
 
 
 

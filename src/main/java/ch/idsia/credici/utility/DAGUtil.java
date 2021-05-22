@@ -7,7 +7,9 @@ import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
+import com.google.common.primitives.Ints;
 import org.jgrapht.Graph;
+import org.jgrapht.alg.connectivity.ConnectivityInspector;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DefaultUndirectedGraph;
 import org.jgrapht.graph.DirectedAcyclicGraph;
@@ -182,6 +184,12 @@ public class DAGUtil {
             }
         }
         return moral;
+    }
+
+    public static  List<int[]> connectComponents(Graph g){
+        ConnectivityInspector connectInspect = new ConnectivityInspector(g);
+        List connectedComponentList = connectInspect.connectedSets();
+        return (List<int[]>) connectedComponentList.stream().map(s -> Ints.toArray((Set)s)).collect(Collectors.toList());
     }
 
 

@@ -17,6 +17,8 @@ public class ChainGenerator {
 	StructuralCausalModel m = null;
 	boolean doubleCard = false;
 
+	int maxDist = 2;
+
 	public ChainGenerator(int n, int treeWidth){
 		this.n = n;
 		this.treeWidth = treeWidth;
@@ -58,7 +60,7 @@ public class ChainGenerator {
 	}
 
 	private void addQuasiMarkCoFounders(){
-		int[][] pairs = Combinatorial.randomPairs(m.getEndogenousVars(), 2);
+		int[][] pairs = Combinatorial.randomPairs(m.getEndogenousVars(), maxDist);
 		//int [][] pairs = IntStream.range(0, m.getEndogenousVars().length/2).mapToObj(i -> new int[]{i*2,i*2+1}).toArray(int[][]::new);
 
 		for(int[] p : pairs) {
@@ -82,7 +84,10 @@ public class ChainGenerator {
 
 		// Generate all the possible pairs and shuffle them
 		List<int[]> pairs = Arrays.asList(Combinatorial.getCombinations(2, m.getEndogenousVars()))
-				.stream().filter(p -> p[0] < p[1]).collect(Collectors.toList());
+				.stream()
+				.filter(p -> p[0] < p[1])
+				.filter(p -> p[1] - p[0] <= maxDist)
+				.collect(Collectors.toList());
 
 		Collections.shuffle(pairs);
 

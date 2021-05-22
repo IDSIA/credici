@@ -22,16 +22,18 @@ public class modelGen {
 
 	//static String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
 	static String wdir = "./";
-	static String modelFolder = "papers/neurips21/models/s0_2/";
+	static String modelFolder = "papers/neurips21/models/s2_2/";
 
-
+/*
+TODO: experiments python code: more points and more time
+ */
 
 	public static void main(String[] args) throws IOException, InterruptedException {
 
 		// set1
 		String[] topologies = new String[]{"chain"};
-		int[] treeWidthExo = new int[]{0}; //
-		int[] numEndogenous = new int[]{5,10,15};
+		int[] treeWidthExo = new int[]{2}; //
+		int[] numEndogenous = new int[]{5, 15};
 		int[] index = IntStream.range(21,40).toArray();
 
 
@@ -47,10 +49,8 @@ public class modelGen {
 						//if(twExo==0 || (twExo==1 && nEndo<8)) dataCheck = true;
 						//if(twExo<2) empCheck = false;
 
-						dataCheck = true;
-						empCheck = false;
 
-						buildModel(top, twExo, nEndo, idx, dataCheck);
+						buildModel(top, twExo, nEndo, idx, false);
 					}
 				}
 			}
@@ -74,8 +74,6 @@ public class modelGen {
 		String name = top+"_twExo"+twExo+"_nEndo"+nEndo+"_"+idx;
 		boolean feasible = true;
 
-		dataCheck = true;
-
 		StructuralCausalModel m = null;
 		RandomUtil.setRandomSeed(name.hashCode());
 		TIntIntMap[] data = null;
@@ -87,10 +85,10 @@ public class modelGen {
 		do {
 			feasible = true;
 
-			if(i%2==0)
+//			if(i%2==0)
 				m = ChainGenerator.build(nEndo, twExo);
-			else
-				m.fillWithRandomFactors(3);
+//			else
+//				m.fillWithRandomFactors(3);
 
 
 			try {
@@ -112,6 +110,12 @@ public class modelGen {
 					m.toVCredal(FactorUtil.fixEmpiricalMap(m.getEmpiricalMap(), 5).values());
 
 				}
+
+				int t = m.getExogenousTreewidth();
+				//System.out.println(t);
+				if(t!=twExo)
+					throw new IllegalArgumentException("");
+
 			} catch (Exception e) {
 				feasible = false;
 				System.out.print("*");

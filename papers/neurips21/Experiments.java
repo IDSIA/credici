@@ -12,7 +12,6 @@ import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.credici.utility.experiments.Python;
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.InvokerWithTimeout;
@@ -31,7 +30,6 @@ import java.util.*;
 import ch.idsia.credici.utility.experiments.Watch;
 
 
-import static ch.idsia.credici.utility.EncodingUtil.getRandomSeqMask;
 import static ch.idsia.credici.utility.EncodingUtil.getSequentialMask;
 
 public class Experiments implements Runnable{
@@ -93,6 +91,8 @@ case with ratios of 0.99, unfeasible:
 	@CommandLine.Option(names={"-q", "--quiet"}, description = "Controls if log messages are printed to standard output.")
 	boolean quiet;
 
+	@CommandLine.Option(names={"--simpleOutput"}, description = "If activated, log-likelihood and kl statistics are not computed.")
+	boolean simpleOutput = false;
 
 	@CommandLine.Option(names={"-g", "--groundtruth"}, description = "Inference method for ground truth")
 	InferenceMethod infGroundTruth = InferenceMethod.cve;
@@ -177,9 +177,6 @@ case with ratios of 0.99, unfeasible:
 
 		}
 
-
-
-
 	}
 
 
@@ -253,8 +250,9 @@ case with ratios of 0.99, unfeasible:
 		int[] innerPoints = new int[masks.size()];
 		int[] iterEM = new int[masks.size()];
 		long[] timeQuery = new long[masks.size()];
-		double[] llkratio = new double[masks.size()];
 
+
+		double[] llkratio = new double[masks.size()];
 		double[] klqp = new double[masks.size()];
 		double[] klpq = new double[masks.size()];
 		double[] klsym = new double[masks.size()];
@@ -280,17 +278,19 @@ case with ratios of 0.99, unfeasible:
 			timeQuery[i] = time;
 
 			iterEM[i] = builder.getTrajectories().get(i).size()-1;
-			llkratio[i] = builder.ratioLk(builder.getSelectedPoints().get(i));
-			klqp[i] = builder.klQP(builder.getSelectedPoints().get(i), false)/empSize;
-			klpq[i] = builder.klPQ(builder.getSelectedPoints().get(i), false)/empSize;
-			klsym[i] = builder.klsym(builder.getSelectedPoints().get(i), true)/empSize;
 
 
+			String logmsg = "Approx PSN with "+(i+1)+" " + "points: \t"+ Arrays.toString(pnsEM)+"\t (";
 
-			logger.info("Approx PSN with "+(i+1)+" " +
-					"points: \t"+ Arrays.toString(pnsEM)+"\t (ratio="+llkratio[i]+", " + "klqp="+klqp[i]+", "
-					+"klpq="+klpq[i]+", "+"klsym="+klsym[i]+", "+
-					" "+iterEM[i]+" iter. "+time+" ms.)");
+			if(!simpleOutput) {
+				llkratio[i] = builder.ratioLk(builder.getSelectedPoints().get(i));
+				klqp[i] = builder.klQP(builder.getSelectedPoints().get(i), false) / empSize;
+				klpq[i] = builder.klPQ(builder.getSelectedPoints().get(i), false) / empSize;
+				klsym[i] = builder.klsym(builder.getSelectedPoints().get(i), true) / empSize;
+				logmsg += "ratio="+llkratio[i]+", " + "klqp="+klqp[i]+", " +"klpq="+klpq[i]+", "+"klsym="+klsym[i]+", ";
+			}
+
+			logger.info(logmsg+" "+iterEM[i]+" iter. "+time+" ms.)");
 		}
 
 
@@ -445,5 +445,5 @@ case with ratios of 0.99, unfeasible:
 		}
 	}
 
-
 }
+

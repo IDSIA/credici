@@ -65,24 +65,28 @@ print(model_folder)
 
 print(jar_file)
 
-def run(model, datasize = 1000, executions=20, logfile=None, output = None, datafile=None, seed = 0, timeout = 6000):
+def run(model, datasize = 1000, executions=20, logfile=None, output = None, datafile=None, seed = 0, timeout = 6000, simpleOutput = False):
     logfile = logfile or Path(res_folder, f"{strtime()}_log.txt")
     output = output or res_folder
     output.mkdir(parents=True, exist_ok=True)
     #print(model)
     modelfile = Path(model_folder, model)
     params = f"--executions {executions} --datasize {datasize} --policy LAST --output {output} "\
-        f"--logfile {logfile} --timeout {timeout} --seed {seed}"
+        f"--logfile {logfile} --timeout {timeout} -q --seed {seed}"
     
     if datafile is not None:
         params += f"-f {datafile}"
+        
+    if simpleOutput:
+        params += " --simpleOutput"
     
     params += f" {modelfile}"
-
+    
+    print(params)
     cmd = f"{java} -cp {jar_file} {javafile} {params}"
-    #print(cmd)
+    print(cmd)
     output = exec_bash(cmd)  
-    #print(output)
+    print(output)
     exec(output[0])
     return locals()["results"]
 
@@ -124,7 +128,8 @@ for i,m in enumerate(models[start:]):
                 kwargs["datafile"] = Path(model_folder, df)  
             if int(str(m)[str(m).find("twExo")+5])>1:
                 kwargs["executions"] = kwargs["executions"]+10
-                kwargs["timeout"] = 12000
+                kwargs["timeout"] = 1200
+                kwargs["simpleOutput"] = True
 
             res_dicts.append(run(**kwargs))
         except timeout_decorator.TimeoutError:

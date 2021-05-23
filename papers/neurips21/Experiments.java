@@ -301,10 +301,13 @@ case with ratios of 0.99, unfeasible:
 		output.put("pnsEM_u", pnsEM_u);
 		output.put("innerPoints", innerPoints);
 		output.put("iterEM", iterEM);
-		output.put("llkratio", llkratio);
-		output.put("klpq", klpq);
-		output.put("klqp", klqp);
-		output.put("klsym", klsym);
+
+		if(!simpleOutput) {
+			output.put("llkratio", llkratio);
+			output.put("klpq", klpq);
+			output.put("klqp", klqp);
+			output.put("klsym", klsym);
+		}
 
 		if(infGroundTruth == InferenceMethod.saturation) {
 			output.put("pnsExact_l", pnsEM_l[masks.size() - 1]);
@@ -383,8 +386,13 @@ case with ratios of 0.99, unfeasible:
 		cause = X[0];
 		effect = X[X.length-1];
 
-		HashMap empTrue = 	model.getEmpiricalMap();
-		logger.info("True empirical distribution: "+empTrue);
+
+		if(!simpleOutput) {
+			HashMap empTrue = model.getEmpiricalMap();
+			empSize = FactorUtil.EmpiricalMapSize(empTrue);
+			empTrue.put("empSize", empSize);
+			logger.info("True empirical distribution: " + empTrue);
+		}
 
 		// Sample data
 
@@ -396,14 +404,15 @@ case with ratios of 0.99, unfeasible:
 			logger.info("Loaded data with "+data.length+" from " + datafile + "");
 
 		}
-		empData = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data), numDecimalsRound);
-		logger.info("Data empirical distribution: "+empData);
+
+		if(!simpleOutput) {
+			empData = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data), numDecimalsRound);
+			logger.info("Data empirical distribution: " + empData);
+		}
 
 
 
 
-		empSize = FactorUtil.EmpiricalMapSize(empTrue);
-		empTrue.put("empSize", empSize);
 		// Experiment global stats
 
 		stats = new HashMap<>();

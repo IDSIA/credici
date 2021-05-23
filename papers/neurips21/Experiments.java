@@ -381,6 +381,9 @@ case with ratios of 0.99, unfeasible:
 		logger.info("Reading model at "+modelPath);
 		model = (StructuralCausalModel) IO.read(modelPath);
 		logger.info("Loaded SCM: "+model.getNetwork());
+		logger.info("Endo C-components: "+Arrays.toString(model.endoConnectComponents().stream().map(c -> Arrays.toString(c)).toArray()));
+		logger.info("Exo C-components: "+Arrays.toString(model.exoConnectComponents().stream().map(c -> Arrays.toString(c)).toArray()));
+
 
 		int X[] = model.getEndogenousVars();
 		cause = X[0];

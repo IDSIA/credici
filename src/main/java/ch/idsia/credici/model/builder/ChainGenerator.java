@@ -105,7 +105,8 @@ public class ChainGenerator {
 
 			// Treewidth of the new model
 			try {
-				int tw2 = m2.getExogenousTreewidth();
+				//int tw2 = m2.getExogenousTreewidth();
+				int tw2 = m2.maxExoCC();
 
 				if (tw2 <= treeWidth) {
 					m = m2;

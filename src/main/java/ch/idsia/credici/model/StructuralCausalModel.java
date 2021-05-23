@@ -1109,6 +1109,13 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				.collect(Collectors.toList());
 	}
 
+	public int maxExoCC(){
+		return this.exoConnectComponents().stream().mapToInt(c -> ((int[])c).length).max().getAsInt();
+	}
+	public int maxEndoCC(){
+		return this.endoConnectComponents().stream().mapToInt(c -> ((int[])c).length).max().getAsInt();
+	}
+
 
 
 }

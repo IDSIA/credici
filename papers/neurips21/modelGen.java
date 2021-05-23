@@ -15,14 +15,16 @@ import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class modelGen {
 
 	//static String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
 	static String wdir = "./";
-	static String modelFolder = "papers/neurips21/models/s2_2/";
+	static String modelFolder = "papers/neurips21/models/s2/";
 
 /*
 TODO: experiments python code: more points and more time
@@ -34,7 +36,7 @@ TODO: experiments python code: more points and more time
 		String[] topologies = new String[]{"chain"};
 		int[] treeWidthExo = new int[]{2}; //
 		int[] numEndogenous = new int[]{5, 15};
-		int[] index = IntStream.range(21,40).toArray();
+		int[] index = IntStream.range(0,20).toArray();
 
 
 
@@ -48,7 +50,6 @@ TODO: experiments python code: more points and more time
 
 						//if(twExo==0 || (twExo==1 && nEndo<8)) dataCheck = true;
 						//if(twExo<2) empCheck = false;
-
 
 						buildModel(top, twExo, nEndo, idx, false);
 					}
@@ -111,8 +112,8 @@ TODO: experiments python code: more points and more time
 
 				}
 
-				int t = m.getExogenousTreewidth();
-				//System.out.println(t);
+				int t = m.maxExoCC();
+				System.out.println(m.exoConnectComponents().stream().map(c -> Arrays.toString(c)).collect(Collectors.joining()));
 				if(t!=twExo)
 					throw new IllegalArgumentException("");
 

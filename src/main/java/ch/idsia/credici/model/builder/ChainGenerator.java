@@ -8,7 +8,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 public class ChainGenerator {
 
@@ -52,6 +51,9 @@ public class ChainGenerator {
 
 	public static StructuralCausalModel build(int n, int treeWidth){
 		return new ChainGenerator(n, treeWidth).build();
+	}
+	public static StructuralCausalModel build(int n, int treeWidth, int maxDist){
+		return new ChainGenerator(n, treeWidth).setMaxDist(maxDist).build();
 	}
 
 	public ChainGenerator setDoubleCard(boolean doubleCard) {
@@ -129,6 +131,10 @@ public class ChainGenerator {
 		}
 	}
 
+	public ChainGenerator setMaxDist(int maxDist) {
+		this.maxDist = maxDist;
+		return this;
+	}
 
 	public static void main(String[] args) {
 		StructuralCausalModel m = ChainGenerator.build(5,1);

@@ -3,16 +3,24 @@ package neurips21;
 import ch.idsia.credici.IO;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
+import ch.idsia.credici.model.builder.ExactCredalBuilder;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.utility.RandomUtil;
 
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class triangoloBuild {
 
-	static String prj_folder = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
+	//static String prj_folder = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
+	static String prj_folder = "./";
+
 	static String bnetFile = prj_folder+"models/empirical_triangolo.uai";
 	static String scmFile = prj_folder+"models/triangolo_causal.uai";
 	static String hFile = prj_folder+"models/triangolo_hcredal.uai";
@@ -22,13 +30,29 @@ public class triangoloBuild {
 
 	public static void main(String[] args) throws IOException {
 
+		RandomUtil.setRandomSeed(0);
+
 		bnet = (BayesianNetwork) IO.read(bnetFile);
 
-		//buildSCM();
-		//buildHmodel();;
+		buildSCM();
 		buildVmodel();
 
 
+		int s = 0;
+		boolean feasible = false;
+		/*do {
+			try {
+				feasible = true;
+				System.out.println(s);
+				RandomUtil.setRandomSeed(s);
+				buildSCM();
+				//buildHmodel();;
+				buildVmodel();
+			} catch (Exception e) {
+				s++;
+				feasible = false;
+			}
+		}while(!feasible);*/
 
 		//model.toVCredal(model.getEmpiricalMap().values())
 
@@ -36,7 +60,14 @@ public class triangoloBuild {
 
 	private static void buildSCM() throws IOException {
 
-		StructuralCausalModel m = CausalBuilder.of(bnet).build();
+		int[] exoSizes = bnet.getFactors().stream().mapToInt(f -> f.getData().length + 1).toArray();
+
+		StructuralCausalModel m =
+				CausalBuilder.of(bnet)
+						//.setExoVarSizes(exoSizes)
+						//.setFillRandomEquations(true)
+						.build();
+
 		System.out.println(m);
 		IO.writeUAI(m, scmFile);
 	}
@@ -62,13 +93,31 @@ public class triangoloBuild {
 		StructuralCausalModel model = (StructuralCausalModel) IO.readUAI(scmFile);
 
 		System.out.println("Preparing empirical");
-		Collection factors = bnet.getFactors();
+		//Collection factors = bnet.getFactors();
+
+	//int num_decimals, boolean newZeros, int... left_vars
+		Collection factors = IntStream.of(bnet.getVariables())
+				.mapToObj(x -> FactorUtil.fixPrecission(bnet.getFactor(x), 3, true, x ))
+				.collect(Collectors.toList());
 
 		System.out.println("Building V-model");
-		SparseModel hmodel = model.toVCredal(factors);
+		//SparseModel vmodel = model.toVCredal(factors);
+		SparseModel vmodel = null;
 
-		System.out.println("Saving file");
-		IO.writeUAI(hmodel, vFile);
+		ExactCredalBuilder builder = ExactCredalBuilder.of(model)
+				.setEmpirical(factors)
+				.setToVertex()
+				.setRaiseNoFeasible(false)
+				.build();
+
+		List<Integer> unfeasibleNodes = builder.getUnfeasibleNodes();
+		if(unfeasibleNodes.size()>0){
+			System.out.println(unfeasibleNodes);
+		}else {
+			vmodel = builder.getModel();
+			System.out.println("Saving file");
+			IO.writeUAI(vmodel, vFile);
+		}
 
 	}
 }

@@ -65,7 +65,7 @@ print(model_folder)
 
 print(jar_file)
 
-def run(model, datasize = 1000, executions=20, logfile=None, output = None, datafile=None, seed = 0, timeout = 6000, simpleOutput = False):
+def run(model, datasize = 1000, executions=20, logfile=None, output = None, datafile=None, seed = 0, timeout = 600, simpleOutput = False):
     logfile = logfile or Path(res_folder, f"{strtime()}_log.txt")
     output = output or res_folder
     output.mkdir(parents=True, exist_ok=True)
@@ -122,14 +122,17 @@ for i,m in enumerate(models[start:]):
             kwargs = dict(model = m, datasize=datasize,
                           logfile=logfile,
                           output=output_folder,
-                          executions=executions)
+                          executions=executions,
+                          simpleOutput=True)
             df = Path(str(m).replace(".uai",".csv"))
+            
+            
             if df in datafiles:
                 kwargs["datafile"] = Path(model_folder, df)  
             if int(str(m)[str(m).find("twExo")+5])>1:
                 kwargs["executions"] = kwargs["executions"]+10
                 kwargs["timeout"] = 1200
-                kwargs["simpleOutput"] = True
+                #kwargs["simpleOutput"] = True
 
             res_dicts.append(run(**kwargs))
         except timeout_decorator.TimeoutError:

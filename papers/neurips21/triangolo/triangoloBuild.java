@@ -1,4 +1,4 @@
-package neurips21;
+package neurips21.triangolo;
 
 import ch.idsia.credici.IO;
 import ch.idsia.credici.model.StructuralCausalModel;
@@ -35,7 +35,7 @@ public class triangoloBuild {
 		bnet = (BayesianNetwork) IO.read(bnetFile);
 
 		buildSCM();
-		buildVmodel();
+		//buildVmodel();
 
 
 		int s = 0;
@@ -69,6 +69,10 @@ public class triangoloBuild {
 						.build();
 
 		System.out.println(m);
+
+		for(int u: m.getExogenousVars())
+			System.out.println("u\t"+m.getFactor(u));
+
 		IO.writeUAI(m, scmFile);
 	}
 

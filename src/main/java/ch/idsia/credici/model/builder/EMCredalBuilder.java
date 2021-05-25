@@ -18,7 +18,6 @@ import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 
-import javax.xml.crypto.Data;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -54,6 +53,10 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	private TIntIntMap[] data = null;
 
+	private boolean verbose = false;
+
+	private boolean buildCredalModel = false;
+
 	public enum SelectionPolicy {
 		LAST,	// Selects the last point in the trajectory.
 		BISECTION_BORDER_SAME_PATH, // Bisection with the 2 points in the same path closer to the border.
@@ -82,6 +85,17 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.data = data;
 
 		this.inputGenDist = causalModel.getEmpiricalMap(false);
+		setTargetGenDist();
+
+	}
+
+
+	public EMCredalBuilder(StructuralCausalModel causalModel, TIntIntMap[] data, HashMap genDist){
+		this.causalmodel = causalModel;
+		this.endogJointProbs = causalModel.endogenousBlanketProb();
+		this.data = data;
+
+		this.inputGenDist = genDist;
 		setTargetGenDist();
 
 	}
@@ -232,7 +246,8 @@ public class EMCredalBuilder extends CredalBuilder{
 		BayesianNetwork[] bnets =
 				selectedPoints.stream().map(s -> s.toBnet()).toArray(BayesianNetwork[]::new);
 
-		model = VertexFactor.buildModel(true, bnets);
+		if(buildCredalModel)
+			model = VertexFactor.buildModel(true, bnets);
 
 	}
 
@@ -323,6 +338,16 @@ public class EMCredalBuilder extends CredalBuilder{
 		return this;
 	}
 
+	public EMCredalBuilder setVerbose(boolean verbose) {
+		this.verbose = verbose;
+		return this;
+	}
+
+	public EMCredalBuilder setBuildCredalModel(boolean buildCredalModel) {
+		this.buildCredalModel = buildCredalModel;
+		return this;
+	}
+
 	/**
 	 * The result is an inner approximation if all the precise models composing the
 	 * result are inside.
@@ -350,13 +375,17 @@ public class EMCredalBuilder extends CredalBuilder{
 			stepArgs = (Collection) Arrays.asList(data);
 		}
 
-		em.setVerbose(false)
+		em.setVerbose(verbose)
 				.setRecordIntermediate(true)
 				.setTrainableVars(causalmodel.getExogenousVars());
 		em.run(stepArgs, maxEMIter);
 
 
+
 		List<StructuralCausalModel> t = em.getIntermediateModels();
+
+		if(verbose)
+			System.out.println(" calculated EM trajectory of "+(t.size()-1));
 
 		// Return the trajectories
 		return t;

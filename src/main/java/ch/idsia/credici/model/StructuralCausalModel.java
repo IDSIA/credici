@@ -441,6 +441,17 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return pvar;
 	}
 
+	public BayesianFactor conditionalProb(int[] left, int... right){
+		VariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(this));
+		inf.setFactors(this.getFactors());
+		return (BayesianFactor) inf.conditionalQuery(left, right);
+	}
+
+	public BayesianFactor conditionalProb(int left, int... right){
+		return this.conditionalProb(new int[]{left}, right);
+	}
+
+
 	/**
 	 * Returns a new SCM with the do operation done over a given variable.
 	 * @param var - target variable.
@@ -805,9 +816,28 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap() {
 		return this.getEmpiricalMap(true);
 	}
+	/*
+	public HashMap<Set<Integer>, BayesianFactor> getTianFactorisation(){
+
+		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
+		for(int[] c : this.endoConnectComponents()) {
+
+			int[] pa = IntStream.of(this.getEndegenousParents(c)).filter(v -> !ArrayUtils.contains(c, v)).toArray();
+
+			for(int x : c){
 
 
+				BayesianFactor f = merge().conditionalProb(new int[]{x}, pa);
 
+
+			}
+
+			//empirical.put(Arrays.stream(x).boxed().collect(Collectors.toSet()), p);
+		}
+		return empirical;
+	}
+
+*/
 	public BayesianNetwork getEmpiricalNet(){
 
 		if(this.getExogenousTreewidth()>1)
@@ -885,7 +915,13 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		while(it.hasNext()){
 			int v = (int) it.next();
 			if(!obs.containsKey(v)) {
-				BayesianFactor f = this.getFactor(v).copy();
+				BayesianFactor f = this.getFactor(v);
+				if(f != null)
+					f = f.copy();
+
+
+
+
 				//if(obs.size()>0 && v==9)
 				//	System.out.println();
 				//System.out.println("\t"+v);

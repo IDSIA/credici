@@ -14,4 +14,9 @@ public class Watch {
 		watch.stop();
 		return watch.getTime();
 	}
+
+	public static void stopAndPrint(){
+		watch.stop();
+		System.out.println("Ellapsed time: "+watch.getTime()+".ms");
+	}
 }

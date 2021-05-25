@@ -24,11 +24,11 @@ public class modelGen {
 
 	//static String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
 	static String wdir = "./";
-	static String modelFolder = "papers/neurips21/models/x1_2/";
+	static String modelFolder = "papers/neurips21/models/";
+	static String set = "s";
+	static String fcount = "d";
 
-/*
-TODO: experiments python code: more points and more time
- */
+
 
 	public static void main(String[] args) throws IOException, InterruptedException {
 
@@ -36,7 +36,7 @@ TODO: experiments python code: more points and more time
 		String[] topologies = new String[]{"chain"};
 		int[] treeWidthExo = new int[]{1}; //
 		int[] numEndogenous = new int[]{5,10};
-		int[] index = IntStream.range(21,40).toArray();
+		int[] index = IntStream.range(50,60).toArray();
 
 
 
@@ -78,7 +78,7 @@ TODO: experiments python code: more points and more time
 		StructuralCausalModel m = null;
 		RandomUtil.setRandomSeed(name.hashCode());
 		TIntIntMap[] data = null;
-		int maxDist = nEndo;
+		int maxDist = 2;
 
 
 		int i = 0;
@@ -114,6 +114,8 @@ TODO: experiments python code: more points and more time
 
 				int t = m.maxExoCC();
 				System.out.println(m.exoConnectComponents().stream().map(c -> Arrays.toString(c)).collect(Collectors.joining()));
+				System.out.println(m.endoConnectComponents().stream().map(c -> Arrays.toString(c)).collect(Collectors.joining()));
+
 				if(twExo>0 && t!=twExo)
 					throw new IllegalArgumentException("");
 
@@ -132,7 +134,7 @@ TODO: experiments python code: more points and more time
 		System.out.println("tw="+m.getExogenousTreewidth());
 		System.out.println(m.getExogenousDAG());
 
-		String filename = wdir+modelFolder+name;
+		String filename = wdir+modelFolder+set+twExo+fcount+"/"+name;
 		System.out.println(filename+".uai");
 		IO.write(m, filename+".uai");
 

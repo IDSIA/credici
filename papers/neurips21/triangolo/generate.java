@@ -65,3 +65,9 @@ public class generate {
     }
 
 }
+
+/*
+
+!nohup java -cp /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/target/credici-0.1.3-SNAPSHOT-jar-with-dependencies.jar generate.java 20 > output20.out 2>&1 &
+
+*/

@@ -33,8 +33,10 @@ public class triangoloBuild {
 		RandomUtil.setRandomSeed(0);
 
 		bnet = (BayesianNetwork) IO.read(bnetFile);
+		System.out.println(bnet.getNetwork()); // (8,0), (7,0), (2,0), (11,0), (9,2), (1,3), (8,5), (3,6), (10,6), (1,6), (5,7), (1,7), (10,8), (1,8), (1,9), (4,10), (1,10), (6,11)
 
-		buildSCM();
+
+		//buildSCM();
 		//buildVmodel();
 
 

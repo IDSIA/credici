@@ -1,10 +1,10 @@
 package neurips21.triangolo;
 
-import ch.idsia.credici.IO;
-import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.builder.CausalBuilder;
-import ch.idsia.credici.model.builder.ExactCredalBuilder;
-import ch.idsia.credici.utility.FactorUtil;
+import edu.neurips.causalem.IO;
+import edu.neurips.causalem.model.StructuralCausalModel;
+import edu.neurips.causalem.model.builder.CausalBuilder;
+import edu.neurips.causalem.model.builder.ExactCredalBuilder;
+import edu.neurips.causalem.utility.FactorUtil;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.RandomUtil;

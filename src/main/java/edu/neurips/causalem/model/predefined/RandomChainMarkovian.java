@@ -1,6 +1,6 @@
 package edu.neurips.causalem.model.predefined;
 
-import ch.idsia.credici.inference.*;
+import edu.neurips.causalem.inference.*;
 import edu.neurips.causalem.inference.CausalInference;
 import edu.neurips.causalem.inference.CausalVE;
 import edu.neurips.causalem.inference.CredalCausalApproxLP;

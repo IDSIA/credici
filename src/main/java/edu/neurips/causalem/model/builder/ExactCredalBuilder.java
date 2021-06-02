@@ -63,7 +63,7 @@ public class ExactCredalBuilder extends CredalBuilder {
     }
 
     public ExactCredalBuilder setEmpirical(BayesianNetwork bnet){
-        if(!equals(bnet.getVariables(),
+        if(!ArraysUtil.equals(bnet.getVariables(),
                 causalmodel.getEndogenousVars(), true, false))
             throw new IllegalArgumentException("Uncompatible empirical network");
 

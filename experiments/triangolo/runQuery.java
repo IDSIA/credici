@@ -1,10 +1,10 @@
 package neurips21.triangolo;
 
-import ch.idsia.credici.IO;
-import ch.idsia.credici.inference.CausalInference;
-import ch.idsia.credici.inference.CausalMultiVE;
-import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.utility.CollectionTools;
+import edu.neurips.causalem.IO;
+import edu.neurips.causalem.inference.CausalInference;
+import edu.neurips.causalem.inference.CausalMultiVE;
+import edu.neurips.causalem.model.StructuralCausalModel;
+import edu.neurips.causalem.utility.CollectionTools;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.ArraysUtil;

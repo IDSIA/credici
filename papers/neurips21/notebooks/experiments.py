@@ -23,7 +23,7 @@ executions = 20
 java = "java"
 #########
 
-@timeout_decorator.timeout(20*60) # seconds
+#@timeout_decorator.timeout(20*60) # seconds
 def gen_exec(cmd, check_return: bool = False):
     popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
     for stdout_line in iter(popen.stdout.readline, ""):
@@ -65,7 +65,7 @@ print(model_folder)
 
 print(jar_file)
 
-def run(model, datasize = 1000, executions=20, logfile=None, output = None, datafile=None, seed = 0, timeout = 600, simpleOutput = False):
+def run(model, datasize = 1000, executions=20, logfile=None, output = None, datafile=None, seed = 0, timeout = 1200, simpleOutput = False):
     logfile = logfile or Path(res_folder, f"{strtime()}_log.txt")
     output = output or res_folder
     output.mkdir(parents=True, exist_ok=True)
@@ -123,7 +123,7 @@ for i,m in enumerate(models[start:]):
                           logfile=logfile,
                           output=output_folder,
                           executions=executions,
-                          simpleOutput=True)
+                          simpleOutput=False)
             df = Path(str(m).replace(".uai",".csv"))
             
             
@@ -131,7 +131,7 @@ for i,m in enumerate(models[start:]):
                 kwargs["datafile"] = Path(model_folder, df)  
             if int(str(m)[str(m).find("twExo")+5])>1:
                 kwargs["executions"] = kwargs["executions"]+10
-                kwargs["timeout"] = 1200
+                kwargs["timeout"] = 2400
                 #kwargs["simpleOutput"] = True
 
             res_dicts.append(run(**kwargs))

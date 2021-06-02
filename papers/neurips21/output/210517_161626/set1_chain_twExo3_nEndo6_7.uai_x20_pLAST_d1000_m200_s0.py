@@ -1,1 +1,0 @@
-results=dict(file='chain_twExo3_nEndo6_7.uai', folder='set1', error=True, errorMsg='java.lang.NumberFormatException: Character N is neither a decimal digit number, decimal point, nor "e" notation exponential mark.')

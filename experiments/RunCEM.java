@@ -78,6 +78,13 @@ public class RunCEM implements Runnable{
 	@CommandLine.Option(names={"-g", "--groundtruth"}, description = "Inference method for ground truth")
 	InferenceMethod infGroundTruth = InferenceMethod.cve;
 
+	@CommandLine.Option(names = {"-X", "--cause"}, description = "Cause endogenous variable. Default is 0.")
+	private int cause = 0;
+
+	@CommandLine.Option(names = {"-Y", "--effect"}, description = "Effect endogenous variable. Default is the one with the higher id.")
+	private int effect = -1;
+
+
 	@CommandLine.Option(names = { "-h", "--help" }, usageHelp = true, description = "display a help message")
 	private boolean helpRequested;
 
@@ -93,9 +100,6 @@ public class RunCEM implements Runnable{
 	TIntIntMap[] data;
 	HashMap empData;
 	int empSize;
-
-	int cause;
-	int effect;
 
 
 	HashMap<String, Object> stats;
@@ -175,7 +179,7 @@ public class RunCEM implements Runnable{
 		exp.runExact();
 		exp.runApprox();
 		return null;
-		
+
 	}
 
 
@@ -290,7 +294,7 @@ public class RunCEM implements Runnable{
 
 	private void runExact() throws InterruptedException, ExecutionControl.NotImplementedException {
 		// True results with PGM method
-		
+
 		if(List.of(InferenceMethod.cve, InferenceMethod.approxlp).contains(infGroundTruth)) {
 			Watch.start();
 			SparseModel vmodel = null;
@@ -335,7 +339,7 @@ public class RunCEM implements Runnable{
 			output.put("timeExact", time);
 		}
 		output.put("groundtruth", infGroundTruth.name());
-		
+
 	}
 
 
@@ -357,8 +361,10 @@ public class RunCEM implements Runnable{
 
 
 		int X[] = model.getEndogenousVars();
-		cause = X[0];
-		effect = X[X.length-1];
+		if(cause < 0)
+			cause = X[0];
+		if(effect < 0)
+			effect = X[X.length-1];
 
 
 		if(!simpleOutput) {

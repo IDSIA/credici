@@ -42,7 +42,7 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 /**
- * Author:  Rafael Cabañas
+ * Author:
  * Date:    04.02.2020
  * <p>
  * A Structural Causal Model is a special type of {@link GenericSparseModel}, composed with {@link BayesianFactor} and

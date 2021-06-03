@@ -8,7 +8,7 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
 
 /**
- * Author:  Rafael Cabañas
+ * Author:
  */
 public abstract class CausalInference<M, R extends GenericFactor>{
 

@@ -12,7 +12,7 @@ import java.util.stream.Stream;
 
 /**
  * Access point to all the implemented parsers
- * @author Rafael Cabañas
+ * @author
  */
 public class IO extends ch.idsia.crema.IO {
 

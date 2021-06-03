@@ -25,7 +25,7 @@ public class CausalOps {
      * @return
      */
     public static StructuralCausalModel merge(StructuralCausalModel reality, StructuralCausalModel... models) {
-        // ALESSANDRO: code for counterfactual graphs
+        // code for counterfactual graphs
         //check that the variables are the same
         for(StructuralCausalModel m : models){
             if (!Arrays.equals(reality.getExogenousVars(), m.getExogenousVars()) ||

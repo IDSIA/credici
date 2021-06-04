@@ -72,7 +72,7 @@ Usage: <main class> [-hq] [--simpleOutput] [-d=<dataSize>] [-f=<datafile>]
 ```
 
 
-### Example with the synthetic models
+### Experiments with the synthetic models
 
 As an example, let us consider the following command will run CEM with the quasi-markovian model `./models/synthetic/s1b_chain_twExo1_nEndo5_15.uai` with
 10 EM runs and a sample size of 1000. The endogenous variables considered for the PNS query are the first and the last one
@@ -115,7 +115,7 @@ results=dict(seed=0, markovian=False, innerPoints=[0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 Note that the last line is a Python sentence for creating a dictionary containing all the statistics from the execution.
 
 
-### Example with a real model
+### Experiments with a real model
 
 For the palliative care model considered in the experimentation, we also provide in the folder `./models/palliative_care/em/` the set of precise SCM obtained from
 different EM runs. These models can be merged for obtaining the resulting PNS intervals using the following command.
@@ -164,3 +164,13 @@ numPoints,FAwareness_l,FAwareness_u,Triangolo_l,Triangolo_u,PAwareness_l,PAwaren
 14,0.054701177073378925,0.1013507304192107614,0.29717499346065257,0.311827362849678814,0.033693330013311,0.09665652257971483
 15,0.054701177073378925,0.1013507304192107615,0.29717499346065257,0.3128786208036083415,0.033693330013311,0.09665652257971483
 ```
+
+
+### Supplementary material example
+
+The example given in the supplementary material about M-incompatibility can be executed with the following command:
+
+```
+java -cp lib/causalem.jar example/suppmat.java
+```
+

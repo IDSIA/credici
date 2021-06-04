@@ -3,6 +3,7 @@
 This bundle contains the manuscript submitted to Neurips 2021 and entitled  "Causal Expectation-Maximisation". 
 The organisation  is the following:
 
+- _example_: code and data for replicating the example in the supplementary material.
 - _experiments_: Java files for replicating the experiments.
 - _lib_: packages needed for running the code.
 - _models_: set of structural causal models in UAI format considered in the experimentation.

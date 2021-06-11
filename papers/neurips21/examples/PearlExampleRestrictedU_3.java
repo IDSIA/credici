@@ -21,6 +21,8 @@ import java.util.stream.IntStream;
 public class PearlExampleRestrictedU_3 {
 	public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException {
 
+
+
 		BayesianNetwork bnet = new BayesianNetwork();
 
 		int X = bnet.addVariable(2);
@@ -226,3 +228,6 @@ public class PearlExampleRestrictedU_3 {
 */
 	}
 }
+
+
+

@@ -1,5 +1,6 @@
 package neurips21.examples;
 
+import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
@@ -15,11 +16,15 @@ import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
 import org.apache.commons.lang3.ArrayUtils;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.stream.IntStream;
 
 public class PearlExample {
-	public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException {
+	public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException, IOException {
+
+
+		String folder = "./papers/neurips21/examples/";
 
 		BayesianNetwork bnet = new BayesianNetwork();
 
@@ -94,6 +99,9 @@ public class PearlExample {
 
 		CredalCausalVE inf = new CredalCausalVE(m_eqless, empData.values());
 
+		IO.write(m_eqless, folder+"consPearl.uai");
+		DataUtil.toCSV(folder+"dataPearl.csv", data);
+
 
 		VertexFactor pn = (VertexFactor) inf.probNecessity(X,Y,0,1);
 		VertexFactor ps = (VertexFactor) inf.probSufficiency(X,Y,0,1);
@@ -128,9 +136,6 @@ public class PearlExample {
 		//System.out.println("pn2="+pn2);
 		//System.out.println("ps2="+ps2);
 		System.out.println("pns2="+pns2);
-
-
-
 
 
 

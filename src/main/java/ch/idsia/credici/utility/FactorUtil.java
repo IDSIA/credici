@@ -7,6 +7,7 @@ import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
+import ch.idsia.crema.utility.IndexIterator;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
@@ -60,14 +61,18 @@ public class FactorUtil {
 		return res;
 	}
 
-	public static void print(BayesianFactor p){
+	public static void print(BayesianFactor p){//, int[] vars){
 
 		Strides dom = p.getDomain();
 		int[] vars = dom.getVariables();
 
+		//IndexIterator it = dom.getReorderedIterator(vars);
+
 		System.out.println("f("+ Arrays.toString(vars)+")");
 		System.out.println("-------------------------------");
 		for (int i = 0; i < dom.getCombinations(); i++) {
+		//while (it.hasNext()){
+		//	int i = it.next();
 			int[] states = dom.statesOf(i);
 			TIntIntMap assignament = new TIntIntHashMap();
 			for (int j = 0; j < vars.length; j++)
@@ -78,7 +83,12 @@ public class FactorUtil {
 
 
 	}
+/*
 
+	public static void print(BayesianFactor p){
+		print(p, p.getDomain().getVariables());
+	}
+*/
 
 	public static BayesianFactor  fixPrecission(BayesianFactor f, int num_decimals, boolean newZeros, int... left_vars){
 

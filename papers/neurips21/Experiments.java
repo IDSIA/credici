@@ -35,18 +35,7 @@ import static ch.idsia.credici.utility.EncodingUtil.getSequentialMask;
 public class Experiments implements Runnable{
 
 /*
---executions 20 --datasize 1000 --policy LAST ./papers/neurips21/models/set1/chain_twExo0_nEndo4_5.uai
---executions 20 --datasize 1000 --policy LAST ./papers/neurips21/models/set1/chain_twExo1_nEndo4_6.uai
-
-case with ratio==0 but good results:
---executions 20 --datasize 500 --policy LAST --seed 1234 ./papers/neurips21/models/set1/chain_twExo1_nEndo6_3.uai
-
-case with ratios of 0.0 and of 0.99, unfeasible:
---executions 20 --datasize 500 --policy LAST ./papers/neurips21/models/set1/chain_twExo1_nEndo6_4.uai
-
-case with ratios of 0.99, unfeasible:
---executions 20 --datasize 500 --policy LAST ./papers/neurips21/models/set1/chain_twExo1_nEndo6_6.uai
-
+--executions 20 --datasize 1000 ./papers/neurips21/models/synthetic/s0_2_chain_twExo0_nEndo5_24.uai
 
 
 */
@@ -97,7 +86,11 @@ case with ratios of 0.99, unfeasible:
 	@CommandLine.Option(names={"-g", "--groundtruth"}, description = "Inference method for ground truth")
 	InferenceMethod infGroundTruth = InferenceMethod.cve;
 
+	@CommandLine.Option(names = {"-X", "--cause"}, description = "Cause endogenous variable. Default is 0.")
+	private int cause = 0;
 
+	@CommandLine.Option(names = {"-Y", "--effect"}, description = "Effect endogenous variable. Default is the one with the higher id.")
+	private int effect = -1;
 
 	//////
 
@@ -112,20 +105,6 @@ case with ratios of 0.99, unfeasible:
 	HashMap empData;
 	int empSize;
 
-	int cause;
-	int effect;
-
-
-
-
-	/*
-
-	double[] pnsExact = null;
-	double[][] pnsEM = null;
-	int[] innerPoints = null;
-
-*/
-
 
 	HashMap<String, Object> stats;
 	HashMap<String, Object> output = new HashMap<>();
@@ -134,8 +113,7 @@ case with ratios of 0.99, unfeasible:
 	PrintWriter outPrinter = null;
 	File outputFile = null;
 
-
-
+	
 	public static void main(String[] args) {
 		argStr = String.join(";", args);
 		CommandLine.run(new Experiments(), args);
@@ -386,9 +364,12 @@ case with ratios of 0.99, unfeasible:
 
 
 		int X[] = model.getEndogenousVars();
-		cause = X[0];
-		effect = X[X.length-1];
+		if(cause < 0)
+			cause = X[0];
+		if(effect < 0)
+			effect = X[X.length-1];
 
+		logger.info("Cause: "+cause+", Effect: "+effect);
 
 		if(!simpleOutput) {
 			HashMap empTrue = model.getEmpiricalMap();

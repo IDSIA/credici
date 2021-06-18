@@ -1,11 +1,15 @@
 package ch.idsia.credici.model;
 
+import ch.idsia.credici.IO;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.utility.ArraysUtil;
+import org.junit.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
@@ -45,6 +49,12 @@ public class StructuralCausalModelTest {
         m.addParent(y,x);
         m.fillWithRandomFactors(2);
         return m;
+    }
+
+    private static StructuralCausalModel syntheticModel() throws IOException {
+        Path wdir = Path.of("");
+        Path modelfile = wdir.resolve("./models/synthetic/chain_twExo2_nEndo5_0.uai");
+        return (StructuralCausalModel) IO.readUAI(modelfile.toString());
     }
 
 
@@ -162,6 +172,24 @@ public class StructuralCausalModelTest {
                         CausalOps.intervention(modelSingleU(),1,1, false)})
 
         );
+    }
+
+    @Test
+    public  void endoExoLinks() throws IOException {
+
+        StructuralCausalModel model = syntheticModel();
+
+        // Exogenous parents
+        assertArrayEquals(model.getExogenousParents(2),  new int[]{5, 6});
+
+        //Edgogenous parents
+        assertArrayEquals(model.getEndegenousParents(2),  new int[]{1});
+
+        // Endogenous children
+        assertArrayEquals(model.getEndogenousChildren(5),  new int[]{2, 3});
+        assertArrayEquals(model.getEndogenousChildren(2),  new int[]{3});
+
+
     }
     
 }

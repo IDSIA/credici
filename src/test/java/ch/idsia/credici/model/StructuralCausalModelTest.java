@@ -2,7 +2,9 @@ package ch.idsia.credici.model;
 
 import ch.idsia.credici.IO;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.utility.ArraysUtil;
+import org.junit.Assert;
 import org.junit.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -10,6 +12,8 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
@@ -191,5 +195,69 @@ public class StructuralCausalModelTest {
 
 
     }
-    
+
+
+
+    @Test
+    public  void empiricalSet() throws IOException {
+
+        StructuralCausalModel m = syntheticModel();
+
+        HashMap map = m.getEmpiricalMap();
+        Set keys = map.keySet();
+
+        // length of components
+        Assert.assertEquals(keys.size(), 3);
+
+        // Values in keys
+        Assert.assertTrue(map.containsKey(Set.of(1,2,3)));
+        Assert.assertTrue(map.containsKey(Set.of(0)));
+        Assert.assertTrue(map.containsKey(Set.of(4)));
+
+        // Check the empirical P(1,2,3 | 0)
+        double[] expected = new double[] { 0.07, 0.429, 0.055, 0.006, 0.103, 0.103, 0.406, 0.057, 0.097, 0.327, 0.261, 0.003, 0.007, 0.051, 0.001, 0.024 };
+        double[] actual = ((BayesianFactor)map.get(Set.of(1,2,3))).getData();
+        Assert.assertArrayEquals(expected, actual, 0.00001);
+
+    }
+
+    @Test
+    public  void components() throws IOException {
+
+        StructuralCausalModel m = syntheticModel();
+
+        // U-components
+        assertArrayEquals(new int[]{7}, m.exoConnectComponents().get(0));
+        assertArrayEquals(new int[]{5,6}, m.exoConnectComponents().get(1));
+        assertArrayEquals(new int[]{8}, m.exoConnectComponents().get(2));
+
+        // C-components
+        assertArrayEquals(new int[]{0}, m.endoConnectComponents().get(0));
+        assertArrayEquals(new int[]{1,2,3}, m.endoConnectComponents().get(1));
+        assertArrayEquals(new int[]{4}, m.endoConnectComponents().get(2));
+
+
+    }
+
+
+
+    @Test
+    public  void exoTreeWidth() throws IOException {
+
+        double actual = 0;
+
+        actual = modelSimple().getExogenousTreewidth();
+        assertEquals(1.0, actual);
+
+        actual = modelSimple2().getExogenousTreewidth();
+        assertEquals(1.0, actual);
+
+        actual = modelSingleU().getExogenousTreewidth();
+        assertEquals(1.0, actual);
+
+        actual = syntheticModel().getExogenousTreewidth();
+        assertEquals(2.0, actual);
+
+    }
+
 }

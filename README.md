@@ -67,7 +67,7 @@ Add the following code in the  pom.xml of your project:
         <dependency>
             <groupId>ch.idsia</groupId>
             <artifactId>credici</artifactId>
-            <version>0.1.2</version>
+            <version>0.1.3</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>

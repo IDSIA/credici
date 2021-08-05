@@ -1,3 +1,15 @@
+
+0.1.3
+=============
+- EMCredalBuilder: learns a set of precise  SCMs compatible with the observed distribution.
+- CausalMultiVE: causal inference from a set of precise SCMs.
+- Probability of necessity and sufficiency queries.
+- Data IO functionality.
+- Extended unit tests.
+- fixed some bugs.
+
+
+
 0.1.2
 =============
 

@@ -244,19 +244,19 @@ public class StructuralCausalModelTest {
     @Test
     public  void exoTreeWidth() throws IOException {
 
-        double actual = 0;
+        int actual = 0;
 
         actual = modelSimple().getExogenousTreewidth();
-        assertEquals(1.0, actual);
+        assertEquals(1, actual, 0);
 
         actual = modelSimple2().getExogenousTreewidth();
-        assertEquals(1.0, actual);
+        assertEquals(1, actual, 0);
 
         actual = modelSingleU().getExogenousTreewidth();
-        assertEquals(1.0, actual);
+        assertEquals(1, actual, 0);
 
         actual = syntheticModel().getExogenousTreewidth();
-        assertEquals(2.0, actual);
+        assertEquals(2, actual, 0);
 
     }
 

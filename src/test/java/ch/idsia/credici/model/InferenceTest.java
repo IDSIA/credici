@@ -53,6 +53,7 @@ public class InferenceTest {
 
 
 	}
+	@Test
 	public void CredalCausalApproxLP() throws InterruptedException {
 		RandomUtil.setRandomSeed(1);
 		StructuralCausalModel m = RandomChainNonMarkovian.buildModel(4, 2, 6);
@@ -72,6 +73,7 @@ public class InferenceTest {
 
 	}
 
+	@Test
 	public void CausalVE() throws ExecutionControl.NotImplementedException, InterruptedException {
 
 		RandomUtil.setRandomSeed(1);

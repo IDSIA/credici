@@ -3,8 +3,6 @@ package ch.idsia.credici.utility;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
@@ -21,28 +19,31 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
 
+import org.jgrapht.graph.DirectedAcyclicGraph;
+
+
 
 public class DAGUtil {
 
-    private static int[] nodesOperation(BinaryOperator<int[]> func, SparseDirectedAcyclicGraph... DAGs) {
-        int[] out = DAGs[0].getVariables();
+    private static int[] nodesOperation(BinaryOperator<int[]> func, DirectedAcyclicGraph... DAGs) {
+        int[] out = getVariables(DAGs[0]);
         for (int i = 1; i < DAGs.length; i++)
-            out = func.apply(out, DAGs[i].getVariables());
+            out = func.apply(out, getVariables(DAGs[i]));
         return out;
 
     }
 
-    public static int[] nodesIntersection(SparseDirectedAcyclicGraph... DAGs) {
+    public static int[] nodesIntersection(DirectedAcyclicGraph... DAGs) {
         return nodesOperation(ArraysUtil::intersection, DAGs);
     }
 
-    public static int[] nodesDifference(SparseDirectedAcyclicGraph... DAGs) {
+    public static int[] nodesDifference(DirectedAcyclicGraph... DAGs) {
         return nodesOperation(ArraysUtil::difference, DAGs);
     }
 
-    public static boolean isContained(SparseDirectedAcyclicGraph subDAG, SparseDirectedAcyclicGraph DAG) {
-        for (int x : subDAG.getVariables()) {
-            for (int y : subDAG.getChildren(x)) { // x -> y
+    public static boolean isContained(DirectedAcyclicGraph subDAG, DirectedAcyclicGraph DAG) {
+        for (int x : getVariables(subDAG)) {
+            for (int y : getChildren(subDAG, x)) { // x -> y
                 if (!DAG.containsEdge(x, y))
                     return false;
             }
@@ -51,41 +52,16 @@ public class DAGUtil {
     }
 
 
-    public static SparseDirectedAcyclicGraph getSubDAG(SparseDirectedAcyclicGraph dag, int... nodes) {
-        int[] toremove = ArraysUtil.difference(dag.getVariables(), nodes);
-        SparseDirectedAcyclicGraph out = dag.copy();
+    public static DirectedAcyclicGraph getSubDAG(DirectedAcyclicGraph dag, int... nodes) {
+        int[] toremove = ArraysUtil.difference(getVariables(dag), nodes);
+        DirectedAcyclicGraph out = (DirectedAcyclicGraph) dag.clone();
         for (int v : toremove) {
-            out.removeVariable(v);
+            out.removeVertex(v);
         }
         return out;
     }
 
 
-    public static void main(String[] args) {
-        BayesianNetwork bnet = new BayesianNetwork();
-        int y = bnet.addVariable(2);
-        int x = bnet.addVariable(2);
-
-        bnet.setFactor(y, new BayesianFactor(bnet.getDomain(y), new double[]{0.3, 0.7}));
-        bnet.setFactor(x, new BayesianFactor(bnet.getDomain(x, y), new double[]{0.6, 0.5, 0.5, 0.5}));
-
-
-        //int u1=2, u2=3;
-
-        //EquationBuilder.fromVector(Strides.as(y,2))
-
-        StructuralCausalModel model = CausalBuilder.of(bnet).setFillRandomExogenousFactors(3).build();
-
-        CausalBuilder b = CausalBuilder.of(bnet).setFillRandomExogenousFactors(3);
-        b.build();
-
-        String str = Arrays.toString(
-                nodesDifference(b.getCausalDAG(), b.getEmpiricalDAG())
-        );
-
-        System.out.println(str);
-
-    }
 
     public static int[] getTopologicalOrder(DirectedAcyclicGraph dag, int... nodes) {
 
@@ -105,15 +81,15 @@ public class DAGUtil {
     }
 
 
-    public static SparseDirectedAcyclicGraph randomDag(int numNodes) {
+    public static DirectedAcyclicGraph randomDag(int numNodes) {
         Random r = RandomUtil.getRandom();
 
         if (numNodes < 2)
             throw new IllegalArgumentException("The minumum number of nodes is 2.");
 
-        SparseDirectedAcyclicGraph dag = new SparseDirectedAcyclicGraph();
+        DirectedAcyclicGraph dag = new DirectedAcyclicGraph(DefaultEdge.class);
         for (int i = 0; i < numNodes; i++) {
-            dag.addVariable(i);
+            dag.addVertex(i);
         }
 
         // number of sets in the top. order
@@ -148,7 +124,7 @@ public class DAGUtil {
             for (int i : sets[s]) {
                 // random node from the next set
                 int j = sets[s + 1][r.nextInt(sets[s + 1].length)];
-                dag.addLink(i, j);
+                dag.addEdge(i, j);
             }
         }
 
@@ -156,10 +132,10 @@ public class DAGUtil {
         // set minimal ingoing arcs
         for(int s=1; s<numSets; s++) {
             for(int i : sets[s]){
-                if(dag.getParents(i).length==0) {
+                if(getParents(dag,i).length==0) {
                     // random node from the previous set
                     int j = sets[s-1][r.nextInt(sets[s-1].length)];
-                    dag.addLink(j,i);
+                    dag.addEdge(j,i);
                 }
             }
         }
@@ -168,16 +144,16 @@ public class DAGUtil {
     }
 
 
-    public static Graph moral(SparseDirectedAcyclicGraph dag){
+    public static Graph moral(DirectedAcyclicGraph dag){
 
         Graph moral = new DefaultUndirectedGraph(DefaultEdge.class);
-        for(int x : dag.getVariables())
+        for(int x : getVariables(dag))
             moral.addVertex(x);
 
-        for(int x: dag.getVariables()){
-            for(int y: dag.getParents(x)){
+        for(int x: getVariables(dag)){
+            for(int y: getParents(dag, x)){
                 moral.addEdge(y,x);
-                for(int y2: dag.getParents(x)){
+                for(int y2: getParents(dag, x)){
                     if(y!=y2 && !moral.containsEdge(y,y2))
                         moral.addEdge(y, y2);
                 }
@@ -192,5 +168,15 @@ public class DAGUtil {
         return (List<int[]>) connectedComponentList.stream().map(s -> Ints.toArray((Set)s)).collect(Collectors.toList());
     }
 
+    public static int[] getVariables(DirectedAcyclicGraph dag){
+        return dag.vertexSet().stream().mapToInt(i->(int)i).toArray();
+    }
 
+    public static int[] getChildren(DirectedAcyclicGraph dag, int x){
+        return dag.getDescendants(x).stream().mapToInt(i->(int)i).toArray();
+    }
+
+    public static int[] getParents(DirectedAcyclicGraph dag, int x){
+        return dag.getAncestors(x).stream().mapToInt(i->(int)i).toArray();
+    }
 }

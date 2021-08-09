@@ -2,12 +2,9 @@ package ch.idsia.credici.factor;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.Combinatorial;
+import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
-import ch.javasoft.util.ints.IntHashMap;
-import com.google.common.primitives.Ints;
-import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
 import java.util.List;
@@ -50,7 +47,8 @@ public class EquationBuilder {
     public BayesianFactor fromVector(int var, int... assignments){
         assertEndogenous(var);
 
-        return fromVector(model.getDomain(var),
+        return fromVector(
+                model.getDomain(var),
                 model.getDomain(model.getParents(var)),
                 assignments);
 
@@ -85,7 +83,7 @@ public class EquationBuilder {
 
 
     public static BayesianFactor fromVector(Strides left, Strides right, int... assignments){
-        return BayesianFactor.deterministic(left, right, assignments);
+        return BayesianFactorBuilder.deterministic(left, right, assignments);
     }
 
     public static BayesianFactor from2DArray(Strides left, Strides right, int[][] assignments) {

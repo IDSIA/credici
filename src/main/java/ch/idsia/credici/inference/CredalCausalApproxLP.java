@@ -5,12 +5,9 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
-import ch.idsia.crema.inference.approxlp.Inference;
-import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.preprocess.BinarizeEvidence;
-import ch.idsia.crema.preprocess.CutObservedSepHalfspace;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -18,7 +15,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Collection;
 
-public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalFactor> {
+public class CredalCausalApproxLP extends CausalInference<DAGModel, IntervalFactor> {
 
 
     private double epsilon = 0.0;

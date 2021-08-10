@@ -1,6 +1,6 @@
 package ch.idsia.credici.model.counterfactual;
 
-import ch.idsia.crema.model.graphical.GenericSparseModel;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
@@ -16,7 +16,7 @@ public class WorldMapping {
     public static final int ALL = -2;
     private List<int[]> worldGroup;
 
-    private GenericSparseModel model;
+    private DAGModel model;
 
     public static List<WorldMapping> registry = new ArrayList<WorldMapping>();
 
@@ -153,15 +153,15 @@ public class WorldMapping {
         return ArraysUtil.sort(Stream.of(getWorldGroup()).mapToInt(t -> t[0]).distinct().toArray());
     }
 
-    public void setModel(GenericSparseModel model) {
+    public void setModel(DAGModel model) {
         this.model = model;
     }
 
-    public GenericSparseModel getModel() {
+    public DAGModel getModel() {
         return model;
     }
 
-    public static WorldMapping getMap(GenericSparseModel model){
+    public static WorldMapping getMap(DAGModel model){
 
         WorldMapping[] maps = registry.stream()
                 .filter(w ->  w.getModel() == model)

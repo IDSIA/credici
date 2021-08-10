@@ -1,41 +1,34 @@
 package ch.idsia.credici.model;
 
+import ch.idsia.credici.factor.BayesianFactorBuilder;
+import ch.idsia.credici.factor.Operations;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.ExactCredalBuilder;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.RandomUtilities;
+import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
-import ch.idsia.crema.factor.convert.BayesianToVertex;
-import ch.idsia.crema.factor.convert.HalfspaceToVertex;
-import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
-import ch.idsia.crema.model.Strides;
-import ch.idsia.credici.model.counterfactual.WorldMapping;
-import ch.idsia.crema.model.graphical.GenericSparseModel;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-import ch.idsia.crema.preprocess.CutObserved;
-import ch.idsia.crema.preprocess.RemoveBarren;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.ArraysUtil;
-import ch.idsia.crema.utility.RandomUtil;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
+import org.jgrapht.graph.DirectedAcyclicGraph;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -43,17 +36,18 @@ import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+
 /**
  * Author:  Rafael Cabañas
  * Date:    04.02.2020
  * <p>
- * A Structural Causal Model is a special type of {@link GenericSparseModel}, composed with {@link BayesianFactor} and
- * constructed on a {@link SparseDirectedAcyclicGraph}. Differs from Bayesian networks on having 2 different
+ * A Structural Causal Model is a special type of {@link DAGModel}, composed with {@link BayesianFactor}. Differs
+ * from Bayesian networks on having 2 different
  * kind of variables: exogenous and endogenous
  */
-public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, SparseDirectedAcyclicGraph> {
+public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 
-
+	/** String for identifying the model*/
 	private String name="";
 
 	/** set of variables that are exogenous. The rest are considered to be endogenous */
@@ -65,11 +59,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * Create the directed model using the specified network implementation.
 	 */
 	public StructuralCausalModel() {
-		super(new SparseDirectedAcyclicGraph());
+
+		//super(new SparseDirectedAcyclicGraph());
 	}
 
 	public StructuralCausalModel(String name) {
-		super(new SparseDirectedAcyclicGraph());
+		//super(new SparseDirectedAcyclicGraph());
 		this.name=name;
 	}
 
@@ -80,29 +75,29 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param endoVarSizes
 	 * @param exoVarSizes
 	 */
-	public StructuralCausalModel(SparseDirectedAcyclicGraph empiricalDAG, int[] endoVarSizes, int... exoVarSizes){
-		super(new SparseDirectedAcyclicGraph());
+	public StructuralCausalModel(DirectedAcyclicGraph empiricalDAG, int[] endoVarSizes, int... exoVarSizes){
 
-		if(endoVarSizes.length != empiricalDAG.getVariables().length)
+		if(endoVarSizes.length != empiricalDAG.vertexSet().size())
 			throw new IllegalArgumentException("endoVarSizes vector should as long as the number of vertices in the dag");
 
-		Strides dagDomain = new Strides(empiricalDAG.getVariables(), endoVarSizes);
+		int[] vars = DAGUtil.getVariables(empiricalDAG);
+		Strides dagDomain = new Strides(vars, endoVarSizes);
 
 		if(exoVarSizes.length==0){
-			exoVarSizes =  IntStream.of(empiricalDAG.getVariables())
-					.map(v -> dagDomain.intersection(ArrayUtils.add(empiricalDAG.getParents(v), v)).getCombinations()+1)
+			exoVarSizes =  IntStream.of(vars)
+					.map(v -> dagDomain.intersection(ArrayUtils.add(vars, v)).getCombinations()+1)
 					.toArray();
 		}else if(exoVarSizes.length==1){
 			int s = exoVarSizes[0];
-			exoVarSizes = IntStream.range(0,empiricalDAG.getVariables().length).map(i-> s).toArray();
+			exoVarSizes = IntStream.range(0,vars.length).map(i-> s).toArray();
 		}
 
 
 		this.addVariables(dagDomain.getSizes());
 
-		for (int i = 0; i<empiricalDAG.getVariables().length; i++){
-			int v = empiricalDAG.getVariables()[i];
-			this.addParents(v, empiricalDAG.getParents(v));
+		for (int i = 0; i<vars.length; i++){
+			int v = vars[i];
+			this.addParents(v, DAGUtil.getParents(empiricalDAG, v));
 			if(exoVarSizes.length==1)
 				this.addParent(v, this.addVariable(exoVarSizes[0], true));
 			else
@@ -116,7 +111,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param bnet
 	 * @return
 	 */
-	public static StructuralCausalModel of(BayesianNetwork bnet){
+	public static StructuralCausalModel of(DAGModel<BayesianFactor> bnet){
 		return ch.idsia.credici.model.builder.CausalBuilder.of(bnet).build();
 	}
 
@@ -126,7 +121,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param endoVarSizes
 	 * @return
 	 */
-	public static StructuralCausalModel of(SparseDirectedAcyclicGraph dag, int[] endoVarSizes){
+	public static StructuralCausalModel of(DirectedAcyclicGraph dag, int[] endoVarSizes){
 		return CausalBuilder.of(dag,endoVarSizes).build();
 	}
 
@@ -173,7 +168,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		if(vid>max) max = vid;
 		max++;
 		this.cardinalities.put(vid, size);
-		network.addVariable(vid, size);
+		network.addVertex(vid);
 		if(exogenous)
 			this.exogenousVars.add(vid);
 		return vid;
@@ -328,7 +323,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	public void randomizeExoFactor(int u, int prob_decimals){
 		this.setFactor(u,
-				BayesianFactor.random(this.getDomain(u),
+				RandomUtilities.BayesianFactorRandom(this.getDomain(u),
 						this.getDomain(this.getParents(u)),
 						prob_decimals, false)
 		);
@@ -338,9 +333,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public void randomizeEndoFactor(int x){
 		try {
 			Strides pa_x = this.getDomain(this.getParents(x));
-			int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
+			int[] assignments = RandomUtilities.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
 			this.setFactor(x,
-					BayesianFactor.deterministic(
+					BayesianFactorBuilder.deterministic(
 							this.getDomain(x),
 							pa_x,
 							assignments)
@@ -365,10 +360,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 			for (int x : getEndogenousVars()) {
 				Strides pa_x = this.getDomain(this.getParents(x));
-				int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
+				int[] assignments = RandomUtilities.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
 
 				this.setFactor(x,
-						BayesianFactor.deterministic(
+						BayesianFactorBuilder.deterministic(
 								this.getDomain(x),
 								pa_x,
 								assignments)
@@ -395,7 +390,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		for(int v : model.getEndogenousVars()){
 			equations.put(v, model.getFactor(v));
-			empirical.put(v, model.getProb(v).fixPrecission(5,v));
+			empirical.put(v, FactorUtil.fixPrecission(model.getProb(v), 5, false, v));
+
+
 		}
 
 		return new TIntObjectMap[] {empirical, equations};
@@ -474,14 +471,11 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			System.out.println("Exogenous parents: "+Arrays.toString(this.getSizes(this.getExogenousParents(x)))+" states");
 
 			try {
-				BayesianFactor p = this.getProb(x).fixPrecission(5, x).reorderDomain(x);
+				BayesianFactor p = FactorUtil.fixPrecission(this.getProb(x), 5, false, x);
 				System.out.println(p + " = " + Arrays.toString(p.getData()));
 			}catch (Exception e){}
 
 			BayesianFactor f = this.getFactor(x).reorderDomain(this.getExogenousParents(x));
-
-
-
 
 			double[][] fdata = ArraysUtil.reshape2d(f.getData(), f.getDomain().getCombinations()/f.getDomain().getCardinality(this.getExogenousParents(x)[0]));
 			System.out.println(f+" = ");
@@ -494,57 +488,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 
-	/**
-	 * Converts the current SCM into an equivalent credal network consistent
-	 * with the empirical probabilities (of the endogenous variables).
-	 * This is the simple case where each endogenous variable has a single
-	 * and non-shared exogenous parent.
-	 * @param empiricalProbs - for each exogenous variable U, the empirical probability of the children given the endogenous parents.
-	 * @return
-	 */
-	@Deprecated
-	public SparseModel toVertexSimple(BayesianFactor... empiricalProbs){
 
-		// Copy the structure of the this
-		SparseModel cmodel = new SparseModel();
-		cmodel.addVariables(this.getSizes(this.getVariables()));
-		for (int v : cmodel.getVariables()){
-			cmodel.addParents(v, this.getParents(v));
-		}
-
-
-		// Set the credal sets for the endogenous variables X
-		for(int v: this.getEndogenousVars()) {
-			VertexFactor kv = new BayesianToVertex().apply(this.getFactor(v), v);
-			cmodel.setFactor(v, kv);
-		}
-
-		// Get the credal sets for the exogenous variables U
-		for(int v: this.getExogenousVars()) {
-			System.out.println("Calculating credal set for "+v);
-			double [] vector = this.getFactor(this.getChildren(v)[0]).getData();
-
-
-			double[][] coeff = ArraysUtil.transpose(ArraysUtil.reshape2d(
-					this.getFactor(this.getChildren(v)[0]).getData(), this.getSizes(v)
-			));
-
-			int x = this.getChildren(v)[0];
-			BayesianFactor pv = (BayesianFactor) Stream.of(empiricalProbs).filter(f ->
-					ImmutableSet.copyOf(Ints.asList(f.getDomain().getVariables()))
-							.equals(ImmutableSet.copyOf(
-									Ints.asList(Ints.concat(new int[]{x}, this.getEndegenousParents(x))))))
-					.toArray()[0];
-
-			double[] vals = pv.getData();
-
-			SeparateHalfspaceFactor constFactor = new SeparateHalfspaceFactor(cmodel.getDomain(v), coeff, vals);
-			VertexFactor vertexFactor = new VertexFactor(constFactor);
-			cmodel.setFactor(v, vertexFactor);
-		}
-
-		return cmodel;
-	}
 
 	/**
 	 * Converts the current SCM into an equivalent credal network consistent
@@ -555,7 +499,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	@Deprecated
-	public SparseModel toCredalNetwork(BayesianFactor... empiricalProbs){
+	public DAGModel toCredalNetwork(BayesianFactor... empiricalProbs){
 		return this.toCredalNetwork(true, empiricalProbs);
 	}
 
@@ -569,72 +513,13 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	@Deprecated
-	public SparseModel toCredalNetwork(boolean vertex, BayesianFactor... empiricalProbs){
-
-
-		// Copy the structure of the this
-		SparseModel cmodel = new SparseModel();
-		cmodel.addVariables(this.getSizes(this.getVariables()));
-		for (int v : cmodel.getVariables()){
-			cmodel.addParents(v, this.getParents(v));
-		}
-
-		// Set the credal sets for the endogenous variables X (structural eqs.)
-		for(int v: this.getEndogenousVars()) {
-
-			// Variable on the left should be the first
-			BayesianFactor cpt_v =this.getFactor(v).reorderDomain(v);
-
-			if(vertex)
-				cmodel.setFactor(v, new BayesianToVertex().apply(cpt_v, v));
-			else
-				cmodel.setFactor(v, new BayesianToHalfSpace().apply(cpt_v, v));
-		}
-
-		// Get the credal sets for the exogenous variables U
-		for(int u: this.getExogenousVars()) {
-
-			double [] vector = this.getFactor(this.getChildren(u)[0]).getData();
-			int[] children = this.getChildren(u);
-
-			// Get the coefficients by combining all the EQs of the children
-			double[][] coeff = this.getCoeff(u);
-
-			// Get the P(ch(U)|endogenous_pa(ch(U)))
-			int[] ch_u = this.getChildren(u);
-
-			BayesianFactor pv = (BayesianFactor) Stream.of(empiricalProbs).filter(f ->
-					ImmutableSet.copyOf(Ints.asList(f.getDomain().getVariables()))
-							.equals(ImmutableSet.copyOf(
-									Ints.asList(Ints.concat(ch_u, this.getEndegenousParents(ch_u))))
-							))
-					.toArray()[0];
-
-			double[] vals = pv.getData();
-
-
-			SeparateHalfspaceFactor constFactor = new SeparateHalfspaceFactor(cmodel.getDomain(u), coeff, vals);
-
-			if(constFactor==null)
-				throw new NoFeasibleSolutionException();
-
-
-			if(vertex){
-				VertexFactor fu = new HalfspaceToVertex().apply(constFactor);
-				if(fu.getData()[0]==null)
-					throw new NoFeasibleSolutionException();
-				cmodel.setFactor(u, fu);
-			}else{
-				cmodel.setFactor(u, constFactor);
-			}
-
-
-		}
-
-		return cmodel;
+	public DAGModel toCredalNetwork(boolean vertex, BayesianFactor... empiricalProbs){
+		if(vertex)
+			return this.toVCredal(empiricalProbs);
+		return this.toHCredal(empiricalProbs);
 	}
 
-	public SparseModel toHCredal(BayesianFactor... empiricalProbs){
+	public DAGModel<SeparateHalfspaceFactor> toHCredal(BayesianFactor... empiricalProbs){
 		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setNonnegative(false)
@@ -642,7 +527,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				.build().getModel();
 	}
 
-	public SparseModel toHCredal(Collection empiricalProbs){
+	public DAGModel<SeparateHalfspaceFactor> toHCredal(Collection empiricalProbs){
 		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setNonnegative(false)
@@ -651,14 +536,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 
-	public SparseModel toVCredal(BayesianFactor... empiricalProbs){
+	public DAGModel<VertexFactor> toVCredal(BayesianFactor... empiricalProbs){
 		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToVertex()
 				.build().getModel();
 	}
 
-	public SparseModel toVCredal(Collection empiricalProbs){
+	public DAGModel<VertexFactor> toVCredal(Collection empiricalProbs){
 		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToVertex()
@@ -666,8 +551,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 
-	public BayesianNetwork toBnet(){
-		BayesianNetwork bnet = new BayesianNetwork();
+	public DAGModel<BayesianFactor> toBnet(){
+		DAGModel<BayesianFactor> bnet = new DAGModel<>();
 		IntStream.of(getVariables()).forEach(v -> bnet.addVariable(v, getSize(v)));
 		IntStream.of(getVariables()).forEach(v -> {
 			bnet.addParents(v, this.getParents(v));
@@ -794,7 +679,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		int i = 0;
 		for(int u : getExogenousVars()){
 			int[] ch_u = getEndogenousChildren(u);
-			empirical[i] = getProb(ch_u).fixPrecission(5,ch_u);
+			empirical[i] = FactorUtil.fixPrecission(getProb(ch_u), 5, true, ch_u);
 			i++;
 		}
 		return empirical;
@@ -806,7 +691,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		int i = 0;
 		for(int[] x : this.endoConnectComponents()) {
 			BayesianFactor p = getProb(x);
-			if(fix) p = p.fixPrecission(5, x);
+			if(fix) p = FactorUtil.fixPrecission(p, 5, true, x);
 			empirical.put(Arrays.stream(x).boxed().collect(Collectors.toSet()), p);
 			i++;
 		}
@@ -838,12 +723,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 */
-	public BayesianNetwork getEmpiricalNet(){
+	public DAGModel<BayesianFactor> getEmpiricalNet(){
 
 		if(this.getExogenousTreewidth()>1)
 			throw new IllegalArgumentException("Non quasi markovian model");
 
-		BayesianNetwork bnet = new BayesianNetwork();
+		DAGModel<BayesianFactor> bnet = new DAGModel<>();
 
 		// Copy the endogenous variables
 		IntStream.of(getEndogenousVars()).forEach( v -> bnet.addVariable(v, this.getSize(v)));
@@ -851,7 +736,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		// Set the factors
 		for(int v: getEndogenousVars()){
 			bnet.addParents(v, getEndegenousParents(v));
-			bnet.setFactor(v, getProb(v).fixPrecission(5, v));
+			bnet.setFactor(v, FactorUtil.fixPrecission(getProb(v),5, false, v));
 		}
 
 		return bnet;
@@ -866,7 +751,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			throw new IllegalArgumentException("Non quasi markovian model");
 
 		StructuralCausalModel smodel = this.copy();
-		SparseModel cmodel = null;
+		DAGModel<VertexFactor> cmodel = null;
 		for (int i = 0; i < maxIterations; i++) {
 
 			try {
@@ -882,7 +767,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		if(cmodel != null){
 			for(int u : smodel.getExogenousVars()){
-				smodel.setFactor(u, ((VertexFactor)cmodel.getFactor(u)).sampleVertex());
+				smodel.setFactor(u, Operations.sampleVertex(cmodel.getFactor(u)));
 			}
 
 		}else{
@@ -944,7 +829,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	public Strides endogenousMarkovBlanket(int v){
 		return this.getDomain(ArraysUtil.intersection(
-				this.getNetwork().markovBlanket(v),
+				DAGUtil.markovBlanket(this.getNetwork(), v),
 				this.getEndogenousVars()
 		));
 	}
@@ -986,7 +871,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		// define the new factors
 
-		BayesianFactor fab = BayesianFactor.combineAll(this.getFactors(a, b));
+		BayesianFactor fab = (BayesianFactor) Operations.combineAll(this.getFactors(a, b));
 		BayesianFactor fb = fab.marginalize(a);
 		BayesianFactor fa_b = fab.divide(fb);
 
@@ -1036,16 +921,16 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		for (int v : vars) {
 			BayesianFactor f1 = this.getFactor(v);
 			BayesianFactor f2 = model.getFactor(v);
-			out.setFactor(v, f1.addition(f2).scalarMultiply(0.5));
+			out.setFactor(v, Operations.scalarMultiply(f1.addition(f2), 0.5));
 		}
 		return out;
 	}
 
-	public SparseDirectedAcyclicGraph getExogenousDAG(){
-		SparseDirectedAcyclicGraph dag = this.getNetwork().copy();
+	public DirectedAcyclicGraph getExogenousDAG(){
+		DirectedAcyclicGraph dag = (DirectedAcyclicGraph) this.getNetwork().clone();
 		for(int x : this.getEndogenousVars()){
 			for(int y: this.getEndegenousParents(x)){
-				dag.removeLink(y,x);
+				dag.removeEdge(y,x);
 			}
 		}
 		return dag;
@@ -1073,7 +958,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			int vnew = v+increment;
 			int[] parentsNew = IntStream.of(this.getParents(v)).map(i -> i+increment).toArray();
 			int[] newDomain = IntStream.of(this.getFactor(v).getDomain().getVariables()).map(i -> i+increment).toArray();
-			BayesianFactor newFactor = this.getFactor(v).copy().renameDomain(newDomain);
+			BayesianFactor newFactor = Operations.renameDomain(this.getFactor(v), newDomain);
 
 			newModel.addParents(vnew, parentsNew);
 			newModel.setFactor(vnew, newFactor);

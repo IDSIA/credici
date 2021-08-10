@@ -3,16 +3,18 @@ package ch.idsia.credici.model.builder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.ConstraintsOps;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
 import ch.idsia.crema.factor.convert.HalfspaceToVertex;
-import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactorFactory;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.model.graphical.DAGModel;
+
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
@@ -64,7 +66,7 @@ public class ExactCredalBuilder extends CredalBuilder {
         return setEmpirical((BayesianFactor[]) factors.toArray(BayesianFactor[]::new));
     }
 
-    public ExactCredalBuilder setEmpirical(BayesianNetwork bnet){
+    public ExactCredalBuilder setEmpirical(DAGModel<BayesianFactor> bnet){
         if(!ArraysUtil.equals(bnet.getVariables(),
                 causalmodel.getEndogenousVars(), true, false))
             throw new IllegalArgumentException("Uncompatible empirical network");
@@ -75,7 +77,7 @@ public class ExactCredalBuilder extends CredalBuilder {
 
         for(int x: causalmodel.getEndogenousVars()){
             BayesianFactor f = (BayesianFactor) inf.conditionalQuery(x, causalmodel.getEndegenousParents(x));
-            f = f.fixPrecission(10, x);
+            f = FactorUtil.fixPrecission(f, 10, false, x);
             factors.add(f);
         }
 
@@ -135,7 +137,7 @@ public class ExactCredalBuilder extends CredalBuilder {
         assertMarkovianity();
 
         // Copy the structure of the causal model
-        model = new SparseModel();
+        model = new DAGModel();
         model.addVariables(causalmodel.getSizes(causalmodel.getVariables()));
         for (int v : model.getVariables()){
             model.addParents(v, causalmodel.getParents(v));
@@ -162,8 +164,12 @@ public class ExactCredalBuilder extends CredalBuilder {
         double[][] coeff = getCoeff(u);
         double[] vals = empiricalFactors.get(u).getData();
 
-        SeparateHalfspaceFactor constFactor =
-                new SeparateHalfspaceFactor(false, this.nonnegative, model.getDomain(u), coeff, vals);
+
+
+        SeparateHalfspaceFactor constFactor = SeparateHalfspaceFactorFactory
+                .factory()
+                .constraints(false, this.nonnegative, model.getDomain(u), coeff, vals).get();
+
 
         // remove constraints with all their coefficients equal to zero
         constFactor = ConstraintsOps.removeZeroConstraints(constFactor);

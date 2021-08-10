@@ -2,8 +2,7 @@ package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
-import ch.idsia.crema.model.graphical.SparseModel;
-import gnu.trove.map.hash.THashMap;
+import ch.idsia.crema.model.graphical.DAGModel;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,13 +13,13 @@ public abstract class CredalBuilder {
 	protected  StructuralCausalModel causalmodel;
 
 	// output credal model
-	protected SparseModel model;
+	protected DAGModel model;
 
 	// abstract methods to implemented
 	abstract public CredalBuilder build() throws InterruptedException;
 
 	// method for getting the generated model.
-	public SparseModel getModel() {
+	public DAGModel getModel() {
 		return model;
 	}
 

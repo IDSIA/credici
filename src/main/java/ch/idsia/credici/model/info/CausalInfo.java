@@ -2,10 +2,9 @@ package ch.idsia.credici.model.info;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.predefined.Party;
-import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.GenericSparseModel;
-import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
@@ -14,20 +13,20 @@ import java.util.stream.IntStream;
 
 public class CausalInfo {
 
-    GenericSparseModel model;
+    DAGModel model;
 
     /**
      * Constructor of a CausalInfo with a model associated
      * @param model
      */
-    private CausalInfo(GenericSparseModel model){
+    private CausalInfo(DAGModel model){
         this.model = model;
     }
 
 
     private static TIntObjectHashMap<CausalInfo> builders = new TIntObjectHashMap<>();
 
-    public static CausalInfo of(GenericSparseModel model){
+    public static CausalInfo of(DAGModel model){
 
         //assertIsCredal(model);
 
@@ -81,7 +80,7 @@ public class CausalInfo {
     }
 
 
-    public static void assertIsCredal(SparseModel m){
+    public static void assertIsCredal(DAGModel m){
         for(int v : m.getVariables())
             if(!(m.getFactor(v) instanceof VertexFactor) && !(m.getFactor(v) instanceof SeparateHalfspaceFactor))
                 throw new IllegalArgumentException("Factors should be credal");
@@ -89,14 +88,14 @@ public class CausalInfo {
     }
 
 
-    public static void assertIsHCredal(SparseModel m){
+    public static void assertIsHCredal(DAGModel m){
         for(int v : m.getVariables())
             if(!(m.getFactor(v) instanceof SeparateHalfspaceFactor))
                 throw new IllegalArgumentException("Model should be H-CREDAL");
 
     }
 
-    public static void assertIsVCredal(SparseModel m){
+    public static void assertIsVCredal(DAGModel m){
         for(int v : m.getVariables())
             if(!(m.getFactor(v) instanceof VertexFactor))
                 throw new IllegalArgumentException("Model should be V-CREDAL");
@@ -124,7 +123,7 @@ public class CausalInfo {
     public static void main(String[] args) {
 
         StructuralCausalModel causalModel = Party.buildModel();
-        SparseModel m = causalModel.toVCredal(causalModel.getEmpiricalProbs());
+        DAGModel m = causalModel.toVCredal(causalModel.getEmpiricalProbs());
 
         System.out.println(Arrays.toString(CausalInfo.of(m).getEndogenousVars()));
         System.out.println(Arrays.toString(CausalInfo.of(m).getExogenousParents(0)));

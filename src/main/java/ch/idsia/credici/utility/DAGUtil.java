@@ -179,4 +179,18 @@ public class DAGUtil {
     public static int[] getParents(DirectedAcyclicGraph dag, int x){
         return dag.getAncestors(x).stream().mapToInt(i->(int)i).toArray();
     }
+
+
+    public static int[] markovBlanket(DirectedAcyclicGraph dag, int v){
+
+        int[] paCh = Ints.concat(IntStream.of(getChildren(dag, v))
+                .mapToObj(c -> getParents(dag, c))
+                .toArray(int[][]::new));
+
+        paCh = IntStream.of(paCh).filter(x->x!=v).toArray();
+
+        return ArraysUtil.unique(Ints.concat(getParents(dag, v), getChildren(dag, v), paCh));
+
+    }
+
 }

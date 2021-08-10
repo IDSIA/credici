@@ -4,16 +4,16 @@ import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.DAGUtil;
+import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.Strides;
-import ch.idsia.crema.model.graphical.GenericSparseModel;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.lang3.NotImplementedException;
+import org.jgrapht.graph.DirectedAcyclicGraph;
 
 import java.util.Random;
 import java.util.stream.IntStream;
@@ -21,9 +21,9 @@ import java.util.stream.Stream;
 
 public class CausalBuilder {
 
-    private SparseDirectedAcyclicGraph empiricalDAG;
+    private DirectedAcyclicGraph empiricalDAG;
 
-    private SparseDirectedAcyclicGraph causalDAG;
+    private DirectedAcyclicGraph causalDAG;
 
     private BayesianFactor[] equations;
 
@@ -42,28 +42,28 @@ public class CausalBuilder {
 
 
 
-    public CausalBuilder(SparseDirectedAcyclicGraph empiricalDAG, int[] endoVarSizes) {
+    public CausalBuilder(DirectedAcyclicGraph empiricalDAG, int[] endoVarSizes) {
         this.empiricalDAG = empiricalDAG;
         this.endoVarSizes = new TIntIntHashMap();
         int i = 0;
-        for(int x: empiricalDAG.getVariables()){
+        for(int x: DAGUtil.getVariables(empiricalDAG)){
             this.endoVarSizes.put(x, endoVarSizes[i]);
             i++;
         }
     }
 
-    public CausalBuilder(BayesianNetwork bnet) {
+    public CausalBuilder(DAGModel<BayesianFactor> bnet) {
         this(bnet.getNetwork(), bnet.getSizes(bnet.getVariables()));
     }
 
-    public static CausalBuilder of(SparseDirectedAcyclicGraph empiricalDAG, int... endoVarSizes){
+    public static CausalBuilder of(DirectedAcyclicGraph empiricalDAG, int... endoVarSizes){
         int s = endoVarSizes[0];
         if(endoVarSizes.length == 1)
-            endoVarSizes = IntStream.range(0,empiricalDAG.getVariables().length)
+            endoVarSizes = IntStream.range(0, DAGUtil.getVariables(empiricalDAG).length)
                     .map(x -> s).toArray();
         return new CausalBuilder(empiricalDAG, endoVarSizes);
     }
-    public static CausalBuilder of(BayesianNetwork bnet){
+    public static CausalBuilder of(DAGModel<BayesianFactor> bnet){
         return new CausalBuilder(bnet);
     }
 
@@ -84,8 +84,11 @@ public class CausalBuilder {
             assertDAGsConsistency();
         }else if(equations != null){
             //build a DAG consistent with the equations
-            causalDAG = empiricalDAG.copy();
-            for(int x : empiricalDAG.getVariables()){
+            causalDAG = (DirectedAcyclicGraph) empiricalDAG.clone();
+
+            int[] empiricalVars = DAGUtil.getVariables(empiricalDAG);
+
+            for(int x : empiricalVars){
                 // Get the equation of X
                 BayesianFactor eqx =
                         Stream.of(equations)
@@ -93,21 +96,25 @@ public class CausalBuilder {
                                 .toArray(BayesianFactor[]::new)[0];
 
                 // Add links from each U to each X
-                int U[] = ArraysUtil.difference(eqx.getDomain().getVariables(), empiricalDAG.getVariables());
+                int U[] = ArraysUtil.difference(eqx.getDomain().getVariables(), empiricalVars);
                 for(int u: U){
                     if(!causalDAG.containsVertex(u))
-                        causalDAG.addVariable(u);
-                    causalDAG.addLink(u,x);
+                        causalDAG.addVertex(u);
+                    causalDAG.addEdge(u,x);
                 }
             }
             // check consistency
             assertDAGsConsistency();
         }else{
+
+            int[] empiricalVars = DAGUtil.getVariables(empiricalDAG);
+            int u = IntStream.of(empiricalVars).max().getAsInt();
+
             // build the markovian-case DAG
-            causalDAG = empiricalDAG.copy();
-            for(int x: empiricalDAG.getVariables()){
-                int u = causalDAG.addVariable();
-                causalDAG.addLink(u,x);
+            causalDAG = (DirectedAcyclicGraph) empiricalDAG.clone();
+            for(int x: DAGUtil.getVariables(empiricalDAG)){
+                causalDAG.addVertex(u);
+                causalDAG.addEdge(u,x);
             }
         }
 
@@ -115,12 +122,13 @@ public class CausalBuilder {
 
 
     private void initEndogenousPart(){
+        int[] empiricalVars = DAGUtil.getVariables(empiricalDAG);
         model = new StructuralCausalModel();
-        for(int x: empiricalDAG) {
+        for(int x: empiricalVars) {
             model.addVariable(x, endoVarSizes.get(x), false);
         }
-        for(int x: empiricalDAG) {
-            model.addParents(x, empiricalDAG.getParents(x));
+        for(int x: empiricalVars) {
+            model.addParents(x, DAGUtil.getParents(empiricalDAG,x));
         }
 
     }
@@ -155,9 +163,10 @@ public class CausalBuilder {
             // compute in markovian equationless case
             exoVarSizes = new TIntIntHashMap();
             for(int x : model.getEndogenousVars()){
-                int u = ArraysUtil.difference(causalDAG.getParents(x), empiricalDAG.getParents(x))[0];
+
+                int u = ArraysUtil.difference(DAGUtil.getParents(causalDAG,x), DAGUtil.getParents(empiricalDAG,x))[0];
                 int sizeX = model.getDomain(x).getCombinations();
-                int sizeEndoPaX = model.getDomain(empiricalDAG.getParents(x)).getCombinations();
+                int sizeEndoPaX = model.getDomain(DAGUtil.getParents(empiricalDAG,x)).getCombinations();
                 exoVarSizes.put(u, (int) Math.pow(sizeX, sizeEndoPaX));
 
             }
@@ -168,10 +177,10 @@ public class CausalBuilder {
 
 
     private void initEnxogenousPart(){
-        int[] exogenousVars = ArraysUtil.difference(causalDAG.getVariables(), empiricalDAG.getVariables());
+        int[] exogenousVars = ArraysUtil.difference(DAGUtil.getVariables(causalDAG),DAGUtil.getVariables(empiricalDAG));
         for(int u: exogenousVars) {
             model.addVariable(u, exoVarSizes.get(u), true);
-            for(int x: causalDAG.getChildren(u)) {
+            for(int x: DAGUtil.getChildren(causalDAG, u)) {
                 model.addParent(x, u);
             }
         }
@@ -239,9 +248,9 @@ public class CausalBuilder {
     }
 
     private boolean isMarkovian(){
-        for(int v: causalDAG.getVariables()){
+        for(int v: DAGUtil.getVariables(causalDAG)){
             if(!empiricalDAG.containsVertex(v)){
-                if(causalDAG.getChildren(v).length > 1)
+                if(DAGUtil.getChildren(causalDAG,v).length > 1)
                     return false;
             }
         }
@@ -253,15 +262,15 @@ public class CausalBuilder {
         return model;
     }
 
-    public SparseDirectedAcyclicGraph getCausalDAG() {
+    public DirectedAcyclicGraph getCausalDAG() {
         return causalDAG;
     }
 
-    public SparseDirectedAcyclicGraph getEmpiricalDAG() {
+    public DirectedAcyclicGraph getEmpiricalDAG() {
         return empiricalDAG;
     }
 
-    public CausalBuilder setCausalDAG(SparseDirectedAcyclicGraph causalDAG) {
+    public CausalBuilder setCausalDAG(DirectedAcyclicGraph causalDAG) {
         this.causalDAG = causalDAG;
         return this;
     }
@@ -280,39 +289,17 @@ public class CausalBuilder {
             throw new IllegalArgumentException("Causal and empirical DAGs are not consistent");
 
         for(int u: DAGUtil.nodesDifference(causalDAG, empiricalDAG))
-            if(causalDAG.getParents(u).length > 0 )
+            if(DAGUtil.getParents(causalDAG,u).length > 0 )
                 throw new IllegalArgumentException("Exogenous nodes cannot have ingoing arcs");
 
     }
 
-    public static void main(String[] args) {
-        BayesianNetwork bnet = new BayesianNetwork();
-        int y = bnet.addVariable(2);
-        int x = bnet.addVariable(2);
-
-        bnet.setFactor(y, new BayesianFactor(bnet.getDomain(y), new double[]{0.3,0.7}));
-        bnet.setFactor(x, new BayesianFactor(bnet.getDomain(x,y), new double[]{0.6,0.5, 0.5,0.5}));
 
 
-        //int u1=2, u2=3;
-
-        //EquationBuilder.fromVector(Strides.as(y,2))
-
-        StructuralCausalModel model =  CausalBuilder.of(bnet).setFillRandomExogenousFactors(3).build();
-
-        CausalBuilder b = CausalBuilder.of(bnet).setFillRandomExogenousFactors(3);
-        b.build();
-        b.getModel().printSummary();
-
-
-
-    }
-
-
-    public static StructuralCausalModel transformFrom(BayesianNetwork bnet){
+    public static StructuralCausalModel transformFrom(DAGModel<BayesianFactor> bnet){
 
         for(int x: CausalInfo.of(bnet).getEndogenousVars()) {
-            if (!bnet.getFactor(x).isDeterministic(bnet.getParents(x)))
+            if (!FactorUtil.isDeterministic(bnet.getFactor(x),bnet.getParents(x)))
                 throw new IllegalArgumentException("Variable " + x + " does not contain a deterministic function as factor");
         }
 
@@ -331,18 +318,18 @@ public class CausalBuilder {
     }
 
 
-    public static StructuralCausalModel random(SparseDirectedAcyclicGraph empDAG, int endoVarSize, int exoVarSize ){
+    public static StructuralCausalModel random(DirectedAcyclicGraph empDAG, int endoVarSize, int exoVarSize ){
 
         Random r = RandomUtil.getRandom();
         StructuralCausalModel scm = new StructuralCausalModel();
 
         // build endogenous part
-        int[] X = empDAG.getVariables();
+        int[] X = DAGUtil.getVariables(empDAG);
         for(int x: X)
             scm.addVariable(x, endoVarSize, false);
 
         for(int x:X)
-            scm.addParents(x, empDAG.getParents(x));
+            scm.addParents(x, DAGUtil.getParents(empDAG,x));
 
         // get a random number of co-founders (U variables)
         // between 1 and the number of endog. vars

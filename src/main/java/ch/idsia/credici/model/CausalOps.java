@@ -2,7 +2,6 @@ package ch.idsia.credici.model;
 
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
-import ch.idsia.crema.factor.Factor;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.SeparatelySpecified;

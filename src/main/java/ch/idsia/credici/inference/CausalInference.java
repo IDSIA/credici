@@ -1,18 +1,8 @@
 package ch.idsia.credici.inference;
 
-import ch.idsia.credici.model.CausalOps;
-import ch.idsia.credici.model.counterfactual.WorldMapping;
+
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.GenericFactor;
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.inference.approxlp.CredalApproxLP;
-import ch.idsia.crema.model.ObservationBuilder;
-import ch.idsia.crema.model.graphical.GenericSparseModel;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.user.credal.Interval;
-import ch.idsia.crema.user.credal.IntervalFactor;
-import com.google.common.primitives.Doubles;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;

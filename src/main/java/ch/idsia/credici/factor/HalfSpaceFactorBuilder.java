@@ -4,8 +4,10 @@ import ch.idsia.crema.IO;
 import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactorFactory;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import ch.idsia.crema.model.graphical.DAGModel;
 import com.google.common.primitives.Ints;
+import gnu.trove.map.TIntObjectMap;
 import org.apache.commons.math3.optim.linear.LinearConstraint;
 import org.apache.commons.math3.optim.linear.Relationship;
 
@@ -16,6 +18,19 @@ import java.util.List;
 
 public class HalfSpaceFactorBuilder {
 
+	public static SeparateHalfspaceFactor as(Strides left, Strides right, TIntObjectMap<List<LinearConstraint>> data) {
+		return SeparateHalfspaceFactorFactory
+				.factory()
+				.domain(left,right)
+				.data((List<List<LinearConstraint>>) data.valueCollection())
+				.get();
+	}
+
+	public static SeparateHalfspaceFactor as(Strides leftRightDomain, TIntObjectMap<List<LinearConstraint>> data) {
+		Strides left = Strides.as(leftRightDomain.getVariables()[0], leftRightDomain.getSizes()[0]);
+		Strides right = leftRightDomain.remove(left);
+		return as(left,right, data);
+	}
 
 	public static LinearConstraint[] buildConstraints(boolean normalized, boolean nonnegative, double[][] coefficients, double[] values, Relationship... rel) {
 
@@ -102,6 +117,19 @@ public class HalfSpaceFactorBuilder {
 
 		return factory.get();
 	}
+
+	/**
+	 * Static method that builds a deterministic factor (values can only be ones or zeros)
+	 * without parent variables.
+	 * @param left	Strides - children variables.
+	 * @param assignment int - single value to assign
+	 * @return
+	 */
+
+	public static SeparateHalfspaceFactor deterministic(Strides left, int assignment){
+		return deterministic(left, Strides.empty(), assignment);
+	}
+
 
 	public static void main(String[] args) throws IOException {
 

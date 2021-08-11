@@ -2,6 +2,7 @@ package ch.idsia.credici.inference;
 
 
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.crema.core.ObservationBuilder;
 import ch.idsia.crema.factor.GenericFactor;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;

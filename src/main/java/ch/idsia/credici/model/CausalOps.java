@@ -1,15 +1,16 @@
 package ch.idsia.credici.model;
 
+import ch.idsia.credici.factor.FactorBuilder;
+import ch.idsia.credici.factor.Operations;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.SeparatelySpecified;
-import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.GenericSparseModel;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
-import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
@@ -71,7 +72,7 @@ public class CausalOps {
                 }
                 // Set the factor with the new domain
                 BayesianFactor f = m.getFactor(x_0);
-                f = f.renameDomain(map.getEquivalentVars(w,f.getDomain().getVariables()));
+                f = Operations.renameDomain(f, map.getEquivalentVars(w,f.getDomain().getVariables()));
                 merged.setFactor(x_w, f);
             }
             w++;
@@ -90,11 +91,11 @@ public class CausalOps {
      * @param models
      * @return
      */
-    public static SparseModel merge(SparseModel reality, SparseModel... models) {
+    public static DAGModel merge(DAGModel reality, DAGModel... models) {
 
 
         //check that the variables are the same
-        for(SparseModel m : models){
+        for(DAGModel m : models){
             if (!Arrays.equals(reality.getVariables(), m.getVariables()))
                 throw new IllegalArgumentException("Error: models cannot be merged: different variables");
         }
@@ -113,7 +114,7 @@ public class CausalOps {
         WorldMapping map = new WorldMapping(merged_vars);
 
         // add variables of world 0 (reality)
-        SparseModel merged = (SparseModel) reality.copy();
+        DAGModel merged = (DAGModel) reality.copy();
         IntStream.of(CausalInfo.of(reality).getEndogenousVars())
                 .forEach(v->map.set(v,0,v));
 
@@ -121,7 +122,7 @@ public class CausalOps {
                 .forEach(v->map.set(v, WorldMapping.ALL,v));
 
         int w = 1;
-        for(SparseModel m: models){
+        for(DAGModel m: models){
 
             int[] m_endogenous =  ArraysUtil.intersection(
                     CausalInfo.of(reality).getEndogenousVars(),
@@ -154,11 +155,8 @@ public class CausalOps {
                     leftVars = ((SeparateHalfspaceFactor)f).getDataDomain() .getVariables();
                     rightVars = ((SeparateHalfspaceFactor)f).getSeparatingDomain() .getVariables();
                 }
-                f = f.renameDomain(map.getEquivalentVars(w,Ints.concat(leftVars,rightVars)));
-
-                f = (GenericFactor) ((SeparatelySpecified)f).sortParents();
-
-
+                f = Operations.renameDomain(f, map.getEquivalentVars(w,Ints.concat(leftVars,rightVars)));
+                f = Operations.sortParents(f);
                 merged.setFactor(x_w, f);
             }
             w++;
@@ -172,13 +170,13 @@ public class CausalOps {
     }
 
 
-    public static GenericSparseModel intervention(GenericSparseModel model, int var, int state, boolean... removeDisconnected){
+    public static DAGModel intervention(DAGModel model, int var, int state, boolean... removeDisconnected){
         if(removeDisconnected.length == 0)
             removeDisconnected = new boolean[]{false};
         else if(removeDisconnected.length>1)
             throw new IllegalArgumentException("wrong length of removeDisconnected");
 
-        GenericSparseModel do_model = model.copy();
+        DAGModel do_model = model.copy();
         // remove the parents
         for(int v: model.getParents(var)){
             do_model.removeParent(var, v);
@@ -192,11 +190,11 @@ public class CausalOps {
             }
 
         // Fix the value of the intervened variable
-        do_model.setFactor(var, model.getFactor(var).get_deterministic(var, state));
+        do_model.setFactor(var, FactorBuilder.getDeterministic(model.getFactor(var), var, state));
         return do_model;
 
     }
-
+/*
     public static StructuralCausalModel intervention(StructuralCausalModel model, int var, int state, boolean... removeDisconnected){
         return (StructuralCausalModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);
     }
@@ -204,10 +202,10 @@ public class CausalOps {
     public static SparseModel intervention(SparseModel model, int var, int state, boolean... removeDisconnected){
         return (SparseModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);
     }
+*/
 
-
-    public static GenericSparseModel applyInterventions(GenericSparseModel model, TIntIntMap intervention, boolean... removeDisconnected){
-        GenericSparseModel do_model = model;
+    public static DAGModel applyInterventions(DAGModel model, TIntIntMap intervention, boolean... removeDisconnected){
+        DAGModel do_model = model;
         for(int i=0; i<intervention.size(); i++) {
             do_model =  CausalOps.intervention(do_model, intervention.keys()[i], intervention.values()[i], removeDisconnected);
         }
@@ -221,37 +219,16 @@ public class CausalOps {
      * @param intervention
      * @return
      */
-    private static GenericSparseModel counterfactualModel(GenericSparseModel model, TIntIntMap... intervention){
+    public static DAGModel counterfactualModel(DAGModel model, TIntIntMap... intervention){
         if(intervention.length > 1)
             throw new NotImplementedException("Counterfactual case with multiple worlds not implemented yet ");
-        GenericSparseModel alternative =  applyInterventions(model, intervention[0]);
-        if(model instanceof SparseModel)
-            return merge((SparseModel)model, (SparseModel)alternative);
-        return merge((StructuralCausalModel) model, (StructuralCausalModel)alternative);
+        DAGModel alternative =  applyInterventions(model, intervention[0]);
+        if(model instanceof StructuralCausalModel)
+            return merge((StructuralCausalModel) model, (StructuralCausalModel)alternative);
+        return merge((DAGModel) model, (DAGModel)alternative);
 
     }
 
-
-    /**
-     * Builds the counterfactual model from a set of interventions.
-     * @param model
-     * @param intervention
-     * @return
-     */
-    public static StructuralCausalModel counterfactualModel(StructuralCausalModel model, TIntIntMap... intervention){
-        return (StructuralCausalModel) counterfactualModel((GenericSparseModel) model, intervention);
-    }
-
-    /**
-     * Builds the counterfactual model from a set of interventions.
-     * @param model
-     * @param intervention
-     * @return
-     */
-
-    public static SparseModel counterfactualModel(SparseModel model, TIntIntMap... intervention){
-        return (SparseModel) counterfactualModel((GenericSparseModel) model, intervention);
-    }
 
 
 }

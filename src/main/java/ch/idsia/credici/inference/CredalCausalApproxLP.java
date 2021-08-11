@@ -4,10 +4,12 @@ import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.preprocess.CutObservedSepHalfspace;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.inference.approxlp.ApproxLP1;
 import ch.idsia.crema.model.graphical.DAGModel;
-import ch.idsia.crema.preprocess.BinarizeEvidence;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -15,7 +17,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Collection;
 
-public class CredalCausalApproxLP extends CausalInference<DAGModel, IntervalFactor> {
+public class CredalCausalApproxLP extends CausalInference<DAGModel<SeparateHalfspaceFactor>, IntervalFactor> {
 
 
     private double epsilon = 0.0;
@@ -34,14 +36,14 @@ public class CredalCausalApproxLP extends CausalInference<DAGModel, IntervalFact
 
     }
 
-    public CredalCausalApproxLP(SparseModel model){
+    public CredalCausalApproxLP(DAGModel<SeparateHalfspaceFactor> model){
         CausalInfo.assertIsHCredal(model);
         this.model = model;
 
     }
 
     @Override
-    public SparseModel getInferenceModel(Query q, boolean simplify) {
+    public DAGModel<SeparateHalfspaceFactor> getInferenceModel(Query q, boolean simplify) {
 
         target = q.getTarget();
         epsilon = q.getEpsilon();
@@ -54,11 +56,11 @@ public class CredalCausalApproxLP extends CausalInference<DAGModel, IntervalFact
 
 
         // Get the inference model (simple mutilated or twin graph)
-        SparseModel infModel=null;
+        DAGModel<SeparateHalfspaceFactor> infModel=null;
         if(!q.isCounterfactual()) {
-            infModel = (SparseModel) CausalOps.applyInterventions(model, intervention);
+            infModel = (DAGModel<SeparateHalfspaceFactor>) CausalOps.applyInterventions(model, intervention);
         }else{
-            infModel = (SparseModel) CausalOps.counterfactualModel(model, intervention);
+            infModel = (DAGModel<SeparateHalfspaceFactor>) CausalOps.counterfactualModel(model, intervention);
             //map the target to the alternative world
             q.setCounterfactualMapping(WorldMapping.getMap(infModel));
             target = q.getCounterfactualMapping().getEquivalentVars(1, target);
@@ -67,8 +69,9 @@ public class CredalCausalApproxLP extends CausalInference<DAGModel, IntervalFact
         // preprocessing
         if (simplify) {
             RemoveBarren removeBarren = new RemoveBarren();
-            infModel = removeBarren
-                    .execute(new CutObservedSepHalfspace().execute(infModel, evidence), target, evidence);
+            infModel = (DAGModel<SeparateHalfspaceFactor>) removeBarren
+                    .execute(new CutObservedSepHalfspace().execute(infModel, evidence), evidence, target);
+            // Add to credici this old functionality or check if the new one works well
         }
 
         for(int v : infModel.getVariables()) {
@@ -85,7 +88,7 @@ public class CredalCausalApproxLP extends CausalInference<DAGModel, IntervalFact
     @Override
     public IntervalFactor run(Query q) throws InterruptedException {
 
-        SparseModel infModel = getInferenceModel(q);
+        DAGModel<SeparateHalfspaceFactor> infModel = getInferenceModel(q);
 
         TIntIntHashMap filteredEvidence = new TIntIntHashMap();
 
@@ -97,11 +100,11 @@ public class CredalCausalApproxLP extends CausalInference<DAGModel, IntervalFact
         }
 
         IntervalFactor result = null;
-        Inference lp1 = new Inference();
+        ApproxLP1<SeparateHalfspaceFactor> lp1 = new ApproxLP1();
 
         if(filteredEvidence.size()>0) {
-            int evbin = new BinarizeEvidence().executeInline(infModel, filteredEvidence, filteredEvidence.size(), false);
-            result = lp1.query(infModel, target[0], evbin);
+            //int evbin = new BinarizeEvidence().executeInline(infModel, filteredEvidence, filteredEvidence.size(), false);
+            result = lp1.query(infModel, filteredEvidence, target[0]);
 
         }else{
             result = lp1.query(infModel, target[0]);

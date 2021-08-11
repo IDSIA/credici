@@ -1,12 +1,15 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.factor.VertexFactorBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.VertexToInterval;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.Strides;
+
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactorFactory;
 import jdk.jshell.spi.ExecutionControl;
 
 import java.util.List;
@@ -74,7 +77,8 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 		vals[0][0][0] = min;
 		vals[0][1][0] = max;
 
-		return new VertexFactor(Strides.empty(), Strides.empty(), vals);
+		// todo: check that this with the empty domain works.
+		return VertexFactorBuilder.as(Strides.empty(), Strides.empty(), vals);
 	}
 
 }

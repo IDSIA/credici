@@ -53,6 +53,25 @@ public class VertexFactorBuilder {
 	}
 
 
+
+	public static VertexFactor as(Strides left, Strides right, double[][][] data){
+		VertexFactorFactory factory = VertexFactorFactory.factory().domain(left, right);
+		for(int i=0; i< right.getCombinations(); i++){
+			for(double[] v : data[i])
+				factory.addVertex(v, i);
+		}
+		return factory.get();
+
+	}
+
+
+	public static VertexFactor as(Strides leftRightDomain, double[][][] data) {
+		Strides left = Strides.as(leftRightDomain.getVariables()[0], leftRightDomain.getSizes()[0]);
+		Strides right = leftRightDomain.remove(left);
+		return as(left,right, data);
+	}
+
+
 	public static void main(String[] args) throws IOException {
 
 		Path folder = Path.of("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/tmp/crema");

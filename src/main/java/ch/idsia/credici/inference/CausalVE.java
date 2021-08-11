@@ -46,8 +46,9 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         }
         if (simplify) {
             RemoveBarren removeBarren = new RemoveBarren();
-            infModel = removeBarren
-                    .execute(new CutObserved().execute(infModel, evidence), target, evidence);
+            infModel = (StructuralCausalModel) removeBarren
+                    .execute(new CutObserved().execute(infModel, evidence), evidence, target);
+
         }
         if(elimOrder==null)
             elimOrder = new MinFillOrdering().apply(infModel);

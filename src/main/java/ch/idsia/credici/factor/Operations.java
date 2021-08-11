@@ -5,10 +5,14 @@ import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.OperableFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactorFactory;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactorFactory;
 import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import ch.idsia.crema.factor.credal.vertex.separate.VertexFactorFactory;
+import ch.idsia.crema.utility.IndexIterator;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.Collection;
 import java.util.List;
@@ -111,7 +115,80 @@ public class Operations {
 				.factory()
 				.domain(new Strides(new_vars, f.getDomain().getSizes()))
 				.data(f.getData()).get();
+	}
 
+	public static VertexFactor renameDomain(VertexFactor f, int... new_vars){
+		Strides leftRightDom = new Strides(new_vars, f.getDomain().getSizes());
+		return VertexFactorBuilder.as(leftRightDom, f.getData());
+	}
+
+
+	public static SeparateHalfspaceFactor renameDomain(SeparateHalfspaceFactor f, int... new_vars){
+		Strides leftRightDom = new Strides(new_vars, f.getDomain().getSizes());
+		return HalfSpaceFactorBuilder.as(leftRightDom, f.getData());
+	}
+
+	public static GenericFactor renameDomain(GenericFactor f, int... new_vars){
+		if(f instanceof BayesianFactor)
+			return renameDomain((BayesianFactor)f, new_vars);
+		else if(f instanceof VertexFactor)
+			return renameDomain((VertexFactor)f, new_vars);
+		else if(f instanceof SeparateHalfspaceFactor)
+			return renameDomain((SeparateHalfspaceFactor)f, new_vars);
+
+		throw new IllegalArgumentException("Wrong type of factor");
+	}
+
+
+
+	public static SeparateHalfspaceFactor sortParents(SeparateHalfspaceFactor f) {
+		Strides oldLeft = f.getSeparatingDomain();
+		Strides newLeft = oldLeft.sort();
+		int parentComb = f.getSeparatingDomain().getCombinations();
+		IndexIterator it = oldLeft.getReorderedIterator(newLeft.getVariables());
+		int j;
+
+
+		SeparateHalfspaceFactorFactory ff = SeparateHalfspaceFactorFactory.factory();
+		ff = ff.domain(f.getDataDomain(), newLeft);
+
+		// i -> j
+		for (int i = 0; i < parentComb; i++) {
+			j = it.next();
+			ff.linearProblemAt(i, f.getLinearProblemAt(j));
+		}
+		return ff.get();
+	}
+
+	public static VertexFactor sortParents(VertexFactor f) {
+		Strides oldLeft = f.getSeparatingDomain();
+		Strides newLeft = oldLeft.sort();
+		int parentComb = f.getSeparatingDomain().getCombinations();
+		double[][][] data = f.getData();
+		double[][][] newData = new double[parentComb][][];
+		IndexIterator it = oldLeft.getReorderedIterator(newLeft.getVariables());
+		int j;
+		// i -> j
+		for(int i=0; i<parentComb; i++ ){
+			j = it.next();
+			newData[i] = data[j];
+		}
+		return VertexFactorBuilder.as(f.getDataDomain(), newLeft, newData);
+	}
+
+	/**
+	 * Sorts the parents following the global variable order
+	 * @return
+	 */
+	public static GenericFactor sortParents(GenericFactor f) {
+		if(f instanceof BayesianFactor){
+			throw new NotImplementedException("Not implemented yet for BayesianFactor objects");
+		}else if(f instanceof SeparateHalfspaceFactor){
+			return sortParents((SeparateHalfspaceFactor)f);
+		}else if(f instanceof VertexFactor){
+			return sortParents((VertexFactor)f);
+		}
+		throw new IllegalArgumentException("Wrong input factor type");
 	}
 
 

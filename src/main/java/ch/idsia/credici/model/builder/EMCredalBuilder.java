@@ -9,11 +9,10 @@ import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import ch.idsia.crema.learning.ExpectationMaximization;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
@@ -49,7 +48,7 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	private int numDecimalsRound = 5;
 
-	private SparseModel trueCredalModel;
+	private DAGModel trueCredalModel;
 
 	private TIntIntMap[] data = null;
 
@@ -243,11 +242,12 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	private void mergePoints(){
 
-		BayesianNetwork[] bnets =
-				selectedPoints.stream().map(s -> s.toBnet()).toArray(BayesianNetwork[]::new);
+
+		DAGModel<BayesianFactor>[] bnets =
+				selectedPoints.stream().map(s -> s.toBnet()).toArray(DAGModel[]::new);
 
 		if(buildCredalModel)
-			model = VertexFactor.buildModel(true, bnets);
+			model = (DAGModel) CredalBuilder.fromPreciseModels(true, bnets);
 
 	}
 
@@ -333,7 +333,7 @@ public class EMCredalBuilder extends CredalBuilder{
 		return selectedPoints;
 	}
 
-	public EMCredalBuilder setTrueCredalModel(SparseModel trueCredalModel) {
+	public EMCredalBuilder setTrueCredalModel(DAGModel trueCredalModel) {
 		this.trueCredalModel = trueCredalModel;
 		return this;
 	}
@@ -360,7 +360,7 @@ public class EMCredalBuilder extends CredalBuilder{
 	private List<StructuralCausalModel> runEM() throws InterruptedException {
 
 		StructuralCausalModel startingModel =
-				(StructuralCausalModel) BayesianFactor.randomModel(
+				(StructuralCausalModel) CausalBuilder.random(
 						causalmodel, 5, false
 						,causalmodel.getExogenousVars()
 		);
@@ -486,7 +486,7 @@ public class EMCredalBuilder extends CredalBuilder{
 		}
 		//}
 
-		SparseModel vmodel = m.toVCredal(m.getEmpiricalProbs());
+		DAGModel vmodel = m.toVCredal(m.getEmpiricalProbs());
 		System.out.println(vmodel);
 
 		TIntIntMap[] data = m.samples(1000, m.getEndogenousVars());

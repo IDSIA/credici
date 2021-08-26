@@ -1,16 +1,21 @@
 package ch.idsia.credici.learning;
 
+import ch.idsia.credici.factor.BayesianFactorFactoryMutableExt;
+import ch.idsia.credici.factor.Operations;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
+import ch.idsia.credici.utility.Probability;
+import ch.idsia.crema.factor.bayesian.BayesianDefaultFactor;
+import ch.idsia.crema.factor.bayesian.BayesianDeterministicFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.inference.JoinInference;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.learning.DiscreteEM;
 import ch.idsia.crema.learning.ExpectationMaximization;
-import ch.idsia.crema.model.GraphicalModel;
-import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.ArraysUtil;
+import ch.idsia.crema.utility.ProbabilityUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
@@ -24,7 +29,7 @@ import java.util.HashMap;
 import java.util.stream.IntStream;
 
 
-public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
+public class FrequentistCausalEM extends DiscreteEM{
 
     private double regularization = 0.00001;
 
@@ -36,21 +41,13 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
 
 
-
-    public FrequentistCausalEM(StructuralCausalModel model,
-                               JoinInference<BayesianFactor, BayesianFactor> inferenceEngine) {
-        this.inferenceEngine = inferenceEngine;
+    public FrequentistCausalEM(DAGModel<BayesianFactor> model, int[] elimSeq){
+        this.inferenceEngine = getDefaultInference(elimSeq);;
         this.priorModel = model;
         this.trainableVars = CausalInfo.of((StructuralCausalModel) priorModel).getExogenousVars();
     }
 
-    public FrequentistCausalEM(GraphicalModel<BayesianFactor> model, int[] elimSeq){
-        this.inferenceEngine = getDefaultInference(model, elimSeq);;
-        this.priorModel = model;
-        this.trainableVars = CausalInfo.of((StructuralCausalModel) priorModel).getExogenousVars();
-    }
-
-    public FrequentistCausalEM(GraphicalModel<BayesianFactor> model) {
+    public FrequentistCausalEM(DAGModel<BayesianFactor> model) {
         this(model, (new MinFillOrdering()).apply(model));
     }
 
@@ -65,9 +62,10 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     protected TIntObjectMap<BayesianFactor> expectation(TIntIntMap[] observations) throws InterruptedException {
 
-        TIntObjectMap<BayesianFactor> counts = new TIntObjectHashMap<>();
+
+        TIntObjectMap<BayesianFactorFactoryMutableExt> counts = new TIntObjectHashMap<>();
         for (int variable : posteriorModel.getVariables()) {
-            counts.put(variable, new BayesianFactor(posteriorModel.getFactor(variable).getDomain(), false));
+            counts.put(variable, BayesianFactorFactoryMutableExt.factory().domain(posteriorModel.getFactor(variable).getDomain()));
         }
 
         clearPosteriorCache();
@@ -87,20 +85,33 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                     BayesianFactor phidden_obs = posteriorInference(hidden, observation);
                     if(obsVars.length>0)
                         phidden_obs = phidden_obs.combine(
-                                BayesianFactor.getJoinDeterministic(posteriorModel.getDomain(obsVars), observation));
+                                BayesianDeterministicFactor.getJoinDeterministic(
+                                        posteriorModel.getDomain(obsVars), observation));
 
-                    counts.put(var, counts.get(var).addition(phidden_obs));
+
+                    BayesianFactor p = counts.get(var).get().addition(phidden_obs);
+                    counts.put(var, BayesianFactorFactoryMutableExt
+                            .factory()
+                            .domain(p.getDomain())
+                            .data(p.getData()));
                 }else{
                     //fully-observable case
-                    for(int index : counts.get(var).getDomain().getCompatibleIndexes(observation)){
-                        double x = counts.get(var).getValueAt(index) + 1;
-                        counts.get(var).setValueAt(x, index);
+                    for(int index : posteriorModel.getFactor(var).getDomain().getCompatibleIndexes(observation)){
+                        double x = counts.get(var).getData()[index] + 1;
+                        counts.get(var).valueAt(x, index);
                     }
                 }
             }
         }
 
-        return counts;
+        // Generate all the counts factors as output
+        TIntObjectMap<BayesianFactor> output = new TIntObjectHashMap<>();
+        for (int variable : posteriorModel.getVariables()) {
+            output.put(variable, counts.get(variable).get());
+        }
+        return output;
+
+
     }
 
     private void maximization(TIntObjectMap<BayesianFactor> counts){
@@ -110,12 +121,13 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
             BayesianFactor countVar = counts.get(var);
 
             if(regularization>0.0) {
-
-                BayesianFactor reg = posteriorModel.getFactor(var).scalarMultiply(regularization);
+                BayesianFactor reg = Operations.scalarMultiply(posteriorModel.getFactor(var), regularization);
                 countVar = countVar.addition(reg);
             }
             BayesianFactor f = countVar.divide(countVar.marginalize(var));
-            if(f.KLdivergence(posteriorModel.getFactor(var)) > klthreshold) {
+
+            double kl = Probability.KL(f, posteriorModel.getFactor(var));
+            if(kl > klthreshold) {
                 posteriorModel.setFactor(var, f);
                 updated = true;
             }
@@ -132,7 +144,6 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         return regularization;
     }
 
-
     @Override
     public FrequentistCausalEM setTrainableVars(int[] trainableVars) {
 
@@ -140,7 +151,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
             if(!CausalInfo.of((StructuralCausalModel) priorModel).isExogenous(v))
                 throw new IllegalArgumentException("Only exogenous variables can be trainable. Error with "+v);
 
-        return super.setTrainableVars(trainableVars);
+        return (FrequentistCausalEM) super.setTrainableVars(trainableVars);
     }
 
 
@@ -150,7 +161,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, obs.keys(), obs.values()));
 
         if(!posteriorCache.containsKey(hash) || !usePosteriorCache) {
-            BayesianFactor p = inferenceEngine.apply(posteriorModel, query, obs);
+            BayesianFactor p = inferenceEngine.query(posteriorModel, obs, query);
             if(usePosteriorCache)
                 posteriorCache.put(hash, p);
             else
@@ -184,7 +195,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
         RandomUtil.setRandomSeed(1000);
         StructuralCausalModel causalModel = RandomChainNonMarkovian.buildModel(n, endoVarSize, exoVarSize);
-        SparseModel vmodel = causalModel.toVCredal(causalModel.getEmpiricalProbs());
+        DAGModel vmodel = causalModel.toVCredal(causalModel.getEmpiricalProbs());
 
         System.out.println(vmodel);
 
@@ -194,7 +205,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
 
         // randomize P(U)
-        StructuralCausalModel rmodel = (StructuralCausalModel) BayesianFactor.randomModel(causalModel,
+        StructuralCausalModel rmodel = (StructuralCausalModel) CausalBuilder.random(causalModel,
                 5, false
                 ,causalModel.getExogenousVars()
         );
@@ -202,9 +213,9 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         // Run EM in the causal model
         ExpectationMaximization em =
                 new FrequentistCausalEM(rmodel)
-                        .setVerbose(false)
                         .setRegularization(0.0)
                         .usePosteriorCache(true)
+                        .setVerbose(false)
                         .setTrainableVars(causalModel.getExogenousVars());
 
         StopWatch watch = new StopWatch();

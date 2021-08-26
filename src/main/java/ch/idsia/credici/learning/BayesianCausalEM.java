@@ -1,16 +1,18 @@
 package ch.idsia.credici.learning;
 
+import ch.idsia.credici.factor.BayesianFactorBuilder;
+import ch.idsia.credici.factor.Operations;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.Probability;
+import ch.idsia.crema.core.ObservationBuilder;
+import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.inference.JoinInference;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.learning.DiscreteEM;
-import ch.idsia.crema.model.ObservationBuilder;
-import ch.idsia.crema.model.Strides;
-import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
@@ -22,7 +24,7 @@ import org.apache.commons.lang3.time.StopWatch;
 import java.util.*;
 
 
-public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
+public class BayesianCausalEM extends DiscreteEM {
 
     private double regularization = 0.00001;
 
@@ -32,25 +34,11 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
 
     private boolean usePosteriorCache = true;
 
-    //private StructuralCausalModel priorModel;
-
-    //private StructuralCausalModel posteriorModel;
-
     public HashMap<Set<Integer>, BayesianFactor> targetGenDist;
 
 
-
-
-
-    public BayesianCausalEM(StructuralCausalModel model,
-                            JoinInference<BayesianFactor, BayesianFactor> inferenceEngine) {
-        this.inferenceEngine = inferenceEngine;
-        this.priorModel = model;
-        this.trainableVars = CausalInfo.of((StructuralCausalModel) priorModel).getExogenousVars();
-    }
-
     public BayesianCausalEM(StructuralCausalModel model, int[] elimSeq){
-        this.inferenceEngine = getDefaultInference(model, elimSeq);;
+        this.inferenceEngine = getDefaultInference(elimSeq);
         this.priorModel = model;
         this.trainableVars = CausalInfo.of(getPrior()).getExogenousVars();
     }
@@ -64,7 +52,7 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
 
         for (int u : trainableVars) {
 
-            BayesianFactor pu = new BayesianFactor(priorModel.getDomain(u));
+            BayesianFactor pu = BayesianFactorBuilder.zeros(priorModel.getDomain(u));
             Strides blanket = getPrior().endogenousMarkovBlanket(u);
 
             // get the empirical
@@ -78,11 +66,13 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
                 TIntIntHashMap obs = ObservationBuilder.observe(blanket.getVariables(), blanket.statesOf(i));
                 double emp_i = emp.filter(obs).getValueAt(0);
                 if (emp_i > 0)
-                    pu = pu.addition(((BayesianFactor) inferenceEngine.apply(posteriorModel, u, obs)).scalarMultiply(emp_i));
+                    pu = pu.addition((BayesianFactor) inferenceEngine.query(posteriorModel, obs, u));
+                    pu = Operations.scalarMultiply(pu, emp_i);
             }
 
             // Update the model
-            if(pu.KLdivergence(posteriorModel.getFactor(u)) > klthreshold || targetGenDist != null) {
+            double kl = Probability.KL(pu, posteriorModel.getFactor(u));
+            if(kl > klthreshold || targetGenDist != null) {
                 posteriorModel.setFactor(u, pu);
                 updated = true;
             }
@@ -102,7 +92,7 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
         List out = new ArrayList();
         for(int u: model.getExogenousVars()){
             Strides blanket = model.endogenousMarkovBlanket(u);
-            out.add(inferenceEngine.apply(model, blanket.getVariables(), new TIntIntHashMap()));
+            out.add(inferenceEngine.query(model, new TIntIntHashMap(), blanket.getVariables()));
         }
 
         return out;
@@ -126,7 +116,7 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
             if(!CausalInfo.of((StructuralCausalModel) priorModel).isExogenous(v))
                 throw new IllegalArgumentException("Only exogenous variables can be trainable. Error with "+v);
 
-        return super.setTrainableVars(trainableVars);
+        return (BayesianCausalEM) super.setTrainableVars(trainableVars);
     }
 
 
@@ -136,7 +126,7 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
         String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, obs.keys(), obs.values()));
 
         if(!posteriorCache.containsKey(hash) || !usePosteriorCache) {
-            BayesianFactor p = inferenceEngine.apply(posteriorModel, query, obs);
+            BayesianFactor p = inferenceEngine.query(posteriorModel, obs, query);
             if(usePosteriorCache)
                 posteriorCache.put(hash, p);
             else
@@ -184,22 +174,22 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
 
         RandomUtil.setRandomSeed(1000);
         causalModel = RandomChainNonMarkovian.buildModel(n, endoVarSize, exoVarSize);
-        SparseModel vmodel = causalModel.toVCredal(causalModel.getEmpiricalProbs());
+        DAGModel vmodel = causalModel.toVCredal(causalModel.getEmpiricalProbs());
 
         System.out.println(vmodel);
 
         // randomize P(U)
-        StructuralCausalModel rmodel = (StructuralCausalModel) BayesianFactor.randomModel(causalModel,
+        StructuralCausalModel rmodel = (StructuralCausalModel) CausalBuilder.random(causalModel,
                 5, false
                 ,causalModel.getExogenousVars()
         );
 
         // Run EM in the causal model
         BayesianCausalEM em =
-                new BayesianCausalEM(rmodel)
-                        .setVerbose(false)
+                (BayesianCausalEM) new BayesianCausalEM(rmodel)
                         .setRegularization(0.0)
                         .usePosteriorCache(true)
+                        .setVerbose(false)
                         .setTrainableVars(causalModel.getExogenousVars());
 
         StopWatch watch = new StopWatch();

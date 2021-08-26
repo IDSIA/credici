@@ -9,12 +9,22 @@ import com.google.common.primitives.Ints;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.stream.IntStream;
 
 public class BayesianFactorBuilder {
 
 	public static BayesianFactor as(Strides domain, double[] data){
 		return BayesianFactorFactory.factory().domain(domain).data(data).get();
 	}
+
+	public static BayesianFactor constant(Strides domain, double val){
+		double[] data = IntStream.range(0, domain.getCombinations()).mapToDouble(i -> val).toArray();
+		return as(domain, data);
+	}
+	public static BayesianFactor zeros(Strides domain){
+		return constant(domain, 0.0);
+	}
+
 
 
 	/**

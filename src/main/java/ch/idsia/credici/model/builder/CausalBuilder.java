@@ -1,10 +1,12 @@
 package ch.idsia.credici.model.builder;
 
+import ch.idsia.credici.factor.BayesianFactorBuilder;
 import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.RandomUtilities;
 import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.graphical.DAGModel;
@@ -362,6 +364,34 @@ public class CausalBuilder {
         scm.fillWithRandomFactors(3);
         return scm;
 
+    }
+
+
+    /**
+     * Creates a new model with the same structure but with random probability values
+     * @param model
+     * @param num_decimals
+     * @param zero_allowed
+     * @param variables
+     * @return
+     */
+    public static DAGModel<BayesianFactor> random(DAGModel<BayesianFactor> model, int num_decimals,
+                                                             boolean zero_allowed, int... variables){
+        DAGModel<BayesianFactor> rmodel = model.copy();
+
+        if(variables.length == 0)
+            variables = rmodel.getVariables();
+
+        for(int v: variables){
+            BayesianFactor f = RandomUtilities.BayesianFactorRandom(
+                                        rmodel.getDomain(v),
+                                        rmodel.getDomain(rmodel.getParents(v)),
+                                        num_decimals,
+                                        zero_allowed);
+            rmodel.setFactor(v, f);
+        }
+
+        return rmodel;
     }
 
 

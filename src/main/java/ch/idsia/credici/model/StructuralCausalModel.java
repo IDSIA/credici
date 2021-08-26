@@ -456,7 +456,7 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 	 * @return
 	 */
 	public StructuralCausalModel intervention(int var, int state){
-		return CausalOps.intervention(this, var, state, true);
+		return (StructuralCausalModel) CausalOps.intervention(this, var, state, true);
 	}
 
 

@@ -1,9 +1,8 @@
 package ch.idsia.credici.inference;
 
 import ch.idsia.credici.model.counterfactual.WorldMapping;
+import ch.idsia.crema.core.ObservationBuilder;
 import ch.idsia.crema.factor.GenericFactor;
-import ch.idsia.crema.model.ObservationBuilder;
-import ch.idsia.crema.model.graphical.GenericSparseModel;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 

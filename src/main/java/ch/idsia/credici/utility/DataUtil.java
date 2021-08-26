@@ -1,11 +1,13 @@
 package ch.idsia.credici.utility;
 
+import ch.idsia.credici.factor.Operations;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.crema.core.ObservationBuilder;
+import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.data.ReaderCSV;
 import ch.idsia.crema.data.WriterCSV;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.ObservationBuilder;
-import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.factor.bayesian.BayesianFactorFactory;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
@@ -23,7 +25,8 @@ public class DataUtil {
 		// sort the variables in the domain
 		dom = dom.sort();
 
-		BayesianFactor counts = new BayesianFactor(dom);
+		BayesianFactorFactory factory = BayesianFactorFactory.factory().domain(dom);
+
 		int[] vars = dom.getVariables();
 
 		for (int i = 0; i < dom.getCombinations(); i++) {
@@ -34,11 +37,14 @@ public class DataUtil {
 			for (int j = 0; j < vars.length; j++)
 				assignament.put(vars[j], states[j]);
 
-			counts.setValueAt(Stream.of(data)
+
+			long c = Stream.of(data)
 					.filter(d -> IntStream.of(vars).allMatch(v -> d.get(v) == assignament.get(v)))
-					.count(), i);
+					.count();
+
+			factory.set(c, i);
 		}
-		return counts;
+		return factory.get();
 	}
 
 	public static TIntIntMap[] dataFromCounts(BayesianFactor counts){
@@ -75,7 +81,7 @@ public class DataUtil {
 
 
 	public static BayesianFactor getJointProb(TIntIntMap[] data, Strides dom) {
-    	return getCounts(data,dom).scalarMultiply(1.0/data.length);
+    	return Operations.scalarMultiply(getCounts(data,dom), 1.0/data.length);
 	}
 
 

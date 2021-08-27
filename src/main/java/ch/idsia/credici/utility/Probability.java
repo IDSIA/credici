@@ -1,9 +1,9 @@
 package ch.idsia.credici.utility;
 
+import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import com.google.common.primitives.Doubles;
 
 import java.util.Arrays;
@@ -168,14 +168,6 @@ public class Probability {
 		return true;
 
 	}
-
-	/*
-
-	List<StructuralCausalModel> t = em.getIntermediateModels();
-
-Probability.vertexInside(t.get(31).getFactor(4), (VertexFactor) this.trueCredalModel.getFactor(4));
-	 */
-
 
 
 

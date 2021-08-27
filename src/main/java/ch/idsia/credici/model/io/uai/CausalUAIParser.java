@@ -4,7 +4,7 @@ import ch.idsia.credici.IO;
 import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.factor.bayesian.BayesianFactorFactory;
 import ch.idsia.crema.model.io.TypesIO;
 import ch.idsia.crema.model.io.uai.*;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -13,6 +13,7 @@ import com.google.common.primitives.Ints;
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.List;
 import java.util.stream.DoubleStream;
 
 public class CausalUAIParser extends NetUAIParser<StructuralCausalModel> {
@@ -20,43 +21,41 @@ public class CausalUAIParser extends NetUAIParser<StructuralCausalModel> {
 
     private double[][] probs;
 
-    public CausalUAIParser(String file) throws FileNotFoundException {
+    public CausalUAIParser(List<String> lines) throws IOException {
+        super(lines);
         TYPE = UAITypes.CAUSAL;
-        this.bufferedReader = initReader(file);
     }
 
-    public CausalUAIParser(BufferedReader reader) {
+    public CausalUAIParser(String file) throws IOException {
+        super(file);
         TYPE = UAITypes.CAUSAL;
-        this.bufferedReader = reader;
     }
 
-    public static StructuralCausalModel read(String fileName) throws IOException {
-        BufferedReader buff = initReader(fileName);
+
+
+
+    public static StructuralCausalModel read(String filename) throws IOException {
+
+        List<String> lines = readLines(filename);
+
         TypesIO type = null;
 
-        if(fileName.endsWith(".uai")) {
+        if(filename.endsWith(".uai")) {
             // Extract the type to know the required parser
-            String str = buff.readLine().replaceAll("[ \\t\\n]+","");
+            String str = lines.get(0);
             int i = str.indexOf(" ");
             if (i > 0) type = UAITypes.valueOf(str.substring(0, i));
             else type = UAITypes.valueOfLabel(str);
-            // rest the buffer
-            buff = initReader(fileName);
         }else{
             throw new IllegalArgumentException("Unknown file extension");
         }
         StructuralCausalModel parsedObject = null;
 
-        try{
-            // Parse the file
-            if (type == UAITypes.CAUSAL) {
-                parsedObject = new CausalUAIParser(buff).parse();
-            }else {
-                throw new IllegalArgumentException("Unknown type to be parsed");
-            }
-        }catch (Exception e){
-            buff.close();
-            throw e;
+        // Parse the file
+        if (type == UAITypes.CAUSAL) {
+            parsedObject = new CausalUAIParser(lines).parse();
+        }else {
+            throw new IllegalArgumentException("Unknown type to be parsed");
         }
 
         return parsedObject;
@@ -116,7 +115,12 @@ public class CausalUAIParser extends NetUAIParser<StructuralCausalModel> {
         // Add marginal CPTs to Us
         for(int u: model.getExogenousVars()){
             if(probs[u].length>0) {
-                model.setFactor(u, new BayesianFactor(model.getDomain(u), probs[u]));
+
+                BayesianFactor f = BayesianFactorFactory.factory()
+                        .domain(model.getDomain(u))
+                        .data(probs[u])
+                        .get();
+                model.setFactor(u, f);
             }
         }
         return model;

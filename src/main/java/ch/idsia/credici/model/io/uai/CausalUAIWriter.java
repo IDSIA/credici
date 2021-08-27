@@ -2,10 +2,8 @@ package ch.idsia.credici.model.io.uai;
 
 import ch.idsia.credici.IO;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.crema.factor.bayesian.BayesianDefaultFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.Strides;
-import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.io.uai.HCredalUAIWriter;
 import ch.idsia.crema.model.io.uai.NetUAIWriter;
 import ch.idsia.crema.model.io.uai.UAIWriter;
@@ -23,36 +21,22 @@ import static ch.idsia.credici.model.io.uai.UAITypes.CAUSAL;
 
 public class CausalUAIWriter extends NetUAIWriter<StructuralCausalModel> {
 
-
+/*
     public static void write(Object target, String fileName) throws IOException {
 
-        UAIWriter writer = null;
-        try{
-            if(CausalUAIWriter.isCompatible(target))
-                writer =  new CausalUAIWriter((StructuralCausalModel) target, fileName);
-            else
-                throw new IllegalArgumentException("Unknown type to write");
-            writer.writeToFile();
-        }catch (Exception e){
-            if(writer!=null) writer.getWriter().close();
-            throw e;
-        }
-        if(writer!=null) writer.getWriter().close();
-    }
-
-
-
-
-    public CausalUAIWriter(StructuralCausalModel target, String file) throws IOException {
-        this.target = target;
-        TYPE = CAUSAL;
-        this.writer = initWriter(file);
+        if(CausalUAIWriter.isCompatible(target))
+            new CausalUAIWriter((StructuralCausalModel) target, fileName).write();
+        else
+            throw new IllegalArgumentException("Unknown type to write");
 
     }
-    public CausalUAIWriter(StructuralCausalModel target, BufferedWriter writer){
+ */
+
+    public CausalUAIWriter(StructuralCausalModel target, String filename) {
+        super(target, filename);
         this.target = target;
         TYPE = CAUSAL;
-        this.writer = writer;
+
     }
 
 
@@ -62,34 +46,35 @@ public class CausalUAIWriter extends NetUAIWriter<StructuralCausalModel> {
     }
 
     @Override
-    protected void writeFactors() throws IOException {
+    protected void writeFactors() {
 
 
-        tofileln("");
+        append("");
         for(int v : target.getVariables()) {
 
             BayesianFactor f =  target.getFactor(v);
 
             if(f != null){
                 if(target.isEndogenous(v)) {
-                   int[] assig = target.getFactor(v).getAssignments(target.getParents(v));
-                   tofile(assig.length+"\t");
-                   tofileln(assig);
+                   int[] assig = ((BayesianDefaultFactor)target.getFactor(v))
+                           .getAssignments(target.getParents(v));
+                   append(assig.length+"\t");
+                   append(assig);
                 }else{
                     double[] probs = target.getFactor(v).getData();
-                    tofile(probs.length+"\t");
-                    tofileln(probs);
+                    append(probs.length+"\t");
+                    append(probs);
 
                 }
             }else{
-                tofileln(0);
+                append(0);
             }
         }
 
     }
 
     @Override
-    protected void writeTarget() throws IOException {
+    protected void writeTarget(){
         writeType();
         writeVariablesInfo();
         writeDomains();
@@ -98,15 +83,15 @@ public class CausalUAIWriter extends NetUAIWriter<StructuralCausalModel> {
 
 
     @Override
-    protected void writeDomains() throws IOException {
+    protected void writeDomains() {
         // Write the number of factors
-        tofileln(target.getVariables().length);
+        append(target.getVariables().length);
         // Add the factor domains with children at the end
         for(int v: target.getVariables()){
             int[] parents = ArraysUtil.reverse(target.getParents(v));
-            tofile(parents.length+1+"\t");
-            tofile(parents);
-            tofileln(v);
+            append(parents.length+1+"\t");
+            append(parents);
+            append(v);
         }
     }
 

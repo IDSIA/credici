@@ -3,10 +3,12 @@ package ch.idsia.credici.model.predefined;
 import ch.idsia.credici.inference.*;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
+
+import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import gnu.trove.map.hash.TIntIntHashMap;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DirectedAcyclicGraph;
 
 import java.util.Arrays;
 
@@ -17,16 +19,16 @@ public class RandomChainMarkovian {
 
     public static StructuralCausalModel buildModel(int n, int endoSize, int exoSize) {
 
-        SparseDirectedAcyclicGraph graph = new SparseDirectedAcyclicGraph();
+        DirectedAcyclicGraph graph = new DirectedAcyclicGraph(DefaultEdge.class);
         int[] endo = new int[n];
         int[] endo_sizes = new int[n];
 
         for (int i = 0; i < n; i++) {
             endo[i] = i;
             endo_sizes[i] = endoSize;
-            graph.addVariable(endo[i]);
+            graph.addVertex(endo[i]);
             if (i > 0) {
-                graph.addLink(endo[i - 1], endo[i]);
+                graph.addEdge(endo[i - 1], endo[i]);
             }
         }
 

@@ -5,10 +5,12 @@ import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
+
+import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import gnu.trove.map.hash.TIntIntHashMap;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DirectedAcyclicGraph;
 
 
 public class Markovian2VarRandom {
@@ -19,11 +21,11 @@ public class Markovian2VarRandom {
 
         int x1=0, x2=1;
 
-        SparseDirectedAcyclicGraph dag = new SparseDirectedAcyclicGraph();
-        dag.addVariable(x1);
-        dag.addVariable(x2);
+        DirectedAcyclicGraph dag = new DirectedAcyclicGraph(DefaultEdge.class);
+        dag.addVertex(x1);
+        dag.addVertex(x2);
 
-        dag.addLink(x1, x2);
+        dag.addEdge(x1, x2);
 
         StructuralCausalModel model = new StructuralCausalModel(dag, endoVarSizes, exoVarSizes);
 

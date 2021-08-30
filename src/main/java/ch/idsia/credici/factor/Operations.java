@@ -189,6 +189,7 @@ public class Operations {
 			return sortParents((VertexFactor)f);
 		}
 		throw new IllegalArgumentException("Wrong input factor type");
+
 	}
 
 

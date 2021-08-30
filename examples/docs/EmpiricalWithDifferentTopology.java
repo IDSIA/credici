@@ -1,32 +1,32 @@
 package docs;
 
-
 import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.ExactCredalBuilder;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-
+import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.model.graphical.BayesianNetwork;
+import ch.idsia.crema.model.graphical.DAGModel;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DirectedAcyclicGraph;
 import java.io.IOException;
 import java.util.stream.IntStream;
-
+//16
 public class EmpiricalWithDifferentTopology {
 
     public static void main(String[] args) throws IOException, InterruptedException {
 
 
         // Causal DAG
-        SparseDirectedAcyclicGraph causalDAG = new SparseDirectedAcyclicGraph();
-        IntStream.range(0,4).forEach(x -> causalDAG.addVariable(x));
+        DirectedAcyclicGraph causalDAG = new DirectedAcyclicGraph(DefaultEdge.class);
+        IntStream.range(0,4).forEach(x -> causalDAG.addVertex(x));
 
-        causalDAG.addLink(0,1);
-        causalDAG.addLink(0,2);
-        causalDAG.addLink(1,3);
-        causalDAG.addLink(2,3);
+        causalDAG.addEdge(0,1);
+        causalDAG.addEdge(0,2);
+        causalDAG.addEdge(1,3);
+        causalDAG.addEdge(2,3);
 
         // Empirical Bayesian Network
         BayesianNetwork bnet = (BayesianNetwork) IO.read("./models/party-empirical-rev.uai") ;
@@ -37,7 +37,7 @@ public class EmpiricalWithDifferentTopology {
 
         int[] x = causalModel.getEndogenousVars();
 
-        SparseModel hcredal = ExactCredalBuilder.of(causalModel)
+        DAGModel<SeparateHalfspaceFactor> hcredal = ExactCredalBuilder.of(causalModel)
                                 .setEmpirical(bnet)
                                 .setToHalfSpace()
                                 .build().getModel();
@@ -79,3 +79,4 @@ public class EmpiricalWithDifferentTopology {
     }
 
 }
+//82

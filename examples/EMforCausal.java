@@ -6,18 +6,18 @@ import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.predefined.RandomChainMarkovian;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.Probability;
+import ch.idsia.crema.core.ObservationBuilder;
 import ch.idsia.crema.data.WriterCSV;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToInterval;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import ch.idsia.crema.learning.ExpectationMaximization;
 import ch.idsia.crema.learning.FrequentistEM;
-import ch.idsia.crema.model.ObservationBuilder;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+
+import ch.idsia.crema.model.graphical.BayesianNetwork;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -87,7 +87,7 @@ public class EMforCausal {
         ////// empirical
 
 
-        BayesianNetwork bnet = causalModel.getEmpiricalNet();
+        BayesianNetwork bnet = (BayesianNetwork) causalModel.getEmpiricalNet();
         System.out.println("Obtained empiricals");
         System.out.println(bnet);
 

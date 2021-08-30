@@ -15,12 +15,14 @@ public class FactorBuilder {
 	 */
 	public static GenericFactor getDeterministic(GenericFactor f, int var, int state) {
 		if(f instanceof BayesianFactor){
-			BayesianFactorBuilder.deterministic(f.getDomain(), state);
+			return BayesianFactorBuilder.deterministic(f.getDomain(), state);
 		}else if(f instanceof SeparateHalfspaceFactor){
 			return HalfSpaceFactorBuilder.deterministic(f.getDomain(), state);
 		}else if(f instanceof VertexFactor){
 			return VertexFactorBuilder.deterministic(f.getDomain(), state);
 		}
 		throw new IllegalArgumentException("Wrong input factor type");
+
+
 	}
 }

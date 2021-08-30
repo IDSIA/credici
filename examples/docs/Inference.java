@@ -5,16 +5,16 @@ import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.crema.IO;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-
+import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
+import ch.idsia.crema.model.graphical.BayesianNetwork;
+import ch.idsia.crema.model.graphical.DAGModel;
 import java.io.IOException;
 
 public class Inference {
     public static void main(String[] args) throws IOException, InterruptedException {
-
+//17
 
 // load the empirical model
 BayesianNetwork bnet = (BayesianNetwork) IO.read("models/party-empirical.uai");
@@ -29,8 +29,8 @@ int[] x = causalModel.getEndogenousVars();
 /////// Causal query P(X3 | do(X2 = 1))
 
 // convert the causal models into credal networks
-SparseModel vcredal = causalModel.toVCredal(bnet.getFactors());
-SparseModel hcredal = causalModel.toHCredal(bnet.getFactors());
+DAGModel<VertexFactor> vcredal = causalModel.toVCredal(bnet.getFactors());
+DAGModel<SeparateHalfspaceFactor> hcredal = causalModel.toHCredal(bnet.getFactors());
 
 
 
@@ -101,4 +101,4 @@ System.out.println(resApprox);
 
     }
 }
-//93
+//104

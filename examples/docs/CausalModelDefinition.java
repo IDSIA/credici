@@ -1,13 +1,13 @@
 package docs;
 
+import ch.idsia.credici.factor.BayesianFactorBuilder;
 import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
+import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.Strides;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-
+import ch.idsia.crema.model.graphical.BayesianNetwork;
+import org.jgrapht.graph.DirectedAcyclicGraph;
 
 
 /** NOTE: DO NOT CHANGE TABS HERE */
@@ -40,10 +40,10 @@ model.addParents(x4, u4, x2, x3);
 
 
 // define the CPTs of the exogenous variables
-BayesianFactor pu1 = new BayesianFactor(model.getDomain(u1), new double[] { .4, .6 });
-BayesianFactor pu2 = new BayesianFactor(model.getDomain(u2), new double[] { .07, .9, .03, .0 });
-BayesianFactor pu3 = new BayesianFactor(model.getDomain(u3), new double[] { .05, .0, .85, .10 });
-BayesianFactor pu4 = new BayesianFactor(model.getDomain(u4), new double[] { .05, .9, .05 });
+BayesianFactor pu1 = BayesianFactorBuilder.as(model.getDomain(u1), new double[] { .4, .6 });
+BayesianFactor pu2 = BayesianFactorBuilder.as(model.getDomain(u2), new double[] { .07, .9, .03, .0 });
+BayesianFactor pu3 = BayesianFactorBuilder.as(model.getDomain(u3), new double[] { .05, .0, .85, .10 });
+BayesianFactor pu4 = BayesianFactorBuilder.as(model.getDomain(u4), new double[] { .05, .9, .05 });
 
 model.setFactor(u1,pu1);
 model.setFactor(u2,pu2);
@@ -100,11 +100,11 @@ StructuralCausalModel m6 =
                 .build();
 
 // Markovian equationaless specifying causal DAG
-SparseDirectedAcyclicGraph dag = bnet.getNetwork().copy();
-u1 = dag.addVariable();
-u2 = dag.addVariable();
-dag.addLink(u1, y);
-dag.addLink(u2, x);
+DirectedAcyclicGraph dag = (DirectedAcyclicGraph) bnet.getNetwork().clone();
+u1 = dag.vertexSet().size(); dag.addVertex();
+u2 = dag.vertexSet().size(); dag.addVertex();
+dag.addEdge(u1, y);
+dag.addEdge(u2, x);
 
 StructuralCausalModel m7 =
         CausalBuilder.of(bnet)
@@ -113,10 +113,10 @@ StructuralCausalModel m7 =
 
 
 // Quasi Markovian specifying causal DAG with random factors
-SparseDirectedAcyclicGraph dag2 = bnet.getNetwork().copy();
-int u = dag2.addVariable();
-dag2.addLink(u, y);
-dag2.addLink(u,x);
+DirectedAcyclicGraph dag2 = (DirectedAcyclicGraph) bnet.getNetwork().clone();
+int u = dag2.vertexSet().size(); dag2.addVertex(u);
+dag2.addEdge(u, y);
+dag2.addEdge(u,x);
 
 StructuralCausalModel m8 =
         CausalBuilder.of(bnet)

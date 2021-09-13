@@ -5,6 +5,7 @@ import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.ChainGenerator;
+import ch.idsia.credici.model.builder.TreeGenerator;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
@@ -25,18 +26,18 @@ public class modelGen {
 	//static String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
 	static String wdir = "./";
 	static String modelFolder = "papers/neurips21/models/";
-	static String set = "sq";
-	static String fcount = "_3";
+	static String set = "st";
+	static String fcount = "";
 
 
 
 	public static void main(String[] args) throws IOException, InterruptedException {
 
 		// set1
-		String[] topologies = new String[]{"chain"};
-		int[] treeWidthExo = new int[]{2}; //
-		int[] numEndogenous = new int[]{15};
-		int[] index = IntStream.range(41,60).toArray();
+		String[] topologies = new String[]{"tree"};
+		int[] treeWidthExo = new int[]{0}; //
+		int[] numEndogenous = new int[]{5,7,10};
+		int[] index = IntStream.range(0,20).toArray();
 
 
 
@@ -86,30 +87,15 @@ public class modelGen {
 		do {
 			feasible = true;
 
-//			if(i%2==0)
+			if(top == "tree")
 				m = ChainGenerator.build(nEndo, twExo, maxDist);
-//			else
-//				m.fillWithRandomFactors(3);
+			else // chain
+				m = ChainGenerator.build(nEndo, twExo, maxDist);
 
 
 			try {
 				if(dataCheck){
-
-/*
-
-					data = m.samples(1000, m.getEndogenousVars());
-					HashMap empMap = DataUtil.getEmpiricalMap(m, data);
-					empMap = FactorUtil.fixEmpiricalMap(empMap, 5);
-
-					// If the data is not compatible, try with the exact empiricals
-					if(!m.isCompatible(data, 5)) {
-						data = null;
-						m.toVCredal(FactorUtil.fixEmpiricalMap(m.getEmpiricalMap(), 5).values());
-					}
-
- */
 					m.toVCredal(FactorUtil.fixEmpiricalMap(m.getEmpiricalMap(), 5).values());
-
 				}
 
 				int t = m.maxExoCC();
@@ -138,19 +124,9 @@ public class modelGen {
 		System.out.println(filename+".uai");
 		IO.write(m, filename+".uai");
 
-
 		if(data != null) {
 			System.out.println(filename + ".csv");
 			DataUtil.toCSV(filename+".csv", data);
-
 		}
-
-
-/*		IO.write(m, filename+".uai");
-
-		if(dataCheck)
-			DataUtil.toCSV(filename+".csv", data);
-
-*/
 	}
 }

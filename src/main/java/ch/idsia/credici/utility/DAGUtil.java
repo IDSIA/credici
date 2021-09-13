@@ -10,6 +10,7 @@ import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
+import org.jgrapht.alg.shortestpath.DijkstraShortestPath;
 import org.jgrapht.graph.DefaultEdge;
 import org.jgrapht.graph.DefaultUndirectedGraph;
 import org.jgrapht.graph.DirectedAcyclicGraph;
@@ -190,6 +191,59 @@ public class DAGUtil {
         ConnectivityInspector connectInspect = new ConnectivityInspector(g);
         List connectedComponentList = connectInspect.connectedSets();
         return (List<int[]>) connectedComponentList.stream().map(s -> Ints.toArray((Set)s)).collect(Collectors.toList());
+    }
+
+    public static boolean dseparated(SparseDirectedAcyclicGraph dag, int a, int b, int... obs){
+
+        if(a==b || dag.containsEdge(a,b) || dag.containsEdge(b,a))
+            return false;
+
+
+        Graph moral = DAGUtil.moral(dag);
+        for(int v : obs) {
+            if(v!=a && v!=b)
+                moral.removeVertex(v);
+        }
+
+        // check if a and b are not graphically connected in the moral graph
+        return !new ConnectivityInspector(moral).pathExists(a,b);
+    }
+
+
+    public static int nodesDistance(SparseDirectedAcyclicGraph dag, int x, int y){
+        if(x==y) return 0;
+        System.out.println(x+" "+y);
+        return DijkstraShortestPath.findPathBetween(getUndirected(dag), x,y).getLength();
+    }
+
+    public static DefaultUndirectedGraph getUndirected(SparseDirectedAcyclicGraph dag) {
+        DefaultUndirectedGraph g = new DefaultUndirectedGraph(DefaultEdge.class);
+        for(int v : dag.vertexSet())
+            g.addVertex(v);
+
+        for(int v : dag.vertexSet())
+            for(int p: dag.getParents(v))
+                g.addEdge(p, v);
+
+        return g;
+    }
+
+
+    public static int[][] matrixDistances(SparseDirectedAcyclicGraph dag){
+        int N = dag.vertexSet().size();
+
+        int[][] dist = new int[N][N];
+        int[] X = dag.getVariables();
+
+        for(int i=0; i<N-1; i++){
+            for(int j=i+1; j<N; j++){
+                int d = DAGUtil.nodesDistance(dag, X[i], X[j]);
+                dist[i][j] = d;
+                dist[j][i] = d;
+            }
+        }
+
+        return dist;
     }
 
 

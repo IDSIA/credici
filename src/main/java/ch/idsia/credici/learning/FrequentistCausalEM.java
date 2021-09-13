@@ -3,12 +3,16 @@ package ch.idsia.credici.learning;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
+import ch.idsia.credici.utility.DAGUtil;
+import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.JoinInference;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.learning.DiscreteEM;
 import ch.idsia.crema.learning.ExpectationMaximization;
 import ch.idsia.crema.model.GraphicalModel;
+import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
@@ -72,23 +76,31 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
         clearPosteriorCache();
 
-
         for (TIntIntMap observation : observations) {
             for (int var : trainableVars) {
 
 
                 int[] relevantVars = ArraysUtil.addToSortedArray(posteriorModel.getParents(var), var);
                 int[] hidden =  IntStream.of(relevantVars).filter(x -> !observation.containsKey(x)).toArray();
-                int[] obsVars = IntStream.of(relevantVars).filter(x -> observation.containsKey(x)).toArray();
 
+                //int[] obsVars = IntStream.of(relevantVars).filter(x -> observation.containsKey(x)).toArray();
+                // Consider only d-connected observed variables
+                int[] obsVars = IntStream.of(observation.keys())
+                        .filter(x -> !DAGUtil.dseparated(
+                                ((StructuralCausalModel)priorModel).getNetwork(),
+                                var,
+                                x,
+                                observation.keys()))
+                        .toArray();
 
                 if(hidden.length>0){
                     // Case with missing data
                     BayesianFactor phidden_obs = posteriorInference(hidden, observation);
-                    if(obsVars.length>0)
+
+                    /*if(obsVars.length>0)
                         phidden_obs = phidden_obs.combine(
                                 BayesianFactor.getJoinDeterministic(posteriorModel.getDomain(obsVars), observation));
-
+                    */
                     counts.put(var, counts.get(var).addition(phidden_obs));
                 }else{
                     //fully-observable case

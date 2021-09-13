@@ -420,9 +420,9 @@ public class EMCredalBuilder extends CredalBuilder{
 	}
 
 	private void setTargetGenDist(){
-		if(this.numDecimalsRound>0)
-			this.targetGenDist = FactorUtil.fixEmpiricalMap(this.inputGenDist, numDecimalsRound);
-		else
+	//	if(this.numDecimalsRound>0)
+	//		this.targetGenDist = FactorUtil.fixEmpiricalMap(this.inputGenDist, numDecimalsRound);
+	//	else
 			this.targetGenDist = this.inputGenDist;
 
 	}

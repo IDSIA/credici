@@ -212,7 +212,6 @@ public class DAGUtil {
 
     public static int nodesDistance(SparseDirectedAcyclicGraph dag, int x, int y){
         if(x==y) return 0;
-        System.out.println(x+" "+y);
         return DijkstraShortestPath.findPathBetween(getUndirected(dag), x,y).getLength();
     }
 

@@ -1,23 +1,16 @@
 package neurips21;
 
 import ch.idsia.credici.IO;
-import ch.idsia.credici.inference.CredalCausalApproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.ChainGenerator;
-import ch.idsia.credici.model.builder.TreeGenerator;
-import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
+import ch.idsia.credici.model.builder.ReverseHMM;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
-import ch.idsia.crema.data.WriterCSV;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -26,18 +19,18 @@ public class modelGen {
 	//static String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/";
 	static String wdir = "./";
 	static String modelFolder = "papers/neurips21/models/";
-	static String set = "st";
-	static String fcount = "";
+	static String set = "sr";
+	static String fcount = "_2";
 
 
 
 	public static void main(String[] args) throws IOException, InterruptedException {
 
 		// set1
-		String[] topologies = new String[]{"tree"};
-		int[] treeWidthExo = new int[]{0}; //
+		String[] topologies = new String[]{"rhmm"};
+		int[] treeWidthExo = new int[]{0,1,2}; //
 		int[] numEndogenous = new int[]{5,7,10};
-		int[] index = IntStream.range(0,20).toArray();
+		int[] index = IntStream.range(20,40).toArray();
 
 
 
@@ -87,8 +80,8 @@ public class modelGen {
 		do {
 			feasible = true;
 
-			if(top == "tree")
-				m = ChainGenerator.build(nEndo, twExo, maxDist);
+			if(top == "rhmm")
+				m = ReverseHMM.build(nEndo, twExo, maxDist);
 			else // chain
 				m = ChainGenerator.build(nEndo, twExo, maxDist);
 

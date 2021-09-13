@@ -10,38 +10,45 @@ import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class TreeGenerator {
+public class ReverseHMM {
 
-	int n;
+	int numEndog;
 	int treeWidth;
 	StructuralCausalModel m = null;
 	boolean doubleCard = false;
 
 	int maxDist = 2;
 
-	public TreeGenerator(int n, int treeWidth){
-		this.n = n;
+	public ReverseHMM(int numEndog, int treeWidth){
+		this.numEndog = numEndog;
 		this.treeWidth = treeWidth;
 
 	}
 
 	public StructuralCausalModel build(){
 
-		int X[] = new int[n];
-		int Y[] = new int[n];
+		int lenX = (int) Math.round(this.numEndog/2.0);
+		int lenY = (int) Math.floor(this.numEndog/2.0);
+
+		int X[] = new int[lenX];
+		int Y[] = new int[lenY];
 
 
 		m = new StructuralCausalModel();
-		for(int i=0;i<n; i++) {
+		for(int i = 0; i< lenX; i++) {
 			X[i] = m.addVariable(2, false);
-			Y[i] = m.addVariable(2, false);
+			if (i < lenY)
+				Y[i] = m.addVariable(2, false);
 		}
 
-		for(int i=0;i<n; i++) {
-			if(i>0)
-				m.addParents(X[i], X[i - 1]);
-			m.addParents(Y[i], X[i]);
-		}
+
+		for(int i = 1; i<lenX; i++)
+			m.addParents(X[i], X[i-1]);
+
+		for(int i = 0; i< lenY; i++)
+			m.addParents(X[i], Y[i]);
+
+
 
 		if(treeWidth==1)
 			addQuasiMarkCoFounders();
@@ -58,13 +65,13 @@ public class TreeGenerator {
 
 
 	public static StructuralCausalModel build(int n, int treeWidth){
-		return new TreeGenerator(n, treeWidth).build();
+		return new ReverseHMM(n, treeWidth).build();
 	}
 	public static StructuralCausalModel build(int n, int treeWidth, int maxDist){
-		return new TreeGenerator(n, treeWidth).setMaxDist(maxDist).build();
+		return new ReverseHMM(n, treeWidth).setMaxDist(maxDist).build();
 	}
 
-	public TreeGenerator setDoubleCard(boolean doubleCard) {
+	public ReverseHMM setDoubleCard(boolean doubleCard) {
 		this.doubleCard = doubleCard;
 		return this;
 	}
@@ -139,14 +146,15 @@ public class TreeGenerator {
 		}
 	}
 
-	public TreeGenerator setMaxDist(int maxDist) {
+	public ReverseHMM setMaxDist(int maxDist) {
 		this.maxDist = maxDist;
 		return this;
 	}
 
 	public static void main(String[] args) {
-		StructuralCausalModel m = TreeGenerator.build(3,0);
+		StructuralCausalModel m = ReverseHMM.build(5,0);
 		System.out.println(m);
+		System.out.println(m.getNetwork());
 		System.out.println(m.getExogenousDAG());
 		System.out.println(m.getExogenousTreewidth());
 	}

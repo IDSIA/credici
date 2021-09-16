@@ -1,0 +1,1 @@
+results=dict(file='rhmm_twExo0_nEndo10_18.uai', folder='sr0', error=True, errorMsg='java.util.concurrent.ExecutionException: java.lang.NumberFormatException: Character N is neither a decimal digit number, decimal point, nor "e" notation exponential mark.')

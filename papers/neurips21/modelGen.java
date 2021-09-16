@@ -20,7 +20,7 @@ public class modelGen {
 	static String wdir = "./";
 	static String modelFolder = "papers/neurips21/models/";
 	static String set = "sr";
-	static String fcount = "_2";
+	static String fcount = "_3";
 
 
 
@@ -28,9 +28,9 @@ public class modelGen {
 
 		// set1
 		String[] topologies = new String[]{"rhmm"};
-		int[] treeWidthExo = new int[]{0,1,2}; //
+		int[] treeWidthExo = new int[]{0,1}; //
 		int[] numEndogenous = new int[]{5,7,10};
-		int[] index = IntStream.range(20,40).toArray();
+		int[] index = IntStream.range(40,60).toArray();
 
 
 

@@ -36,6 +36,7 @@ public class Experiments implements Runnable{
 
 /*
 --executions 20 --datasize 1000 ./papers/neurips21/models/synthetic/s0_2_chain_twExo0_nEndo5_24.uai
+--executions 20 --datasize 1000 ./papers/neurips21/models/sr1/rhmm_twExo1_nEndo5_4.uai
 
 
 */
@@ -85,6 +86,10 @@ public class Experiments implements Runnable{
 
 	@CommandLine.Option(names={"-g", "--groundtruth"}, description = "Inference method for ground truth")
 	InferenceMethod infGroundTruth = InferenceMethod.cve;
+
+	@CommandLine.Option(names={"--stopIfNotExact"}, description = "If activated, EM is not run if the exact solution is not available")
+	boolean stopIfNotExact = false;
+
 
 	@CommandLine.Option(names = {"-X", "--cause"}, description = "Cause endogenous variable. Default is 0.")
 	private int cause = 0;
@@ -328,6 +333,10 @@ public class Experiments implements Runnable{
 			}catch(Exception e){
 				logger.severe("Exact method cannot be applied: Unfeasible solution");
 				compatible = false;
+				if (stopIfNotExact) {
+					logger.severe("stopIfNotExact flag is activated.");
+					throw new IllegalArgumentException("Unfeasible solution and stopIfNotExact flag is activated.");
+				}
 			}
 
 			long time = Watch.stop();

@@ -49,6 +49,8 @@ public class suppmat {
 		SparseModel consVModel =  conservativeModel.toVCredal(empData.values());
 		CredalCausalVE infExact = new CredalCausalVE(consVModel);
 
+
+
 		VertexFactor pn = (VertexFactor) infExact.probNecessity(X,Y);
 		VertexFactor ps = (VertexFactor) infExact.probSufficiency(X,Y);
 		VertexFactor pns = (VertexFactor) infExact.probNecessityAndSufficiency(X,Y,0,1);

@@ -2,13 +2,10 @@ package examples;
 
 import ch.idsia.credici.IO;
 import ch.idsia.credici.factor.EquationBuilder;
-import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
-import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.VertexToInterval;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
@@ -19,7 +16,6 @@ import jdk.jshell.spi.ExecutionControl;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.Set;
 
 public class suppmat_why {
 
@@ -35,10 +31,10 @@ public class suppmat_why {
 		String folder = prj_folder + "papers/neurips21/examples/";
 
 		// Read the conservative model
-		StructuralCausalModel conservativeModel = (StructuralCausalModel) IO.readUAI(folder + "consPearl.uai");
+		StructuralCausalModel conservativeModel = (StructuralCausalModel) IO.readUAI(folder + "examples/consPearl.uai");
 
 		// Read the data
-		TIntIntMap[] data = (TIntIntMap[]) DataUtil.fromCSV(folder + "dataPearl.csv");
+		TIntIntMap[] data = (TIntIntMap[]) DataUtil.fromCSV(folder + "examples/dataPearl.csv");
 		HashMap empData = DataUtil.getEmpiricalMap(conservativeModel, data);
 		empData = FactorUtil.fixEmpiricalMap(empData, 6);
 

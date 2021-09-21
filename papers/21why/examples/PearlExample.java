@@ -136,8 +136,8 @@ public class PearlExample {
 
 		CredalCausalVE inf = new CredalCausalVE(m_eqless, empData.values());
 
-		IO.write(m_eqless, folder+"consPearl.uai");
-		DataUtil.toCSV(folder+"dataPearl.csv", data);
+		IO.write(m_eqless, folder+ "examples/consPearl.uai");
+		DataUtil.toCSV(folder+ "examples/dataPearl.csv", data);
 
 
 		VertexFactor pn = (VertexFactor) inf.probNecessity(X,Y,1,0);

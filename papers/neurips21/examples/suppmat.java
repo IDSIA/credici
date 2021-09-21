@@ -1,7 +1,6 @@
 package neurips21.examples;
 
 import ch.idsia.credici.IO;
-import ch.idsia.credici.inference.CausalInference;
 import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
@@ -34,10 +33,10 @@ public class suppmat {
 		String folder = prj_folder+"papers/neurips21/examples/";
 
 		// Read the conservative model
-		StructuralCausalModel conservativeModel = (StructuralCausalModel) IO.readUAI(folder+"consPearl.uai");
+		StructuralCausalModel conservativeModel = (StructuralCausalModel) IO.readUAI(folder+ "examples/consPearl.uai");
 
 		// Read the data
-		TIntIntMap[] data = (TIntIntMap[]) DataUtil.fromCSV(folder+"dataPearl.csv");
+		TIntIntMap[] data = (TIntIntMap[]) DataUtil.fromCSV(folder+ "examples/dataPearl.csv");
 		HashMap<Set<Integer>, BayesianFactor> empData = DataUtil.getEmpiricalMap(conservativeModel, data);
 		empData = FactorUtil.fixEmpiricalMap(empData,6);
 

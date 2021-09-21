@@ -9,6 +9,7 @@ import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.stream.Collectors;
@@ -20,8 +21,9 @@ public class modelGen {
 	static String wdir = "./";
 	static String modelFolder = "papers/neurips21/models/";
 	static String set = "src";
-	static String fcount = "_2";
-
+	static String fcount = "";
+	static Boolean overwrite = true;
+	static int datasize = 1000;
 
 
 	public static void main(String[] args) throws IOException, InterruptedException {
@@ -30,16 +32,17 @@ public class modelGen {
 		String[] topologies = new String[]{"rhmm"};
 		int[] treeWidthExo = new int[]{0,1}; //
 		int[] numEndogenous = new int[]{5,7,10};
-		int[] index = IntStream.range(20,40).toArray();
+		int[] index = IntStream.range(0,20).toArray();
 
 
 
 		for(String top : topologies){
-			for(int twExo : treeWidthExo){
-				for(int nEndo: numEndogenous){
 					for(int idx: index){
+						for(int nEndo: numEndogenous){
+							for(int twExo : treeWidthExo){
 
-						boolean dataCheck = false;
+
+							boolean dataCheck = false;
 						boolean empCheck = false;
 						if(top == "rhmm")
 							dataCheck = true;
@@ -76,21 +79,43 @@ public class modelGen {
 		TIntIntMap[] data = null;
 		int maxDist = 2;
 
+		boolean doubleCard = false;
+		if(twExo==1)
+			doubleCard = false;
+
+
+		String filename = wdir+modelFolder+set+twExo+fcount+"/"+name;
+		System.out.println("\nGenerating:");
+		System.out.println(filename);
+
+		if(!overwrite && new File(filename+".uai").exists())
+			return;
 
 		int i = 0;
 
 		do {
 			feasible = true;
 
-			if(top == "rhmm")
-				m = ReverseHMM.build(nEndo, twExo, maxDist);
+			if(top == "rhmm") {
+				m = new ReverseHMM(nEndo, twExo).setMaxDist(maxDist).setDoubleCard(doubleCard).build();
+				//m = ReverseHMM.build(nEndo, twExo, maxDist);
+			}
 			else // chain
 				m = ChainGenerator.build(nEndo, twExo, maxDist);
 
 
 			try {
 				if(dataCheck){
-					m.toVCredal(FactorUtil.fixEmpiricalMap(m.getEmpiricalMap(), 5).values());
+
+					int j = 0;
+					do {
+						if(j>10)
+							throw new IllegalStateException("Compatible data not found");
+						data = m.samples(datasize, m.getEndogenousVars());
+						System.out.print(".");
+						j++;
+					}while(!m.isCompatible(data, 5));
+					//m.toVCredal(FactorUtil.fixEmpiricalMap(m.getEmpiricalMap(), 5).values());
 				}
 
 				int t = m.maxExoCC();
@@ -115,7 +140,6 @@ public class modelGen {
 		System.out.println("tw="+m.getExogenousTreewidth());
 		System.out.println(m.getExogenousDAG());
 
-		String filename = wdir+modelFolder+set+twExo+fcount+"/"+name;
 		System.out.println(filename+".uai");
 		IO.write(m, filename+".uai");
 
@@ -123,5 +147,6 @@ public class modelGen {
 			System.out.println(filename + ".csv");
 			DataUtil.toCSV(filename+".csv", data);
 		}
+
 	}
 }

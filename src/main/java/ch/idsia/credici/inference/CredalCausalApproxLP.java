@@ -8,7 +8,7 @@ import ch.idsia.credici.preprocess.CutObservedSepHalfspace;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
-import ch.idsia.crema.inference.approxlp.ApproxLP1;
+import ch.idsia.crema.inference.approxlp1.ApproxLP1;
 import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import gnu.trove.map.TIntIntMap;

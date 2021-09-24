@@ -89,7 +89,7 @@ public class FrequentistCausalEM extends DiscreteEM{
                                         posteriorModel.getDomain(obsVars), observation));
 
 
-                    BayesianFactor p = counts.get(var).get().addition(phidden_obs);
+                    BayesianFactor p = counts.get(var).get().addition((BayesianDefaultFactor) phidden_obs);
                     counts.put(var, BayesianFactorFactoryMutableExt
                             .factory()
                             .domain(p.getDomain())
@@ -122,7 +122,7 @@ public class FrequentistCausalEM extends DiscreteEM{
 
             if(regularization>0.0) {
                 BayesianFactor reg = Operations.scalarMultiply(posteriorModel.getFactor(var), regularization);
-                countVar = countVar.addition(reg);
+                countVar = ((BayesianDefaultFactor)countVar).addition((BayesianDefaultFactor)reg);
             }
             BayesianFactor f = countVar.divide(countVar.marginalize(var));
 

@@ -64,8 +64,6 @@ public class CausalModel {
         model.printSummary();
 
 
-        BayesianFactor f4_ = EquationBuilder.of(model).withAllAssignments(x4);
-        System.out.println(f4_);
 
     }
 }

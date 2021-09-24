@@ -11,9 +11,11 @@ import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.RandomUtilities;
 import ch.idsia.crema.core.Strides;
+import ch.idsia.crema.factor.bayesian.BayesianDefaultFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
+import ch.idsia.crema.inference.ve.ConditionalVariableElimination;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
@@ -429,9 +431,10 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 				pvar = pvar.marginalize(u);
 			}
 		}else{
-			VariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(this));
+			ConditionalVariableElimination inf = new ConditionalVariableElimination(new MinFillOrdering().apply(this));
 			inf.setFactors(this.getFactors());
-			pvar = (BayesianFactor) inf.conditionalQuery(vars, this.getEndegenousParents(vars));
+			inf.setConditioning(this.getEndegenousParents(vars));
+			inf.query(this, vars);
 
 		}
 
@@ -439,9 +442,10 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 	}
 
 	public BayesianFactor conditionalProb(int[] left, int... right){
-		VariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(this));
+		ConditionalVariableElimination inf = new ConditionalVariableElimination(new MinFillOrdering().apply(this));
 		inf.setFactors(this.getFactors());
-		return (BayesianFactor) inf.conditionalQuery(left, right);
+		inf.setConditioning(right);
+		return inf.query(this, left);
 	}
 
 	public BayesianFactor conditionalProb(int left, int... right){
@@ -475,7 +479,7 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 				System.out.println(p + " = " + Arrays.toString(p.getData()));
 			}catch (Exception e){}
 
-			BayesianFactor f = this.getFactor(x).reorderDomain(this.getExogenousParents(x));
+			BayesianFactor f = Operations.reorderDomain(this.getFactor(x), this.getExogenousParents(x));
 
 			double[][] fdata = ArraysUtil.reshape2d(f.getData(), f.getDomain().getCombinations()/f.getDomain().getCardinality(this.getExogenousParents(x)[0]));
 			System.out.println(f+" = ");
@@ -894,14 +898,14 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 
 	public HashMap<Integer, BayesianFactor> endogenousBlanketProb(){
 
-
-		FactorVariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(this));
+		ConditionalVariableElimination inf = new ConditionalVariableElimination(new MinFillOrdering().apply(this));
 		inf.setFactors(this.getFactors());
 
 		HashMap probs = new HashMap();
 		for(int u: this.getExogenousVars()){
 			int[] blanket = this.endogenousMarkovBlanket(u).getVariables();
-			probs.put(u, ((BayesianFactor)inf.conditionalQuery(blanket)));
+			probs.put(u, inf.query(this, blanket));
+
 		}
 		return probs;
 
@@ -921,7 +925,7 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 		for (int v : vars) {
 			BayesianFactor f1 = this.getFactor(v);
 			BayesianFactor f2 = model.getFactor(v);
-			out.setFactor(v, Operations.scalarMultiply(f1.addition(f2), 0.5));
+			out.setFactor(v, Operations.scalarMultiply(((BayesianDefaultFactor)f1).addition((BayesianDefaultFactor)f2), 0.5));
 		}
 		return out;
 	}

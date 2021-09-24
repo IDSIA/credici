@@ -3,20 +3,25 @@ package ch.idsia.credici.factor;
 import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.OperableFactor;
+import ch.idsia.crema.factor.bayesian.BayesianDefaultFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactorFactory;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactorFactory;
 import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import ch.idsia.crema.factor.credal.vertex.separate.VertexFactorFactory;
+import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.IndexIterator;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class Operations {
 
@@ -193,6 +198,44 @@ public class Operations {
 	}
 
 
+
+	public static BayesianFactor reorderDomain(BayesianFactor f, Strides newStrides) {
+		if (!(f.getDomain().isConsistentWith(newStrides) && f.getDomain().getSize() == newStrides.getSize())) {
+			throw new IllegalArgumentException("Wrong input Strides");
+		}
+
+		// at position i, now we put the axis that were at varMap[i]
+		int[] varMap = IntStream.of(newStrides.getVariables())
+				.map(v -> ArraysUtil.indexOf(v, f.getDomain().getVariables()))
+				.toArray();
+
+		return new BayesianDefaultFactor(newStrides, ArraysUtil.swapVectorStrides(f.getData(), f.getDomain().getSizes(), varMap));
+	}
+
+	public static BayesianFactor reorderDomain(BayesianFactor f, int... vars) {
+		int[] all_vars = Ints.concat(vars,
+				IntStream.of(f.getDomain().getVariables())
+						.filter(v -> !ArrayUtils.contains(vars, v)).toArray()
+		);
+
+		return reorderDomain(f,
+				new Strides(
+						all_vars,
+						IntStream.of(all_vars).map(v -> f.getDomain().getCardinality(v)).toArray()));
+	}
+
+	public static int[] getAssignments(BayesianFactor f, int... given) {
+		int[] left = ArraysUtil.difference(f.getDomain().getVariables(), given);
+
+		int leftSize = IntStream.of(left).map(v -> f.getDomain().getCardinality(v)).reduce(1, (a, b) -> a * b);
+
+		int rightCombinations = f.getData().length / leftSize;
+
+		BayesianDefaultFactor reordered = (BayesianDefaultFactor) reorderDomain(f, Ints.concat(left, given));
+
+		double[][] data = ArraysUtil.reshape2d(reordered.getData(), rightCombinations, leftSize);
+		return Ints.concat(Stream.of(data).map(v -> ArraysUtil.where(v, x -> x != 0.0)).toArray(int[][]::new));
+	}
 	public static void main(String[] args) {
 		VertexFactor f = VertexFactorFactory.factory().domain(Strides.as(0,2), Strides.as(1,2)).get();
 		f = addVertexAt(f,new double[]{0.5,0.5},0);

@@ -1,5 +1,6 @@
 package ch.idsia.credici.utility;
 
+import ch.idsia.credici.factor.Operations;
 import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -100,14 +101,14 @@ public class FactorUtil {
 		BayesianFactorFactory ff = BayesianFactorFactory.factory().domain(left.concat(right));
 
 		double[][] newData = new double[right.getCombinations()][left.getCombinations()];
-		double[][] oldData = ArraysUtil.reshape2d(f.reorderDomain(left.concat(right)).getData(), right.getCombinations());
+		double[][] oldData = ArraysUtil.reshape2d(Operations.reorderDomain(f,left.concat(right)).getData(), right.getCombinations());
 
 		for(int i=0; i<right.getCombinations(); i++){
 			newData[i] = CollectionTools.roundNonZerosToTarget(oldData[i], 1.0, newZeros, num_decimals);
 		}
 
 		ff = ff.data(Doubles.concat(newData));
-		return ff.get().reorderDomain(f.getDomain());
+		return Operations.reorderDomain(ff.get(),f.getDomain());
 
 	}
 

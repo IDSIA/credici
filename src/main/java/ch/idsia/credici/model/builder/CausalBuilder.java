@@ -115,8 +115,10 @@ public class CausalBuilder {
             // build the markovian-case DAG
             causalDAG = (DirectedAcyclicGraph) empiricalDAG.clone();
             for(int x: DAGUtil.getVariables(empiricalDAG)){
+                u++;
                 causalDAG.addVertex(u);
                 causalDAG.addEdge(u,x);
+
             }
         }
 

@@ -1,6 +1,7 @@
 package ch.idsia.credici.model.io.uai;
 
 import ch.idsia.credici.IO;
+import ch.idsia.credici.factor.Operations;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianDefaultFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -56,8 +57,7 @@ public class CausalUAIWriter extends NetUAIWriter<StructuralCausalModel> {
 
             if(f != null){
                 if(target.isEndogenous(v)) {
-                   int[] assig = ((BayesianDefaultFactor)target.getFactor(v))
-                           .getAssignments(target.getParents(v));
+                   int[] assig = Operations.getAssignments(target.getFactor(v), target.getParents(v));
                    append(assig.length+"\t");
                    append(assig);
                 }else{

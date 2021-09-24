@@ -1,9 +1,11 @@
 package ch.idsia.credici.model.builder;
 
+import ch.idsia.credici.factor.Operations;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.ConstraintsOps;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.crema.core.Strides;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
@@ -11,6 +13,7 @@ import ch.idsia.crema.factor.convert.HalfspaceToVertex;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactorFactory;
 import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
+import ch.idsia.crema.inference.ve.ConditionalVariableElimination;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.graphical.DAGModel;
@@ -72,11 +75,12 @@ public class ExactCredalBuilder extends CredalBuilder {
             throw new IllegalArgumentException("Uncompatible empirical network");
 
         List<BayesianFactor> factors = new ArrayList<>();
-        FactorVariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(bnet));
+        ConditionalVariableElimination inf = new ConditionalVariableElimination(new MinFillOrdering().apply(bnet));
         inf.setFactors(bnet.getFactors());
 
         for(int x: causalmodel.getEndogenousVars()){
-            BayesianFactor f = (BayesianFactor) inf.conditionalQuery(x, causalmodel.getEndegenousParents(x));
+            inf.setConditioning(causalmodel.getEndegenousParents(x));
+            BayesianFactor f = inf.query(causalmodel, x);   // P(X | endoPa(X))
             f = FactorUtil.fixPrecission(f, 10, false, x);
             factors.add(f);
         }
@@ -146,7 +150,7 @@ public class ExactCredalBuilder extends CredalBuilder {
 
     private void buildEndoFactor(int x) {
         // Variable on the left should be the first
-        BayesianFactor eqx = causalmodel.getFactor(x).reorderDomain(x);
+        BayesianFactor eqx = Operations.reorderDomain(causalmodel.getFactor(x), x);
 
         if (vertex) {
             model.setFactor(x, new BayesianToVertex().apply(eqx, x));
@@ -168,8 +172,8 @@ public class ExactCredalBuilder extends CredalBuilder {
 
         SeparateHalfspaceFactor constFactor = SeparateHalfspaceFactorFactory
                 .factory()
+                .domain(this.model.getDomain(u), Strides.empty())
                 .constraints(false, this.nonnegative, model.getDomain(u), coeff, vals).get();
-
 
         // remove constraints with all their coefficients equal to zero
         constFactor = ConstraintsOps.removeZeroConstraints(constFactor);
@@ -219,7 +223,7 @@ public class ExactCredalBuilder extends CredalBuilder {
 
         BayesianFactor joinEQ = IntStream.of(children).mapToObj(i -> causalmodel.getFactor(i)).reduce((f1, f2) -> f1.combine(f2)).get();
         // reorder coeff domain
-        joinEQ = joinEQ.reorderDomain(Ints.concat(empiricalFactors.get(u).getDomain().getVariables(), new int[]{u}));
+        joinEQ = Operations.reorderDomain(joinEQ, Ints.concat(empiricalFactors.get(u).getDomain().getVariables(), new int[]{u}));
 
         // Get the coefficients by combining all the EQs of the children
         double[][] coeff = ArraysUtil.transpose(ArraysUtil.reshape2d(

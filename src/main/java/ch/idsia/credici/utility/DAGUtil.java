@@ -173,11 +173,11 @@ public class DAGUtil {
     }
 
     public static int[] getChildren(DirectedAcyclicGraph dag, int x){
-        return dag.getDescendants(x).stream().mapToInt(i->(int)i).toArray();
+        return dag.getDescendants(x).stream().filter(i -> dag.containsEdge(x, i)).mapToInt(i->(int)i).toArray();
     }
 
     public static int[] getParents(DirectedAcyclicGraph dag, int x){
-        return dag.getAncestors(x).stream().mapToInt(i->(int)i).toArray();
+        return dag.getAncestors(x).stream().filter(i -> dag.containsEdge(i,x)).mapToInt(i->(int)i).toArray();
     }
 
 

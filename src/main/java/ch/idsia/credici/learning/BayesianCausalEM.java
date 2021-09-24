@@ -9,6 +9,7 @@ import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.core.ObservationBuilder;
 import ch.idsia.crema.core.Strides;
+import ch.idsia.crema.factor.bayesian.BayesianDefaultFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.learning.DiscreteEM;
@@ -66,7 +67,7 @@ public class BayesianCausalEM extends DiscreteEM {
                 TIntIntHashMap obs = ObservationBuilder.observe(blanket.getVariables(), blanket.statesOf(i));
                 double emp_i = emp.filter(obs).getValueAt(0);
                 if (emp_i > 0)
-                    pu = pu.addition((BayesianFactor) inferenceEngine.query(posteriorModel, obs, u));
+                    pu = ((BayesianDefaultFactor)pu).addition((BayesianDefaultFactor) inferenceEngine.query(posteriorModel, obs, u));
                     pu = Operations.scalarMultiply(pu, emp_i);
             }
 

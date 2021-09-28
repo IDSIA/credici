@@ -10,6 +10,8 @@ import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
 import ch.idsia.crema.inference.approxlp1.ApproxLP1;
 import ch.idsia.crema.model.graphical.DAGModel;
+import ch.idsia.crema.model.graphical.MixedModel;
+import ch.idsia.crema.preprocess.BinarizeEvidence;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -88,7 +90,7 @@ public class CredalCausalApproxLP extends CausalInference<DAGModel<SeparateHalfs
     @Override
     public IntervalFactor run(Query q) throws InterruptedException {
 
-        DAGModel<SeparateHalfspaceFactor> infModel = getInferenceModel(q);
+        DAGModel<SeparateHalfspaceFactor> infModel = getInferenceModel(q,false);
 
         TIntIntHashMap filteredEvidence = new TIntIntHashMap();
 
@@ -101,12 +103,22 @@ public class CredalCausalApproxLP extends CausalInference<DAGModel<SeparateHalfs
 
         IntervalFactor result = null;
         ApproxLP1<SeparateHalfspaceFactor> lp1 = new ApproxLP1();
+        //lp1.setPreprocess(false);
+
 
         if(filteredEvidence.size()>0) {
             //int evbin = new BinarizeEvidence().executeInline(infModel, filteredEvidence, filteredEvidence.size(), false);
+            //DAGModel binModel = new BinarizeEvidence().execute(infModel, filteredEvidence);
             result = lp1.query(infModel, filteredEvidence, target[0]);
 
+           // MixedModel binModel = new BinarizeEvidence().execute(infModel, filteredEvidence);
+
+            //lp1.setEvidenceNode(12);
+            //lp1.setPreprocess(false);
+            //result = lp1.query((DAGModel)binModel, filteredEvidence, target[0]);
         }else{
+            //lp1.setPreprocess(true);
+
             result = lp1.query(infModel, target[0]);
         }
 

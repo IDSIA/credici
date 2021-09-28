@@ -57,7 +57,7 @@ public class CredalCausalVE extends CausalInference<DAGModel<VertexFactor>, Vert
         // Get the inference model (simple mutilated or twin graph)
         DAGModel infModel=null;
         if(!q.isCounterfactual()) {
-            infModel = (DAGModel) CausalOps.applyInterventions(model, intervention, true);
+            infModel = (DAGModel) CausalOps.applyInterventions(model, intervention, false);
         }else{
             infModel = (DAGModel) CausalOps.counterfactualModel(model, intervention);
             //map the target to the alternative world

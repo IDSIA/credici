@@ -15,14 +15,15 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class HalfSpaceFactorBuilder {
 
 	public static SeparateHalfspaceFactor as(Strides left, Strides right, TIntObjectMap<List<LinearConstraint>> data) {
-		return SeparateHalfspaceFactorFactory
-				.factory()
-				.domain(left,right)
-				.data((List<List<LinearConstraint>>) data.valueCollection())
+		return SeparateHalfspaceFactorFactory.factory().domain(left,right)
+				.data(data.valueCollection().
+						stream()
+						.collect(Collectors.toList()))
 				.get();
 	}
 

@@ -526,7 +526,7 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 	public DAGModel<SeparateHalfspaceFactor> toHCredal(BayesianFactor... empiricalProbs){
 		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
-				.setNonnegative(false)
+				.setNonnegative(true)
 				.setToHalfSpace()
 				.build().getModel();
 	}
@@ -534,7 +534,7 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 	public DAGModel<SeparateHalfspaceFactor> toHCredal(Collection empiricalProbs){
 		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
-				.setNonnegative(false)
+				.setNonnegative(true)
 				.setToHalfSpace()
 				.build().getModel();
 	}

@@ -10,6 +10,8 @@ import ch.idsia.crema.utility.ArraysUtil;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import org.apache.commons.lang3.tuple.ImmutablePair;
+import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.IOException;
 import java.util.*;
@@ -39,6 +41,13 @@ public class DataUtil {
 					.count(), i);
 		}
 		return counts;
+	}
+
+	public static Pair<TIntIntMap, Long>[] getCounts(TIntIntMap[] data){
+		ArrayList counts = new ArrayList();
+		for(TIntIntMap instance : DataUtil.unique(data))
+			counts.add(new ImmutablePair(instance, Arrays.stream(data).filter(s -> DataUtil.instanceEquals(s,instance)).count()));
+		return (Pair<TIntIntMap, Long>[]) counts.toArray(Pair[]::new);
 	}
 
 	public static TIntIntMap[] dataFromCounts(BayesianFactor counts){
@@ -121,6 +130,22 @@ public class DataUtil {
 	public static TIntIntMap[] fromCSV(String filename) throws IOException, CsvException {
 		ReaderCSV reader = new ReaderCSV(filename).read();
 		return ObservationBuilder.observe(reader.getVarNames(), reader.getData());
+	}
+
+	public static boolean instanceEquals(TIntIntMap s1, TIntIntMap s2){
+		if(ArraysUtil.difference(s1.keys(), s2.keys()).length != 0)
+			return false;
+		return Arrays.stream(s1.keys()).allMatch(v -> s1.get(v) == s2.get(v));
+	}
+
+	public static TIntIntMap[] unique(TIntIntMap[] data){
+		ArrayList out = new ArrayList();
+		for(TIntIntMap instance: data){
+			if(!out.stream().anyMatch(s-> DataUtil.instanceEquals((TIntIntMap) s, instance)) ){
+				out.add(instance);
+			}
+		}
+		return (TIntIntMap[]) out.toArray(TIntIntMap[]::new);
 	}
 
 }

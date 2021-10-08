@@ -115,7 +115,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         return counts;
     }
 
-    private void maximization(TIntObjectMap<BayesianFactor> counts){
+    void maximization(TIntObjectMap<BayesianFactor> counts){
 
         updated = false;
         for (int var : trainableVars) {

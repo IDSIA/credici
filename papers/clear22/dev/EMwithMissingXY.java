@@ -5,6 +5,7 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.CredalVariableElimination;
@@ -129,11 +130,15 @@ f({2=1, 1=1, 0=1}) = 1.0
 
 
 		RandomUtil.setRandomSeed(1);
+		Watch.start();
 		builder = EMCredalBuilder.of(prior, data)
 				.setNumTrajectories(100)
-				.setBuildCredalModel(true)
+				.setBuildCredalModel(false)
+				.setWeightedEM(true)
+				//.setSelPolicy(EMCredalBuilder.SelectionPolicy.BISECTION_BORDER_SAME_PATH)
 				.build();
 
+		Watch.stopAndPrint();
 		System.out.println("finished learning");
 
 

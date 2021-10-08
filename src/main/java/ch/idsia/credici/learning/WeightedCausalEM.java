@@ -53,9 +53,34 @@ public class WeightedCausalEM extends FrequentistCausalEM {
     }
 
 
-    protected TIntObjectMap<BayesianFactor> expectation(TIntIntMap[] observations) throws InterruptedException {
 
-        Pair[] dataWeighted = DataUtil.getCounts(observations);
+    public void step(Collection stepArgs) throws InterruptedException {
+        stepPrivate(stepArgs);
+        performedIterations++;
+        if(recordIntermediate)
+            addIntermediateModels(posteriorModel);
+
+    }
+
+    public void run(Collection stepArgs, int iterations) throws InterruptedException {
+        TIntIntMap[] data = (TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new);
+        Pair[] dataWeighted = DataUtil.getCounts(data);
+        super.run(Arrays.asList(dataWeighted), iterations);
+
+    }
+
+
+    protected void stepPrivate(Collection stepArgs) throws InterruptedException {
+        // E-stage
+        TIntObjectMap<BayesianFactor> counts = expectation((Pair[]) stepArgs.toArray(Pair[]::new));
+        // M-stage
+        maximization(counts);
+
+    }
+
+
+    protected TIntObjectMap<BayesianFactor> expectation(Pair[] dataWeighted) throws InterruptedException {
+
 
         TIntObjectMap<BayesianFactor> counts = new TIntObjectHashMap<>();
         for (int variable : posteriorModel.getVariables()) {

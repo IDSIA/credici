@@ -63,18 +63,25 @@ public class PGMcode {
 
         // Set up and run a causal query
         VertexFactor resExact = (VertexFactor) infExact
-                .causalQuery()
+                .counterfactualQuery()
+                //.causalQuery()
                 .setTarget(x[3])
                 .setIntervention(x[2],1)
+                .setEvidence(x[2], 0)
                 .run();
 
         // Set up an run a counterfactual query
         IntervalFactor resApprox = (IntervalFactor) infApprox
                 .counterfactualQuery()
+                //.causalQuery()
                 .setTarget(x[3])
                 .setIntervention(x[2],1)
                 .setEvidence(x[2], 0)
                 .run();
+
+
+        System.out.println(resExact);
+        System.out.println(resApprox);
 
 
     }

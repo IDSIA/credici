@@ -27,6 +27,15 @@ public class HalfSpaceFactorBuilder {
 				.get();
 	}
 
+	public static SeparateHalfspaceFactor as(Strides left, Strides right, List<LinearConstraint[]> data) {
+
+		List<List<LinearConstraint>> data_ = data.stream().map(v -> List.of(v)).collect(Collectors.toList());
+		return SeparateHalfspaceFactorFactory.factory().domain(left,right)
+				.data(data_)
+				.get();
+	}
+
+
 	public static SeparateHalfspaceFactor as(Strides leftRightDomain, TIntObjectMap<List<LinearConstraint>> data) {
 		Strides left = Strides.as(leftRightDomain.getVariables()[0], leftRightDomain.getSizes()[0]);
 		Strides right = leftRightDomain.remove(left);

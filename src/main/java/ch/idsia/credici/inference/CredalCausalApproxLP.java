@@ -7,6 +7,7 @@ import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.preprocess.CutObservedSepHalfspace;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceDefaultFactor;
 import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
 import ch.idsia.crema.inference.approxlp1.ApproxLP1;
 import ch.idsia.crema.model.graphical.DAGModel;
@@ -111,14 +112,18 @@ public class CredalCausalApproxLP extends CausalInference<DAGModel<SeparateHalfs
             //DAGModel binModel = new BinarizeEvidence().execute(infModel, filteredEvidence);
             result = lp1.query(infModel, filteredEvidence, target[0]);
 
-           // MixedModel binModel = new BinarizeEvidence().execute(infModel, filteredEvidence);
+           //MixedModel binModel = new BinarizeEvidence().execute(infModel, filteredEvidence);
 
-            //lp1.setEvidenceNode(12);
+            //lp1.setEvidenceNode(filteredEvidence.keys()[0]);
             //lp1.setPreprocess(false);
             //result = lp1.query((DAGModel)binModel, filteredEvidence, target[0]);
         }else{
             //lp1.setPreprocess(true);
-
+/*            for(int v : infModel.getVariables()) {
+                System.out.println("\n==========\n"+v);
+                ((SeparateHalfspaceDefaultFactor) infModel.getFactor(v)).printLinearProblem();
+            }
+*/
             result = lp1.query(infModel, target[0]);
         }
 

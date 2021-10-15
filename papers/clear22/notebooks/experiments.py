@@ -53,7 +53,7 @@ exp_folder = Path(prj_path, "papers/clear22/")
 res_folder = Path(exp_folder, "output")
 model_folder = Path(exp_folder, "models")
 
-jar_file = Path(prj_path, "target/credici-0.1.3-SNAPSHOT-jar-with-dependencies.jar")
+jar_file = Path(prj_path, "target/credici-0.1.3-jar-with-dependencies.jar")
 javafile = Path(exp_folder, "Experiments.java")
 
 

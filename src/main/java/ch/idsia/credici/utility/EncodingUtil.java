@@ -1,5 +1,6 @@
 package ch.idsia.credici.utility;
 
+import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Booleans;
 
 import java.util.ArrayList;
@@ -57,9 +58,7 @@ public class EncodingUtil {
 	}
 
 	public static List<boolean[]> getRandomSeqMask(int size) {
-
 		List out = new ArrayList();
-
 		List idx = IntStream.range(0, size).boxed().collect(Collectors.toList());
 		Collections.shuffle(idx);
 		boolean[] m = new boolean[size];
@@ -72,18 +71,40 @@ public class EncodingUtil {
 		return out;
 	}
 
-	public static List<boolean[]> getSequentialMask(int size) {
 
+	public static List<int[]> getRandomSeqIntMask(int size) {
 		List out = new ArrayList();
+		List idx = IntStream.range(0, size).boxed().collect(Collectors.toList());
+		Collections.shuffle(idx);
+		int[] m = new int[size];
 
-		boolean[] m = new boolean[size];
-
-		for (int i =0; i<size; i++) {
-			m[i] = true;
+		for (int i : idx.stream().mapToInt(i -> ((Integer) i).intValue()).toArray()) {
+			m[i] = 1;
 			out.add(m.clone());
 		}
 
 		return out;
 	}
+
+
+	public static List<int[]> getRandomSeqIntMask(int size, boolean addZero) {
+		List<int[]> m = getRandomSeqIntMask(size);
+		if(addZero)
+			m.add(0, new int[size]);
+
+		return m;
+	}
+
+	public static List<boolean[]> getSequentialMask(int size) {
+		List out = new ArrayList();
+		boolean[] m = new boolean[size];
+		for (int i =0; i<size; i++) {
+			m[i] = true;
+			out.add(m.clone());
+		}
+		return out;
+	}
+
+
 
 }

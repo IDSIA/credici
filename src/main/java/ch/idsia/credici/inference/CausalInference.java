@@ -5,17 +5,21 @@ import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.factor.convert.VertexToInterval;
+import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.approxlp.CredalApproxLP;
 import ch.idsia.crema.model.ObservationBuilder;
+import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.user.credal.Interval;
-import ch.idsia.crema.user.credal.IntervalFactor;
 import com.google.common.primitives.Doubles;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
+
+import java.util.Arrays;
 
 /**
  * Author:  Rafael Cabañas
@@ -30,9 +34,9 @@ public abstract class CausalInference<M, R extends GenericFactor>{
 
     public R query(int[] target, TIntIntMap evidence, TIntIntMap intervention) throws InterruptedException {
         Query q = causalQuery()
-                    .setTarget(target)
-                    .setEvidence(evidence)
-                    .setIntervention(intervention);
+                .setTarget(target)
+                .setEvidence(evidence)
+                .setIntervention(intervention);
 
         if(this instanceof CredalCausalApproxLP)
             q.setEpsilon(((CredalCausalApproxLP) this).getEpsilon());
@@ -129,6 +133,49 @@ public abstract class CausalInference<M, R extends GenericFactor>{
 
     public R probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
         throw new ExecutionControl.NotImplementedException("Not implemented");
+    }
+
+
+    public GenericFactor averageCausalEffects(int cause, int effect, int effectVal, int causeVal1, int causeVal2) throws InterruptedException {
+
+
+        GenericFactor p1 = this.causalQuery().setIntervention(cause, causeVal1).setTarget(effect).run();
+        GenericFactor p2 = this.causalQuery().setIntervention(cause, causeVal2).setTarget(effect).run();
+
+        GenericFactor ace = null;
+
+        // Check the output type
+        if (!(p1 instanceof BayesianFactor) && !(p1 instanceof  VertexFactor) && !(p1 instanceof ch.idsia.crema.factor.credal.linear.IntervalFactor))
+            throw new IllegalArgumentException("Wrong factor type");
+
+
+        if(p1 instanceof BayesianFactor){
+            double diff = ((BayesianFactor)p1).filter(effect, effectVal).getValueAt(0)
+                    - ((BayesianFactor)p2).filter(effect, effectVal).getValueAt(0);
+            ace = new BayesianFactor(Strides.empty(), new double[]{diff});
+        }else{
+            if(p1 instanceof  VertexFactor){
+                p1 = new VertexToInterval().apply((VertexFactor) p1, effect);
+                p2 = new VertexToInterval().apply((VertexFactor) p2, effect);
+            }
+
+            // Filter the value of the effect
+            double maxp1 = ((ch.idsia.crema.factor.credal.linear.IntervalFactor)p1).getDataUpper()[0][effectVal];
+            double minp1 = ((ch.idsia.crema.factor.credal.linear.IntervalFactor)p1).getDataLower()[0][effectVal];
+            double maxp2 = ((ch.idsia.crema.factor.credal.linear.IntervalFactor)p2).getDataUpper()[0][effectVal];
+            double minp2 = ((ch.idsia.crema.factor.credal.linear.IntervalFactor)p2).getDataLower()[0][effectVal];
+
+
+            double[] vals = new double [] {maxp1 - maxp2, maxp1 - minp2, minp1-maxp2, minp1 - minp2};
+
+            ace = new ch.idsia.crema.factor.credal.linear.IntervalFactor(Strides.empty(), Strides.empty());
+            ((ch.idsia.crema.factor.credal.linear.IntervalFactor)ace).setUpper(new double[]{Arrays.stream(vals).max().getAsDouble()});
+            ((IntervalFactor)ace).setLower(new double[]{Arrays.stream(vals).min().getAsDouble()});
+
+        }
+
+        return ace;
+
     }
 
 }

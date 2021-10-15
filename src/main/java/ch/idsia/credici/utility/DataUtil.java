@@ -148,4 +148,23 @@ public class DataUtil {
 		return (TIntIntMap[]) out.toArray(TIntIntMap[]::new);
 	}
 
+	public static TIntIntMap select(TIntIntMap d, int... keys){
+		TIntIntMap dnew = new TIntIntHashMap();
+		for(int k : keys){
+			if(d.containsKey(k)){
+				dnew.put(k,d.get(k));
+			}
+		}
+		return dnew;
+	}
+	public static TIntIntMap remove(TIntIntMap d, int... keys){
+		TIntIntMap dnew = new TIntIntHashMap(d);
+		for(int k : keys){
+			if(d.containsKey(k)){
+				dnew.remove(k);
+			}
+		}
+		return dnew;
+	}
+
 }

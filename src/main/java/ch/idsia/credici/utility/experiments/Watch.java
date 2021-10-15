@@ -19,4 +19,25 @@ public class Watch {
 		watch.stop();
 		System.out.println("Ellapsed time: "+watch.getTime()+".ms");
 	}
+
+	public static long pause(){
+		watch.suspend();
+		return watch.getTime();
+	}
+
+	public static void pauseAndPrint(){
+		watch.suspend();
+		System.out.println("Ellapsed time: "+watch.getTime()+".ms");
+	}
+
+	public static long resume(){
+		watch.resume();
+		return watch.getTime();
+	}
+
+	public static void resumeAndPrint(){
+		watch.resume();
+		System.out.println("Ellapsed time: "+watch.getTime()+".ms");
+	}
+
 }

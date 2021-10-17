@@ -305,6 +305,7 @@ public class Experiments implements Runnable{
 			aceEM_l[i] = res[2];
 			aceEM_u[i] = res[3];
 			convPoints[i] = npoints;
+			i++;
 
 		}
 

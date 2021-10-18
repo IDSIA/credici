@@ -263,6 +263,8 @@ public class Experiments implements Runnable{
 		double[] aceEM_u= new double[numAssig];
 		double[] timeEM= new double[numAssig];
 		double[] convPoints= new double[numAssig];
+		double[] probAvailable= new double[numAssig];
+
 
 
 		int i = 0;
@@ -305,6 +307,7 @@ public class Experiments implements Runnable{
 			aceEM_l[i] = res[2];
 			aceEM_u[i] = res[3];
 			convPoints[i] = npoints;
+			probAvailable[i] = pS1;
 			i++;
 
 		}
@@ -315,6 +318,8 @@ public class Experiments implements Runnable{
 		output.put("aceEM_l", aceEM_l);
 		output.put("aceEM_u", aceEM_u);
 		output.put("convPoints", convPoints);
+		output.put("propAvailable", probAvailable);
+
 
 		output.put("datasize", dataSize);
 		output.put("maxiter", maxiter);

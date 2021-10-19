@@ -190,7 +190,7 @@ public class Experiments implements Runnable{
 
 	public static double[] pipline() throws IOException, ExecutionControl.NotImplementedException, InterruptedException, CsvException {
 		exp.init();
-		exp.runExact();
+		//exp.runExact();
 		exp.runApprox();
 		return null;
 		
@@ -242,14 +242,14 @@ public class Experiments implements Runnable{
 
 		List<int[]> assigList = getRandomSeqIntMask(parentComb, true);
 
-
-/*		// Pick only some of the assigments
+		// Pick only some of the assigments
 		List<int[]> finalAssigList = assigList;
-		assigList = DoubleStream.of(0., 3. / 5,  1.)
-				//DoubleStream.of(0., 1. / 5, 2. / 5, 3. / 5, 4. / 5, 1.)
-				.mapToInt(i -> (int) Math.floor(finalAssigList.size() * i))
+		assigList =
+				//DoubleStream.of(0., 2./5, 4./5,  1.)
+				IntStream.of(0,2,6,8)
+				//.mapToInt(i -> (int) (Math.floor(finalAssigList.size()-1) * i))
 				.mapToObj(i -> finalAssigList.get(i)).collect(Collectors.toList());
-*/
+
 
 		int numAssig = assigList.size();
 		logger.info("Learning models with bias selection: "+numAssig+ " incremental partitions");

@@ -124,6 +124,10 @@ for i,m in enumerate(models[start:]):
                           output=output_folder,
                           executions=executions,
                           simpleOutput=True)
+            if "nEndo10" in str(m):
+                kwargs["executions"] = 25
+                kwargs["timeout"] = 3600
+                
 
             res_dicts.append(run(**kwargs))
         except timeout_decorator.TimeoutError:

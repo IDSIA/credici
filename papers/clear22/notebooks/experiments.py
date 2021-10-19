@@ -18,7 +18,7 @@ print(f"{sys.argv[1]}{sys.argv[2]}") # 0 set1
 start = int(sys.argv[1])
 modelset= str(sys.argv[2])
 datasize = 1000
-executions = 50
+executions = 25
 #java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
 java = "java"
 #########
@@ -125,7 +125,6 @@ for i,m in enumerate(models[start:]):
                           executions=executions,
                           simpleOutput=True)
             if "nEndo10" in str(m):
-                kwargs["executions"] = 25
                 kwargs["timeout"] = 3600
                 
 

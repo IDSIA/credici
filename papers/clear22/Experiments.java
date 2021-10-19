@@ -190,7 +190,7 @@ public class Experiments implements Runnable{
 
 	public static double[] pipline() throws IOException, ExecutionControl.NotImplementedException, InterruptedException, CsvException {
 		exp.init();
-		//exp.runExact();
+		exp.runExact();
 		exp.runApprox();
 		return null;
 		

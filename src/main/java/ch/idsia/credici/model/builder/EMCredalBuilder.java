@@ -61,6 +61,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	private boolean weightedEM = true;
 
+	private int[] trainableVars = null;
+
 	public enum SelectionPolicy {
 		LAST,	// Selects the last point in the trajectory.
 		BISECTION_BORDER_SAME_PATH, // Bisection with the 2 points in the same path closer to the border.
@@ -75,6 +77,8 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
 		this.inputGenDist = causalModel.getEmpiricalMap(false);
+		this.trainableVars = causalModel.getExogenousVars();
+
 		setTargetGenDist();
 
 	}
@@ -87,6 +91,7 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
 		this.data = data;
+		this.trainableVars = causalModel.getExogenousVars();
 
 		this.inputGenDist = causalModel.getEmpiricalMap(false);
 		setTargetGenDist();
@@ -98,6 +103,8 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
 		this.data = data;
+		this.trainableVars = causalModel.getExogenousVars();
+
 
 		this.inputGenDist = genDist;
 		setTargetGenDist();
@@ -384,7 +391,7 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		em.setVerbose(verbose)
 				.setRecordIntermediate(true)
-				.setTrainableVars(causalmodel.getExogenousVars());
+				.setTrainableVars(this.trainableVars);
 		em.run(stepArgs, maxEMIter);
 
 
@@ -439,9 +446,10 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	}
 
-
-
-
+	public  EMCredalBuilder setTrainableVars(int[] trainableVars) {
+		this.trainableVars = trainableVars;
+		return this;
+	}
 
 	public static void main(String[] args) throws InterruptedException {
 

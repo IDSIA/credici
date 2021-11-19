@@ -10,24 +10,23 @@ import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
-import org.apache.commons.lang3.ArrayUtils;
 import org.junit.Assert;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.HashMap;
-import java.util.stream.IntStream;
 
-public class PearlExample {
+public class Example2_3_PearlModel {
 	public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException, IOException {
 
 		String wdir = ".";
-		String folder = Path.of(wdir, "papers/21why/examples/").toString();
+		String folder = Path.of(wdir, "papers/21why/").toString();
 
 		BayesianNetwork bnet = new BayesianNetwork();
 
@@ -39,6 +38,12 @@ public class PearlExample {
 		bnet.addParents(Y, X, Z);
 
 
+		// Variable names
+		HashMap varNames = new HashMap();
+		varNames.put(Z,"Z");
+		varNames.put(X,"X");
+		varNames.put(Y,"Y");
+
 		// states x, y, z = True = 1
 		int x=1, y=1, z=1;
 
@@ -47,8 +52,6 @@ public class PearlExample {
 
 
 		BayesianFactor counts = new BayesianFactor(bnet.getDomain(Z,X,Y));
-		//new double[]{1,	13,	313,114, 109, 107, 41, 2});
-
 
 		counts.setValue(2, z_, x_, y_);
 		counts.setValue(114, z_, x_, y);
@@ -60,8 +63,7 @@ public class PearlExample {
 		counts.setValue(109, z, x, y_);
 		counts.setValue(1, z, x, y);
 
-		FactorUtil.print(counts);
-
+		FactorUtil.print(counts.reorderDomain(Y,X,Z), varNames);
 
 		int N = (int) counts.marginalize(X, Y, Z).getValueAt(0);
 		Assert.assertEquals(700, N, 0);
@@ -83,97 +85,77 @@ public class PearlExample {
 
 		TIntIntMap[] data = DataUtil.dataFromCounts(counts);
 
-
-		// Empirical network
+		// Empirical Bayesian network
 		bnet.setFactor(Z, pz);
 		bnet.setFactor(Y, py_xz);
 		bnet.setFactor(X, px_z);
 
 
-		int[] exoVarSizes = IntStream.of(bnet.getVariables())
-				.mapToObj(v -> bnet.getDomain(ArrayUtils.add(bnet.getParents(v), v)))
-				.mapToInt(dom -> dom.getCombinations()+1)
-				.toArray();
+		// Conservative SCM
+		StructuralCausalModel conservSCM = CausalBuilder.of(bnet).build();
+		BayesianFactor fx = EquationBuilder.of(conservSCM).fromVector(X, 1,0, 0,0, 0,1, 1,1);
+		conservSCM.setFactor(X, fx);
+		conservSCM.fillExogenousWithRandomFactors(3);
+
+
+		// Empirical endogenous distribution from the data
+		HashMap empiricalDist = DataUtil.getEmpiricalMap(conservSCM, data);
+		empiricalDist = FactorUtil.fixEmpiricalMap(empiricalDist,6);
+
+		System.out.println("Empirical distribution");
+		System.out.println(empiricalDist);
+
+		// Save into disk the model and the data
+		IO.write(conservSCM, folder+ "/examples/consPearl.uai");
+		DataUtil.toCSV(folder+ "/examples/dataPearl.csv", data);
 
 
 
-
-
-		// Equationless
-		StructuralCausalModel m_eqless = CausalBuilder.of(bnet).build();
-
-		BayesianFactor fx = EquationBuilder.of(m_eqless).fromVector(X, 1,0, 0,0, 0,1, 1,1);
-		m_eqless.setFactor(X, fx);
-
-
-		m_eqless.fillExogenousWithRandomFactors(3);
-
-
-		m_eqless.getFactor(X).filter(X, x_).filter(Z, z_);
-		m_eqless.getFactor(X).filter(X, x).filter(Z, z_);
-		m_eqless.getFactor(X).filter(X, x_).filter(Z, z);
-		m_eqless.getFactor(X).filter(X, x).filter(Z, z);
+    /*
+     Baseline method:
+     Zaffalon, M., Antonucci, A., & Cabañas, R. (2020, February).
+     Structural causal models are (solvable by) credal networks.
+     In International Conference on Probabilistic Graphical Models
+     (pp. 581-592). PMLR.
+     */
 
 
 
+		// Transformation to a H-model (constraints)
+		SparseModel hmodelPGM =  conservSCM.toHCredal(empiricalDist.values());
+		System.out.println("H-model PGM:");
+		for(int v : hmodelPGM.getVariables())
+			((SeparateHalfspaceFactor)hmodelPGM.getFactor(v)).printLinearProblem();
 
-
-		HashMap empData = DataUtil.getEmpiricalMap(m_eqless, data);
-		empData = FactorUtil.fixEmpiricalMap(empData,6);
-
-		System.out.println(empData);
-
-		SparseModel vmodelPGM =  m_eqless.toVCredal(empData.values());
-		System.out.println(m_eqless);
-		System.out.println("vmodel PGM:");
+		// Transformation to a V-model (extreme points)
+		SparseModel vmodelPGM =  conservSCM.toVCredal(empiricalDist.values());
+		System.out.println(conservSCM);
+		System.out.println("V-model PGM:");
 		System.out.println(vmodelPGM);
 
-
-		SparseModel hmodelPGM =  m_eqless.toHCredal(empData.values());
-		System.out.println("hmodel PGM:");
-		System.out.println(hmodelPGM);
-
-
-		CredalCausalVE inf = new CredalCausalVE(m_eqless, empData.values());
-
-		IO.write(m_eqless, folder+ "examples/consPearl.uai");
-		DataUtil.toCSV(folder+ "examples/dataPearl.csv", data);
-
-
-		VertexFactor pn = (VertexFactor) inf.probNecessity(X,Y,1,0);
-		VertexFactor ps = (VertexFactor) inf.probSufficiency(X,Y,1,0);
+		// Exact inference with variable elimination
+		CredalCausalVE inf = new CredalCausalVE(conservSCM, empiricalDist.values());
 		VertexFactor pns = (VertexFactor) inf.probNecessityAndSufficiency(X,Y,1,0);
 
 
 		System.out.println("PGM exact method");
 		System.out.println("====================");
-		System.out.println("pn="+pn);
-		System.out.println("ps="+ps);
 		System.out.println("pns="+pns);
 
 
 
-		// EM
-		for(int u: m_eqless.getExogenousVars())
-			System.out.println(u+": "+m_eqless.getFactor(u));
+		/** Causal Expectation Maximization **/
 
-		EMCredalBuilder builder = EMCredalBuilder.of(m_eqless, data)
+		// Computation of the multiple EM executions
+		EMCredalBuilder builder = EMCredalBuilder.of(conservSCM, data)
 				.setMaxEMIter(200)
 				.setNumTrajectories(20)
-				//.setNumDecimalsRound(-1)
 				.build();
 
-
+		// Inference with the results from the EM exectuions
 		CausalMultiVE inf2 = new CausalMultiVE(builder.getSelectedPoints());
-
 		VertexFactor pns2 = (VertexFactor) inf2.probNecessityAndSufficiency(X,Y,1,0);
-
-		//System.out.println("pn2="+pn2);
-		//System.out.println("ps2="+ps2);
 		System.out.println("pns2="+pns2);
-
-
-
 
 	}
 }

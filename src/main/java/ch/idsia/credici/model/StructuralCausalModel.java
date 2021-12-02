@@ -919,12 +919,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				if(f != null)
 					f = f.copy();
 
-
-
-
-				//if(obs.size()>0 && v==9)
-				//	System.out.println();
-				//System.out.println("\t"+v);
 				for (int pa : this.getParents(v)) {
 					f = f.filter(pa, obs.get(pa));
 				}
@@ -1040,6 +1034,26 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		}
 		return out;
 	}
+
+
+	public StructuralCausalModel average(StructuralCausalModel model, double weightFirst, int... vars) {
+
+		if (vars.length == 0)
+			vars = this.getVariables();
+
+		if (!this.edgesToString().equals(model.edgesToString()))
+			throw new IllegalArgumentException("Incompatible models");
+
+		StructuralCausalModel out = model.copy();
+
+		for (int v : vars) {
+			BayesianFactor f1 = this.getFactor(v).scalarMultiply(weightFirst);
+			BayesianFactor f2 = model.getFactor(v).scalarMultiply(1-weightFirst);
+			out.setFactor(v, f1.addition(f2));
+		}
+		return out;
+	}
+
 
 	public SparseDirectedAcyclicGraph getExogenousDAG(){
 		SparseDirectedAcyclicGraph dag = this.getNetwork().copy();

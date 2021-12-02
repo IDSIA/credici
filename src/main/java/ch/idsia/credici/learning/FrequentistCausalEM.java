@@ -127,10 +127,12 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 countVar = countVar.addition(reg);
             }
             BayesianFactor f = countVar.divide(countVar.marginalize(var));
-            if(f.KLdivergence(posteriorModel.getFactor(var)) > klthreshold) {
+            if(Probability.KLsymmetrized(f, posteriorModel.getFactor(var), true) > klthreshold) {
                 posteriorModel.setFactor(var, f);
                 updated = true;
             }
+           // updated=true;
+
         }
     }
 

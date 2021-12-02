@@ -40,6 +40,7 @@ public class quasimarkovian {
 
         m.fillExogenousWithRandomFactors(2);
 
+        System.out.println(m.getFactor(u1));
         m.printSummary();
 
         System.out.println("\nempirical join:");

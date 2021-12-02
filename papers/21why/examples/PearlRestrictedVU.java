@@ -29,8 +29,8 @@ import java.util.stream.IntStream;
 public class PearlRestrictedVU {
 	public static void main(String[] args) throws IOException, InterruptedException, ExecutionControl.NotImplementedException {
 
-		String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici";
-		String folder = Path.of(wdir, "papers/21why/examples/").toString();
+		String wdir = ".";
+		String folder = Path.of(wdir, "papers/21why/").toString();
 
 		BayesianNetwork bnet = new BayesianNetwork();
 

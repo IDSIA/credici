@@ -61,7 +61,10 @@ public class FactorUtil {
 		return res;
 	}
 
-	public static void print(BayesianFactor p){//, int[] vars){
+	public static void print(BayesianFactor p) { print(p, new HashMap());}
+
+	public static void print(BayesianFactor p, HashMap varNames){//, int[] vars){
+
 
 		Strides dom = p.getDomain();
 		int[] vars = dom.getVariables();
@@ -71,15 +74,24 @@ public class FactorUtil {
 		System.out.println("f("+ Arrays.toString(vars)+")");
 		System.out.println("-------------------------------");
 		for (int i = 0; i < dom.getCombinations(); i++) {
-		//while (it.hasNext()){
-		//	int i = it.next();
+			//while (it.hasNext()){
+			//	int i = it.next();
 			int[] states = dom.statesOf(i);
 			TIntIntMap assignament = new TIntIntHashMap();
-			for (int j = 0; j < vars.length; j++)
+
+			String strAssig = "";
+			for (int j = vars.length-1; j >= 0; j--) {
 				assignament.put(vars[j], states[j]);
-			System.out.println("f("+assignament+") = " + +p.getValue(states));
+
+				strAssig +=varNames.getOrDefault(vars[j], vars[j])+"="+states[j];
+				if(j>0)
+					strAssig+=", ";
+			}
+
+			System.out.println("f("+strAssig+") = " + +p.getValue(states));
 		}
 		System.out.println("-------------------------------");
+
 
 
 	}

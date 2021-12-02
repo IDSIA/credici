@@ -1,4 +1,10 @@
 
+0.1.4
+=============
+- fixed bugs.
+- cleanup files.
+
+
 0.1.3
 =============
 - EMCredalBuilder: learns a set of precise  SCMs compatible with the observed distribution.

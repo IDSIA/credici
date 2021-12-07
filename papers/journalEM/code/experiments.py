@@ -8,8 +8,15 @@ import pandas as pd
 from datetime import datetime
 
 #### Parameter experiments
-modelname = "triangolo"
-sizes = [500,1000,1500,2000]
+modelname = "triangolo" # party triangolo
+sizes = [500, 1000, 1500, 2000]
+resampling = True
+run_em = True
+
+EM_SEEDS = list(range(0,50))
+
+
+print("Running experiments.py")
 ####
 
 def gen_exec(cmd, check_return: bool = False):
@@ -45,8 +52,8 @@ data_folder = Path(exp_folder, "data")
 
 
 jar_file = Path(prj_path, "target/credici-0.1.3-jar-with-dependencies.jar")
-java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
-#java = "java"
+#java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
+java = "java"
 
 
 print(prj_path)
@@ -98,7 +105,19 @@ if(not os.path.isfile(model_causal) or not os.path.isfile(model_empirical)):
     
 # Data sampling
 
-for datasize in sizes:
-    datafile = f"{data_folder}/{modelname}_data_d{datasize}.csv"
-    print(datafile)
-    sampler(model_empirical, datafile, datasize)
+if resampling:
+    for datasize in sizes:
+        datafile = f"{data_folder}/{modelname}_data_d{datasize}.csv"
+        print(datafile)
+        sampler(model_empirical, datafile, datasize)
+    
+# EM
+if run_em:
+    for s in EM_SEEDS:
+        for datasize in sizes:
+            output = f"{res_folder}/{modelname}/{datasize}"
+            if not os.path.exists(output):
+                os.makedirs(output)
+
+            datafile = f"{data_folder}/{modelname}_data_d{datasize}.csv"
+            runEM(model_causal, datafile, output, seed=s, maxiter=200)

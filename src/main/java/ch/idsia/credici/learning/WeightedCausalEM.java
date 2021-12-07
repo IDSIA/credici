@@ -70,6 +70,8 @@ public class WeightedCausalEM extends FrequentistCausalEM {
     }
 
 
+
+
     protected void stepPrivate(Collection stepArgs) throws InterruptedException {
         // E-stage
         TIntObjectMap<BayesianFactor> counts = expectation((Pair[]) stepArgs.toArray(Pair[]::new));

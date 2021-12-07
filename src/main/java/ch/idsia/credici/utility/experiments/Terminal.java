@@ -16,7 +16,7 @@ public abstract class Terminal implements Runnable{
 	String logfile = null;
 
 	@CommandLine.Option(names={"-q", "--quiet"}, description = "Controls if log messages are printed to standard output.")
-	boolean quiet;
+	protected boolean quiet;
 
 
 	@CommandLine.Option(names={"--debug"}, description = "Debug flag. Defaults to false")
@@ -67,7 +67,10 @@ public abstract class Terminal implements Runnable{
 		if(logfile!=null)
 			logger.setLogfile(logfile);
 
+		Logger.setGlobal(logger);
 		logger.info("Set up logging");
+
+
 		if(argStr!=null)
 			logger.info("args: "+argStr);
 

@@ -7,6 +7,7 @@ public class Logger {
 	boolean verbose = true;
 	private boolean toFile = false;
 
+	public static Logger global = null;
 
 	private FileWriter fr = null;
 	private BufferedWriter br = null;
@@ -15,6 +16,8 @@ public class Logger {
 	public Logger(){
 
 	}
+
+
 
 
 	public Logger setLogfile(String logfile) throws IOException {
@@ -41,6 +44,10 @@ public class Logger {
 				fr.close();
 				pr.close();
 			}
+
+			if(this== global)
+				global = null;
+
 		} catch (IOException e) {
 			e.printStackTrace();
 			this.severe("Error closing log file: "+e.getMessage());
@@ -48,6 +55,14 @@ public class Logger {
 			toFile = false;
 
 		}
+	}
+
+	public static void setGlobal(Logger logger){
+		global = logger;
+	}
+
+	public static Logger getGlobal(){
+		return global;
 	}
 
 

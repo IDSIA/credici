@@ -21,7 +21,6 @@ import java.util.HashMap;
 public class RunSingleEM extends Terminal {
 
 	/*
-		-o ./papers/journalEM/data/data-party.csv -d 100 -s 1234 ./papers/journalEM/models/party_empirical.uai
 
 	 -s 0 --maxiter 100 -w --output ./papers/journalEM/ouput/party/ -d ./papers/journalEM/data/data-party.csv ./papers/journalEM/models/party_causal.uai
 
@@ -87,7 +86,7 @@ public class RunSingleEM extends Terminal {
 				.setMaxEMIter(maxIter)
 				.setWeightedEM(weighted)
 				.setNumTrajectories(1)
-				.setVerbose(false)
+				.setVerbose(!quiet)
 				.build();
 
 		long time = Watch.stop();

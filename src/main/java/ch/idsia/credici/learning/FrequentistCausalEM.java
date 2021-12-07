@@ -6,6 +6,7 @@ import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.Probability;
+import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.JoinInference;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
@@ -22,6 +23,7 @@ import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.time.StopWatch;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -49,7 +51,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     }
 
     public FrequentistCausalEM(GraphicalModel<BayesianFactor> model, int[] elimSeq){
-        this.inferenceEngine = getDefaultInference(model, elimSeq);;
+        this.inferenceEngine = getDefaultInference(model, elimSeq);
         this.priorModel = model;
         this.trainableVars = CausalInfo.of((StructuralCausalModel) priorModel).getExogenousVars();
     }
@@ -151,8 +153,11 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     public FrequentistCausalEM setTrainableVars(int[] trainableVars) {
 
         for(int v: trainableVars)
-            if(!CausalInfo.of((StructuralCausalModel) priorModel).isExogenous(v))
-                throw new IllegalArgumentException("Only exogenous variables can be trainable. Error with "+v);
+            if(!CausalInfo.of((StructuralCausalModel) priorModel).isExogenous(v)) {
+                String msg = "Only exogenous variables can be trainable. Error with "+v;
+                Logger.getGlobal().severe(msg);
+                throw new IllegalArgumentException(msg);
+            }
 
         return super.setTrainableVars(trainableVars);
     }
@@ -183,6 +188,51 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     public FrequentistCausalEM usePosteriorCache(boolean active) {
         this.usePosteriorCache = active;
         return this;
+    }
+
+
+
+    public void run(Collection stepArgs, int iterations) throws InterruptedException {
+
+        StopWatch watch = null;
+        if(verbose) {
+            watch = new StopWatch();
+            watch.start();
+        }
+        init();
+        for(int i=1; i<=iterations; i++) {
+            if(verbose){
+                if(i % 10 == 0) {
+                    watch.stop();
+                    long time = watch.getTime();
+                    Logger.getGlobal().info(i + " EM iterations in "+time+" ms.");
+                    watch.reset();
+                    watch.start();
+                }
+            }
+            step(stepArgs);
+            if(stopAtConvergence && !updated)
+                break;
+
+        }
+        if(verbose && !watch.isStopped()) watch.stop();
+
+    }
+
+    private void init(){
+        if(!inline)
+            this.posteriorModel = priorModel.copy();
+        else
+            this.posteriorModel = priorModel;
+
+        if(trainableVars == null)
+            trainableVars = posteriorModel.getVariables();
+
+        if(recordIntermediate) {
+            intermediateModels = new ArrayList<GraphicalModel<BayesianFactor>>();
+            addIntermediateModels(priorModel);
+        }
+
     }
 
     public static void main(String[] args) throws InterruptedException {

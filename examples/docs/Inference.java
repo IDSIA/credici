@@ -17,7 +17,7 @@ public class Inference {
 
 
 // load the empirical model
-BayesianNetwork bnet = (BayesianNetwork) IO.read("models/party-empirical.uai");
+BayesianNetwork bnet = (BayesianNetwork) IO.read("models/party_empirical.uai");
 
 // build the causal model
 StructuralCausalModel causalModel = CausalBuilder.of(bnet).build();

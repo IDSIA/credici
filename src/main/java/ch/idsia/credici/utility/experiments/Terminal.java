@@ -1,11 +1,12 @@
 package ch.idsia.credici.utility.experiments;
 
-import com.opencsv.exceptions.CsvException;
 import picocli.CommandLine;
 import sun.misc.Unsafe;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.sql.Timestamp;
+import java.time.Instant;
 
 
 public abstract class Terminal implements Runnable{
@@ -18,6 +19,14 @@ public abstract class Terminal implements Runnable{
 	boolean quiet;
 
 
+	@CommandLine.Option(names={"--debug"}, description = "Debug flag. Defaults to false")
+	boolean debug = false;
+
+	@CommandLine.Option(names = {"-s", "--seed"}, description = "Random seed. If not specified, it is randomly selected.")
+	protected long seed = -1;
+
+
+
 	protected static String errMsg = "";
 	protected static String argStr;
 	protected Logger logger = null;
@@ -28,17 +37,20 @@ public abstract class Terminal implements Runnable{
 
 
 		try {
+			if(seed<0)
+				seed = Timestamp.from(Instant.now()).getNanos()/1000;
 			setUpIO();
 			this.entryPoint();
-
 		}catch (Exception e){
 			errMsg = e.toString();
 			logger.severe(errMsg);
-			//e.printStackTrace();
-
+			if(debug)
+				e.printStackTrace();
 		}catch (Error e){
 			errMsg = e.toString();
 			logger.severe(errMsg);
+			if(debug)
+				e.printStackTrace();
 		}finally {
 			// todo: actions that should always be done
 			if(logger!=null)
@@ -56,6 +68,8 @@ public abstract class Terminal implements Runnable{
 			logger.setLogfile(logfile);
 
 		logger.info("Set up logging");
+		if(argStr!=null)
+			logger.info("args: "+argStr);
 
 
 	}

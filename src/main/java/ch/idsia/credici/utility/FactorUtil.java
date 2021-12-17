@@ -14,6 +14,7 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.util.*;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class FactorUtil {
@@ -117,6 +118,15 @@ public class FactorUtil {
 		newFactor.setData(Doubles.concat(newData));
 		return newFactor.reorderDomain(f.getDomain());
 
+	}
+
+
+	public static int getOffset(BayesianFactor f, TIntIntMap conf){
+		if(!ArraysUtil.equals(f.getDomain().getVariables(), conf.keys(), true, true))
+			throw new IllegalArgumentException("Incompatible domains");
+
+		int[] states = IntStream.of(f.getDomain().getVariables()).map(x -> conf.get(x)).toArray();
+		return f.getDomain().getOffset(states);
 	}
 
 

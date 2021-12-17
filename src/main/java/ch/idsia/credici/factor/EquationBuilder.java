@@ -3,14 +3,19 @@ package ch.idsia.credici.factor;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.Combinatorial;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
+import ch.idsia.crema.utility.IndexIterator;
 import ch.javasoft.util.ints.IntHashMap;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class EquationBuilder {
@@ -83,6 +88,64 @@ public class EquationBuilder {
         return from2DArray(var, Combinatorial.getCombinations(n, states));
     }
 
+    public HashMap withAllAssignments(int exoVar){
+
+        // TODO: review, not working
+        //TODO: CHECKS
+        //this_model.getExogenousTreewidth() <= 2;
+
+        // Check U size
+
+        // Equations to be built
+        HashMap eqs = new HashMap();
+        for(int v : this.model.getEndogenousChildren(exoVar)) {
+
+            Strides domf = this.model.getDomain
+                    (Ints.concat(new int[]{v}, this.model.getParents(v)));
+
+
+            BayesianFactor f = new BayesianFactor(domf);
+            eqs.put(v, f);
+        }
+
+
+
+        // Build set S
+
+        List S = new ArrayList();
+        for(int v : this.model.getEndogenousChildren(exoVar)){
+            List dom = IntStream.range(0, this.model.getDomain(v).getCardinality(v)).boxed().collect(Collectors.toList());
+            for(int i=0; i< dom.size(); i++){
+                S.add(dom);
+            }
+        }
+
+
+        int i = 0;
+        for(Object s_ : Combinatorial.cartesianProduct((List[])S.toArray(List[]::new))){
+            List s = (List) s_;
+            int j = 0;
+            for(int v : this.model.getEndogenousChildren(exoVar)){
+                BayesianFactor f = (BayesianFactor) eqs.get(v);
+                Strides endoPaDom = this.model.getDomain(this.model.getEndegenousParents(v));
+                IndexIterator it = endoPaDom.getIterator();
+                while(it.hasNext()){
+                    int idx = it.next();
+                    ObservationBuilder endoPaValues = ObservationBuilder.observe(endoPaDom.getVariables(), endoPaDom.statesOf(idx));
+                    ObservationBuilder exoPaValues = ObservationBuilder.observe(exoVar, j);
+                    EquationOps.setValue(f, exoPaValues, endoPaValues, v, (int)s.get(j));
+                    //System.out.println("f"+varNames.get(v)+"(u_"+i+","+endoPaValues+") = "+varNames.get(v)+"_"+(int)s.get(j));
+                    j++;
+
+                }
+            }
+            i++;
+        }
+
+
+
+    }
+
 
     public static BayesianFactor fromVector(Strides left, Strides right, int... assignments){
         return BayesianFactor.deterministic(left, right, assignments);
@@ -110,6 +173,8 @@ public class EquationBuilder {
         int[] states = IntStream.range(0, left.getCombinations()).toArray();
         return from2DArray(left, endoParents.concat(exoParent), Combinatorial.getCombinations(n, states));
     }
+
+
 
 
 }

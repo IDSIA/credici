@@ -8,15 +8,36 @@ import pandas as pd
 from datetime import datetime
 
 #### Parameter experiments
+
+
+import sys
+
+
+import sys
+
+print(sys.argv)
+
 modelname = "triangolo" # party triangolo
-sizes = [500, 1000, 1500, 2000]
-resampling = True
+#sizes = len(sys.argv)>1: [int(sys.argv[i]) for i in range(1,len(sys.argv))]
+sizes = [1000]
+resampling = False
 run_em = True
 
-EM_SEEDS = list(range(0,50))
+i, j = int(sys.argv[1]), int(sys.argv[2])
+if j<i: i,j = j,i 
+EM_SEEDS = list(range(i,j))
+
+
+
 
 
 print("Running experiments.py")
+print(modelname)
+print(sizes)
+print(f"resampling={resampling}")
+print(f"runEM={run_em}")
+print(EM_SEEDS)
+
 ####
 
 def gen_exec(cmd, check_return: bool = False):

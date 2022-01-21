@@ -5,6 +5,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.IndexIterator;
@@ -129,5 +130,84 @@ public class FactorUtil {
 		return f.getDomain().getOffset(states);
 	}
 
+	public static VertexFactor inverseFilter(VertexFactor f, int var, int state) {
+		if(f.getDataDomain().contains(var))
+			return inverseLeftFilter(f,var,state);
+		if(f.getSeparatingDomain().contains(var))
+			return inverseRightFilter(f,var,state);
+		throw new IllegalArgumentException("Variable not present");
+
+	}
+
+	private static VertexFactor inverseLeftFilter(VertexFactor f, int var, int state){
+
+		//A single left Variable
+		if(f.getDataDomain().getVariables().length>1)
+			throw new IllegalArgumentException("Factor cannot have more than 1 variable on the left");
+
+		if(!f.getDataDomain().contains(var))
+			throw new IllegalArgumentException("Target variable is not on the left");
+
+		double[][][] newData =  new double[f.getSeparatingDomain().getCombinations()][][];
+		// pa, vert, dim
+		double data[][][] = f.getData();
+		for(int i = 0; i<data.length; i++){
+			newData[i] = new double[data[i].length][];
+			for(int j = 0; j<data[i].length; j++){
+				newData[i][j] = new double[data[i][j].length-1];
+
+				for(int k = 0; k< data[i][j].length; k++){
+					if(k<state)
+						newData[i][j][k] = data[i][j][k];
+					else if(k>state)
+						newData[i][j][k-1] = data[i][j][k];
+				}
+			}
+		}
+
+		Strides newLeftDom = Strides.as(var, f.getDataDomain().getCardinality(var)-1);
+		return new VertexFactor(newLeftDom, f.getSeparatingDomain(), newData);
+
+	}
+
+
+	private static VertexFactor inverseRightFilter(VertexFactor f, int var, int state){
+
+		if(!f.getSeparatingDomain().contains(var))
+			throw new IllegalArgumentException("Target variable is not on the right");
+
+		int[] idxRemove = f.getSeparatingDomain().getCompatibleIndexes(ObservationBuilder.observe(var, state));
+		double[][][] newData =  new double[f.getSeparatingDomain().getCombinations()- idxRemove.length][][];
+		// pa, vert, dim
+		double data[][][] = f.getData();
+		int i_ = 0;
+		for(int i = 0; i<data.length; i++) {
+			if (!ArraysUtil.contains(i, idxRemove)) {
+
+				newData[i_] = new double[data[i].length][];
+				for (int j = 0; j < data[i].length; j++) {
+					newData[i_][j] = new double[data[i][j].length];
+					for (int k = 0; k < data[i][j].length; k++) {
+						newData[i_][j][k] = data[i][j][k];
+					}
+				}
+				i_++;
+			}
+		}
+
+		Strides rightDom = f.getSeparatingDomain();
+
+		int[] newRightCard =
+				Arrays.stream(rightDom.getVariables())
+						.map(v -> {
+							if(v==var)
+								return rightDom.getCardinality(v) - 1;
+							return rightDom.getCardinality(v);}
+						).toArray();
+
+		Strides newRightDom = new Strides(rightDom.getVariables(), newRightCard);
+		return new VertexFactor(f.getDataDomain(), newRightDom, newData);
+
+	}
 
 }

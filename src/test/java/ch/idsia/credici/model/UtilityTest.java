@@ -3,8 +3,10 @@ package ch.idsia.credici.model;
 import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
+import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;
+import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -12,11 +14,15 @@ import ch.idsia.crema.factor.convert.VertexToInterval;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
+import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.RandomUtil;
+import com.google.common.primitives.Doubles;
+import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -109,8 +115,72 @@ public class UtilityTest {
 
 		expected = new double[]{0.92, 0.85 };
 
+		Assert.assertEquals(expected,actual);
 	}
 
+	@Test
+	public void factorUtilFilterTest(){
+		StructuralCausalModel m = new StructuralCausalModel();
+
+		int a = m.addVariable(2, false);
+		int x = m.addVariable(2, false);
+		int y = m.addVariable(2, false);
+		int z = m.addVariable(2, false);
+
+		int w = m.addVariable(2, true);
+		int v = m.addVariable(4, true);
+		int u = m.addVariable(16, true);
+
+		m.addParent(x,a);
+		m.addParent(y,x);
+		m.addParent(z,y);
+
+		m.addParent(a,w);
+		m.addParent(x,v);
+		m.addParent(y,u);
+		m.addParent(z,u);
+
+
+		SparseDirectedAcyclicGraph endoDag = DAGUtil.getSubDAG(m.getNetwork(), m.getEndogenousVars());
+		m = CausalBuilder.of(endoDag, 2).setCausalDAG(m.getNetwork()).build();
+		m.fillExogenousWithRandomFactors(3);
+
+
+
+		TIntIntMap[] dataset = m.samples(100, m.getEndogenousVars());
+		HashMap empProbs = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(m, dataset),5);
+
+		SparseModel vmodel = m.toVCredal(empProbs.values());
+
+
+		double[] actual;
+		double[] expected;
+
+
+		actual = Doubles.concat(FactorUtil.inverseFilter((VertexFactor) vmodel.getFactor(v), v, 0).getData()[0]);
+		expected = new double[]{ 0.35897, 0.45455, 0.18648, 0.0, 0.09558, 0.54545};
+		Assert.assertArrayEquals(expected,actual, 0.0);
+
+		actual = Doubles.concat(FactorUtil.inverseFilter((VertexFactor) vmodel.getFactor(v), v, 1).getData()[0]);
+		expected = new double[]{0.0, 0.45455, 0.18648, 0.35897, 0.09558, 0.54545};
+		Assert.assertArrayEquals(expected,actual, 0.0);
+
+		actual = Doubles.concat(FactorUtil.inverseFilter((VertexFactor) vmodel.getFactor(v), v, 3).getData()[0]);
+		expected = new double[]{0.0, 0.35897, 0.45455, 0.35897, 0.0, 0.09558};
+		Assert.assertArrayEquals(expected,actual, 0.0);
+
+
+		FactorUtil.inverseFilter((VertexFactor) vmodel.getFactor(y), u, 0).sampleVertex();
+		actual = FactorUtil.inverseFilter((VertexFactor) vmodel.getFactor(y), u, 0).sampleVertex().filter(y,0).getData();
+		expected = new double[]{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+		Assert.assertArrayEquals(expected,actual, 0.0);
+
+
+		actual = FactorUtil.inverseFilter((VertexFactor) vmodel.getFactor(y), u, 1).sampleVertex().filter(y,0).getData();
+		expected = new double[]{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+		Assert.assertArrayEquals(expected,actual, 0.0);
+
+	}
 
 	@Test
 	public void probabilityTest(){
@@ -184,5 +254,7 @@ public class UtilityTest {
 
 
 	}
+
+
 
 }

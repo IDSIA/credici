@@ -88,22 +88,24 @@ public class EquationBuilder {
         return from2DArray(var, Combinatorial.getCombinations(n, states));
     }
 
-    public HashMap withAllAssignments(int exoVar){
+    public HashMap withAllAssignmentsQM(int exoVar){//, HashMap varNames){
 
-        // TODO: review, not working
-        //TODO: CHECKS
-        //this_model.getExogenousTreewidth() <= 2;
+        // Check topology
+        if (this.model.getExogenousParents(this.model.getEndogenousChildren(exoVar)).length != 1)
+            throw new IllegalArgumentException("Wrong topology: endogenous children cannot have more than 1 exogenous parent");
 
-        // Check U size
+        // Check U-size
+        int expected = EquationOps.maxExoCardinality(exoVar, this.model);
+        int actual = this.model.getDomain(exoVar).getCombinations();
+        if(expected != actual)
+            throw new IllegalArgumentException("Exepected cardinality for exogenous variable is "+expected+", found "+actual);
+
 
         // Equations to be built
         HashMap eqs = new HashMap();
         for(int v : this.model.getEndogenousChildren(exoVar)) {
-
             Strides domf = this.model.getDomain
                     (Ints.concat(new int[]{v}, this.model.getParents(v)));
-
-
             BayesianFactor f = new BayesianFactor(domf);
             eqs.put(v, f);
         }
@@ -115,7 +117,8 @@ public class EquationBuilder {
         List S = new ArrayList();
         for(int v : this.model.getEndogenousChildren(exoVar)){
             List dom = IntStream.range(0, this.model.getDomain(v).getCardinality(v)).boxed().collect(Collectors.toList());
-            for(int i=0; i< dom.size(); i++){
+            int endoPaCard = this.model.getDomain(this.model.getEndegenousParents(v)).getCombinations();
+            for(int i=0; i< endoPaCard; i++){
                 S.add(dom);
             }
         }
@@ -132,9 +135,9 @@ public class EquationBuilder {
                 while(it.hasNext()){
                     int idx = it.next();
                     ObservationBuilder endoPaValues = ObservationBuilder.observe(endoPaDom.getVariables(), endoPaDom.statesOf(idx));
-                    ObservationBuilder exoPaValues = ObservationBuilder.observe(exoVar, j);
+                    ObservationBuilder exoPaValues = ObservationBuilder.observe(exoVar, i);
                     EquationOps.setValue(f, exoPaValues, endoPaValues, v, (int)s.get(j));
-                    //System.out.println("f"+varNames.get(v)+"(u_"+i+","+endoPaValues+") = "+varNames.get(v)+"_"+(int)s.get(j));
+                    //System.out.println("f"+varNames.get(v)+"("+varNames.get(exoVar)+"_"+i+","+endoPaValues+") = "+varNames.get(v)+"_"+(int)s.get(j));
                     j++;
 
                 }
@@ -142,7 +145,7 @@ public class EquationBuilder {
             i++;
         }
 
-
+        return eqs;
 
     }
 
@@ -173,8 +176,5 @@ public class EquationBuilder {
         int[] states = IntStream.range(0, left.getCombinations()).toArray();
         return from2DArray(left, endoParents.concat(exoParent), Combinatorial.getCombinations(n, states));
     }
-
-
-
 
 }

@@ -1,6 +1,7 @@
 package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.factor.EquationBuilder;
+import ch.idsia.credici.factor.EquationOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.DAGUtil;
@@ -15,6 +16,7 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 
+import java.util.HashMap;
 import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -148,10 +150,18 @@ public class CausalBuilder {
                        .toArray(BayesianFactor[]::new)[0];
                exoVarSizes.put(u,eq.getDomain().getCardinality(u));
             }
-        }else if(!isMarkovian()){
+        }else if(isNonQuasiMarkovian()) {
             // todo: compute in non-markovian equationless case
             throw new NotImplementedException("");
         }else{
+            exoVarSizes = new TIntIntHashMap();
+            for(int u : DAGUtil.getExogenous(causalDAG)){
+                int[] ch = causalDAG.getChildren(u);
+                Strides domCh = model.getDomain(ch);
+                Strides domPa = model.getDomain(model.getEndegenousParents(ch));
+                exoVarSizes.put(u, EquationOps.maxExoCardinality(domCh, domPa));
+            }
+   /*
             // compute in markovian equationless case
             exoVarSizes = new TIntIntHashMap();
             for(int x : model.getEndogenousVars()){
@@ -161,7 +171,7 @@ public class CausalBuilder {
                 exoVarSizes.put(u, (int) Math.pow(sizeX, sizeEndoPaX));
 
             }
-
+*/
         }
 
     }
@@ -204,19 +214,22 @@ public class CausalBuilder {
                 for(int v: expectedVars){
                     if(eqDomain.getCardinality(v) != model.getDomain(v).getCardinality(v))
                         throw new IllegalArgumentException("Equations are not consistent with sizes");
-
                 }
-
             }
         } else {
-            for (int x : model.getEndogenousVars()) {
-                    model.setFactor(x, EquationBuilder.of(model).withAllAssignments(x));
+            for(int u: model.getExogenousVars()){
+                int[] chU = model.getEndogenousChildren(u);
+                if(chU.length==1){
+                    model.setFactor(chU[0], EquationBuilder.of(model).withAllAssignments(chU[0]));
+                }else{
+                    HashMap eqs = (HashMap) EquationBuilder.of(model).withAllAssignmentsQM(u);
+                    for(int x : chU){
+                        model.setFactor(x, (BayesianFactor) eqs.get(x));
+                    }
+                }
             }
         }
-
-
     }
-
 
     public CausalBuilder setExoVarSizes(TIntIntMap exoVarSizes) {
         this.exoVarSizes = exoVarSizes;
@@ -246,8 +259,16 @@ public class CausalBuilder {
             }
         }
         return true;
-
     }
+
+    private boolean isQuasiMarkovian(){
+        return (!isMarkovian()) && DAGUtil.getExogenousTreewidth(causalDAG) == 1;
+    }
+
+    private boolean isNonQuasiMarkovian(){
+        return  DAGUtil.getExogenousTreewidth(causalDAG) > 1;
+    }
+
 
     public StructuralCausalModel getModel() {
         return model;

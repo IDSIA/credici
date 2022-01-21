@@ -1,16 +1,16 @@
 package ch.idsia.credici.model;
 
 import ch.idsia.credici.inference.CausalMultiVE;
-import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalApproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
+
+import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
+import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
@@ -18,6 +18,7 @@ import jdk.jshell.spi.ExecutionControl;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class BuilderTest {
@@ -100,6 +101,49 @@ public class BuilderTest {
 		Assert.assertArrayEquals(expected,actual,0.000001);
 
 
+	}
+
+	@Test
+	public void conservativeBuilder()  {
+		StructuralCausalModel m = new StructuralCausalModel();
+
+		int a = m.addVariable(2, false);
+		int x = m.addVariable(2, false);
+		int y = m.addVariable(2, false);
+		int z = m.addVariable(2, false);
+
+		int w = m.addVariable(2, true);
+		int v = m.addVariable(4, true);
+		int u = m.addVariable(16, true);
+
+		m.addParent(x,a);
+		m.addParent(y,x);
+		m.addParent(z,y);
+
+		m.addParent(a,w);
+		m.addParent(x,v);
+		m.addParent(y,u);
+		m.addParent(z,u);
+
+
+		SparseDirectedAcyclicGraph endoDag = DAGUtil.getSubDAG(m.getNetwork(), m.getEndogenousVars());
+		m = CausalBuilder.of(endoDag, 2).setCausalDAG(m.getNetwork()).build();
+
+		// For each exogenous variable, check the SEs of the children
+		for(int exoVar : m.getExogenousVars()) {
+
+			// Calculate the joint SE
+			BayesianFactor f = BayesianFactor.combineAll(
+					m.getFactors(m.getEndogenousChildren(exoVar))
+			);
+
+			double data[] = f.marginalize(exoVar).getData();
+			double unique = Arrays.stream(data).distinct().count();
+
+			// The result of marginalizing the exogenous from the joint SE must be a factor with the same value
+			// for each position
+			Assert.assertEquals(1, unique, 0.0);
+		}
 	}
 
 }

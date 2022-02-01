@@ -4,7 +4,29 @@ import java.io.*;
 
 public class Logger {
 
-	boolean verbose = true;
+	public enum Level {
+		ALL(0),
+		TRACE(1),
+		DEBUG(2),
+		INFO(3),
+		WARN(4),
+		ERROR(5),
+		SEVERE(6),
+		OFF(7);
+
+		private int id;
+
+		Level(int id){
+			this.id = id;
+		}
+
+		public int getID(){
+			return id;
+		}
+
+	};
+	private Level level = Level.INFO;
+	boolean toStdOutput = true;
 	private boolean toFile = false;
 
 	public static Logger global = null;
@@ -13,12 +35,10 @@ public class Logger {
 	private BufferedWriter br = null;
 	private PrintWriter pr = null;
 
+
 	public Logger(){
 
 	}
-
-
-
 
 	public Logger setLogfile(String logfile) throws IOException {
 		File f = new File(logfile);
@@ -32,8 +52,12 @@ public class Logger {
 		return this;
 	}
 
-	public Logger setVerbose(boolean verbose) {
-		this.verbose = verbose;
+	public void setLevel(Level level) {
+		this.level = level;
+	}
+
+	public Logger setToStdOutput(boolean toStdOutput) {
+		this.toStdOutput = toStdOutput;
 		return this;
 	}
 	public void closeFile(){
@@ -66,23 +90,25 @@ public class Logger {
 	}
 
 
-	private void print(String msg, String type){
-		String s = "["+java.time.LocalDateTime.now()+"]["+type+"][java] "+msg;
-		if(verbose)
-			System.out.println(s);
-
-		if(toFile)
-			pr.println(s);
+	private void print(String msg, Level level){
+		if(this.level.getID() <= level.getID() ) {
+			String s = "[" + java.time.LocalDateTime.now() + "][" + level.toString() + "][java] " + msg;
+			if (toStdOutput)
+				System.out.println(s);
+			if (toFile)
+				pr.println(s);
+		}
 
 	}
 
-	public void info(String msg){
-		print(msg, "INFO");
-	}
 
-	public void severe(String msg){
-		print(msg, "SEVERE");
-	}
+	public void trace(String msg){print(msg, Level.TRACE);}
+	public void debug(String msg){print(msg, Level.DEBUG);}
+	public void info(String msg){print(msg, Level.INFO);}
+	public void warn(String msg){print(msg, Level.WARN);}
+	public void error(String msg){print(msg, Level.ERROR);}
+	public void severe(String msg){print(msg, Level.SEVERE);}
+
 	public static void main(String[] args) {
 		Logger logger = new Logger();
 		logger.info("Reading model at ./papers/neurips21/models/set1/chain_twExo1_nEndo4_1.uai");

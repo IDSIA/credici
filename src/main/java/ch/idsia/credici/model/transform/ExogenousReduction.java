@@ -111,7 +111,10 @@ public class ExogenousReduction {
         HashMap empProbs = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, dataset),5);
         ////
 
-        StructuralCausalModel reducedModel = new ExogenousReduction(model, empProbs).removeWithZeroLower(0.8).removeWithZeroUpper().getModel();
+        StructuralCausalModel reducedModel =
+                new ExogenousReduction(model, empProbs)
+                .removeWithZeroLower(0.8)
+                        .removeWithZeroUpper().getModel();
         //System.out.println(reducedModel);
 
         SparseModel redVmodel = reducedModel.toVCredal(empProbs.values());

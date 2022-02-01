@@ -25,7 +25,8 @@ public abstract class Terminal implements Runnable{
 	@CommandLine.Option(names = {"-s", "--seed"}, description = "Random seed. If not specified, it is randomly selected.")
 	protected long seed = -1;
 
-
+	@CommandLine.Option(names = { "-h", "--help" }, usageHelp = true, description = "Display a help message")
+	private boolean helpRequested;
 
 	protected static String errMsg = "";
 	protected static String argStr;
@@ -63,7 +64,10 @@ public abstract class Terminal implements Runnable{
 	protected void setUpIO() throws IOException {
 		disableWarning();
 		// Set up the verbose and output files
-		logger = new Logger().setVerbose(!quiet);
+		logger = new Logger().setToStdOutput(!quiet);
+		if(debug)
+			logger.setLevel(Logger.Level.DEBUG);
+
 		if(logfile!=null)
 			logger.setLogfile(logfile);
 
@@ -89,6 +93,12 @@ public abstract class Terminal implements Runnable{
 		} catch (Exception e) {
 			// ignore
 		}
+	}
+
+	public void logRuntimeStats(){
+		logger.debug("Free Memory (in MB): " + Runtime.getRuntime().freeMemory()/(1024*1024) +"" +
+				" out of "+Runtime.getRuntime().totalMemory()/(1024*1024));
+		logger.debug("Available CPUs: "+Runtime.getRuntime().availableProcessors());
 	}
 
 	abstract protected void entryPoint() throws Exception;

@@ -54,7 +54,7 @@ public class runQuery {
 		String[] labels = {"Death", "Symptoms", "PPreference", "FAwareness", "Age", "Practitioner", "FSystem", "Triangolo", "Hospital", "PAwareness", "Karnofsky", "FPreference"};
 		//int[] C = ArraysUtil.difference(X, new int[]{effect});
 		//int[] C = new int[]{1,7,8};
-		int[] C = new int[]{3, 9};
+		int[] C = new int[]{7};
 
 		// problems with  "Karnofsky", "FPreference"
 
@@ -64,7 +64,7 @@ public class runQuery {
 						.mapToObj(c -> labels[c] + "_l" + "," + labels[c] + "_u")
 						.collect(Collectors.joining(",")));
 
-		for(int n=15; n<=points.size(); n++) {
+		for(int n=1; n<=points.size(); n++) {
 
 			CausalMultiVE inf = new CausalMultiVE(points.subList(0, n));
 

@@ -28,9 +28,6 @@ if j<i: i,j = j,i
 EM_SEEDS = list(range(i,j))
 
 
-
-
-
 print("Running experiments.py")
 print(modelname)
 print(sizes)

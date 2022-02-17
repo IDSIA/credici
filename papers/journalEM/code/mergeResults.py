@@ -1,9 +1,12 @@
 #!/usr/bin/python3
 
 ''''
- python mergeResults.py 0
+ python mergeResults.py 0 10
 
  where 0.10 is the range of seeds
+
+ nohup ./mergeResults.py 0 10 &
+ nohup ./mergeResults.py 0 10 > output01.out 2>&1 &
 
 '''
 

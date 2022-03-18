@@ -2,9 +2,11 @@ import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.crema.IO;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
+import ch.idsia.crema.model.graphical.BayesianNetwork;
+import ch.idsia.crema.model.graphical.DAGModel;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
@@ -31,14 +33,12 @@ public class Triangolo {
         System.out.println("Building (Causal)");
 
         //Get the Credal Netoworks
-        //SparseModel vcredal = causalModel.toVCredal(bnet.getFactors());
-        SparseModel hcredal = ExactCredalBuilder.of(causalModel)
+        DAGModel<SeparateHalfspaceFactor> hcredal = ExactCredalBuilder.of(causalModel)
                                 .setToHalfSpace()
                                 .setNonnegative(false)
                                 .setEmpirical(bnet.getFactors())
                                 .build().getModel();
 
-        //causalModel.toHCredal(bnet.getFactors());
 
 
 
@@ -51,34 +51,17 @@ public class Triangolo {
         int target = 1;
 
 
-        //Exact inference
-        //CredalCausalVE inf2 = new CredalCausalVE(vcredal);
-        //VertexFactor res2 = inf2.doQuery(target, intervention);
-        //System.out.println(res2);
-
         System.out.println("Computing (Credal)");
 
         // Approx inference
         CredalCausalApproxLP inf = new CredalCausalApproxLP(hcredal);
-/*        IntervalFactor res = inf.doQuery(target, intervention);
+        IntervalFactor res = inf.doQuery(target, intervention);
         System.out.println(res);
 
         System.out.println("Computing (Credal2)");
 
-*/
-        // Set up the exact inference engine
-        CredalCausalApproxLP infApprox = new CredalCausalApproxLP(hcredal);
 
-/*
-        IntervalFactor resApprox = (IntervalFactor) infApprox
-                .causalQuery()
-                .setTarget(x[6])
-                .setIntervention(x[1],1)
-                .run();
-
-        System.out.println(resApprox);
-*/
-        IntervalFactor resApprox = (IntervalFactor) infApprox
+        IntervalFactor resApprox = (IntervalFactor) inf
                 .counterfactualQuery()
                 .setTarget(x[6])
                 .setIntervention(x[1],1)

@@ -1,15 +1,21 @@
+package not_working;
+
+import ch.idsia.credici.factor.HalfSpaceFactorBuilder;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.IO;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.linear.separate.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
+import ch.idsia.crema.model.graphical.BayesianNetwork;
+import ch.idsia.crema.model.graphical.DAGModel;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.io.IOException;
+
+// todo: fix approxLP
 
 public class EquationlessFromFile {
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -22,8 +28,8 @@ public class EquationlessFromFile {
         StructuralCausalModel causalModel = StructuralCausalModel.of(bnet);
 
         //Get the Credal Netoworks
-        SparseModel vcredal = causalModel.toVCredal(bnet.getFactors());
-        SparseModel hcredal =  causalModel.toHCredal(bnet.getFactors());
+        DAGModel<VertexFactor> vcredal = causalModel.toVCredal(bnet.getFactors());
+        DAGModel<SeparateHalfspaceFactor> hcredal =  causalModel.toHCredal(bnet.getFactors());
 
 
         // Set query

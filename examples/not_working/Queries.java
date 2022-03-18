@@ -12,6 +12,7 @@ import ch.idsia.crema.model.graphical.DAGModel;
 
 
 import java.io.IOException;
+// todo: fix approxLP
 
 public class Queries {
     public static void main(String[] args) throws IOException, InterruptedException {

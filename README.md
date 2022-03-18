@@ -17,7 +17,7 @@ import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.io.IOException;
 
-public class EquationlessFromFile {
+public class not_working.EquationlessFromFile {
     public static void main(String[] args) throws IOException, InterruptedException {
 
         // Load the empirical model

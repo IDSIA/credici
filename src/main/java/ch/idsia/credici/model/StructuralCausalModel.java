@@ -431,10 +431,18 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 				pvar = pvar.marginalize(u);
 			}
 		}else{
-			ConditionalVariableElimination inf = new ConditionalVariableElimination(new MinFillOrdering().apply(this));
+
+			int[] cond = this.getEndegenousParents(vars);
+
+			VariableElimination inf = null;
+			if(cond.length>0) {
+				inf = new ConditionalVariableElimination(new MinFillOrdering().apply(this), this.getEndegenousParents(vars));
+			}else{
+				inf = new FactorVariableElimination(new MinFillOrdering().apply(this));
+			}
+
 			inf.setFactors(this.getFactors());
-			inf.setConditioning(this.getEndegenousParents(vars));
-			inf.query(this, vars);
+			pvar = (BayesianFactor) inf.query(this, vars);
 
 		}
 
@@ -898,7 +906,7 @@ public class StructuralCausalModel extends DAGModel<BayesianFactor> {
 
 	public HashMap<Integer, BayesianFactor> endogenousBlanketProb(){
 
-		ConditionalVariableElimination inf = new ConditionalVariableElimination(new MinFillOrdering().apply(this));
+		FactorVariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(this));
 		inf.setFactors(this.getFactors());
 
 		HashMap probs = new HashMap();

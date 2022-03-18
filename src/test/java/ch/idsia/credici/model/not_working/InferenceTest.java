@@ -1,13 +1,13 @@
-package ch.idsia.credici.model;
+package ch.idsia.credici.model.not_working;
 
-import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
 import ch.idsia.crema.utility.RandomUtil;
 import jdk.jshell.spi.ExecutionControl;
 import org.junit.Assert;
@@ -16,6 +16,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.nio.file.Path;
 
+// todo: error in causal query
 public class InferenceTest {
 
 
@@ -66,7 +67,8 @@ public class InferenceTest {
 		CredalCausalApproxLP inf = new CredalCausalApproxLP(m, m.getEmpiricalProbs());
 
 		expected = new double[]{0.97, 0.03};
-		actual = ((IntervalFactor)inf.causalQuery().setTarget(y).setIntervention(x, 0).run()).getDataUpper()[0];
+		//todo: solve error in this line
+		actual = ((IntervalFactor)inf.causalQuery().setTarget(y).setIntervention(x, 0).run()).getUpper();
 		Assert.assertArrayEquals(expected,actual,0.000001);
 
 

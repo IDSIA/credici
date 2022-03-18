@@ -1,17 +1,15 @@
-package ch.idsia.credici.model;
+package ch.idsia.credici.model.not_working;
 
 import ch.idsia.credici.inference.CausalMultiVE;
-import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalApproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
+
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
+import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
 import jdk.jshell.spi.ExecutionControl;
@@ -20,6 +18,7 @@ import org.junit.Test;
 
 import java.util.List;
 
+//todo: EMbuilder error in small value
 public class BuilderTest {
 
 
@@ -32,11 +31,12 @@ public class BuilderTest {
 		int x = 1;
 		int y = 3;
 
+		BayesianFactor[] empProbs = m.getEmpiricalProbs();
 
 		// Build the credal model from
-		SparseModel vm = ExactCredalBuilder.of(m)
+		DAGModel<VertexFactor> vm = ExactCredalBuilder.of(m)
 				.setToVertex()
-				.setEmpirical(m.getEmpiricalProbs())
+				.setEmpirical(empProbs)
 				.build().getModel();
 
 		// Check the extructure

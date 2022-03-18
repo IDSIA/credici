@@ -8,10 +8,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactorFactory;
 import ch.idsia.crema.model.io.TypesIO;
 import ch.idsia.crema.model.io.uai.*;
 import ch.idsia.crema.utility.ArraysUtil;
-import com.google.common.primitives.Ints;
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.DoubleStream;

@@ -1,25 +1,25 @@
-package ch.idsia.credici.model;
+package ch.idsia.credici.model.not_working;
 
-import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalApproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
+
+import ch.idsia.credici.factor.BayesianFactorBuilder;
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.Probability;
+import ch.idsia.credici.utility.RandomUtilities;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.VertexToInterval;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.RandomUtil;
 import jdk.jshell.spi.ExecutionControl;
+import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.List;
 
+// todo: loglikelihood different value
 public class UtilityTest {
 
 
@@ -30,9 +30,9 @@ public class UtilityTest {
 		StructuralCausalModel m = RandomChainNonMarkovian.buildModel(5, 2, 6);
 
 
-		SparseDirectedAcyclicGraph causalDAG = m.getNetwork();
-		SparseDirectedAcyclicGraph endoDAG = m.getEmpiricalNet().getNetwork();
-		SparseDirectedAcyclicGraph exoDAG = m.getExogenousDAG();
+		DirectedAcyclicGraph causalDAG = m.getNetwork();
+		DirectedAcyclicGraph endoDAG = m.getEmpiricalNet().getNetwork();
+		DirectedAcyclicGraph exoDAG = m.getExogenousDAG();
 
 		//DAGUtil
 
@@ -98,9 +98,9 @@ public class UtilityTest {
 		FactorUtil.print(f);
 
 		RandomUtil.setRandomSeed(1);
-		BayesianFactor f1 = BayesianFactor.random(m.getDomain(2), m.getDomain(1,3), 2, true);
-		BayesianFactor f2 = BayesianFactor.random(m.getDomain(2), m.getDomain(1,3), 2, true);
-		BayesianFactor f3 = BayesianFactor.random(m.getDomain(2), m.getDomain(1,3), 2, true);
+		BayesianFactor f1 = RandomUtilities.BayesianFactorRandom(m.getDomain(2), m.getDomain(1,3), 2, true);
+		BayesianFactor f2 = RandomUtilities.BayesianFactorRandom(m.getDomain(2), m.getDomain(1,3), 2, true);
+		BayesianFactor f3 = RandomUtilities.BayesianFactorRandom(m.getDomain(2), m.getDomain(1,3), 2, true);
 
 		actual = new VertexToInterval().apply(
 				FactorUtil.mergeFactors(List.of(f1,f2, f3), 2, true),
@@ -120,7 +120,7 @@ public class UtilityTest {
 		StructuralCausalModel m1 = RandomChainNonMarkovian.buildModel(5, 2, 6);
 
 		StructuralCausalModel m2 = m1.copy();
-		m2.setFactor(7, new BayesianFactor(m2.getDomain(7), new double[]{.06, 0.06, 0.22, 0.02, 0.02, 0.61}));
+		m2.setFactor(7, BayesianFactorBuilder.as(m2.getDomain(7), new double[]{.06, 0.06, 0.22, 0.02, 0.02, 0.61}));
 
 		HashMap map1 = m1.getEmpiricalMap();
 		HashMap map2 = m2.getEmpiricalMap();
@@ -156,8 +156,8 @@ public class UtilityTest {
 				0.000000000000001);
 
 		RandomUtil.setRandomSeed(1);
-		BayesianFactor f1 = BayesianFactor.random(m1.getDomain(2), m1.getDomain(1,3), 2, false);
-		BayesianFactor f2 = BayesianFactor.random(m1.getDomain(2), m1.getDomain(1,3), 2, false);
+		BayesianFactor f1 = RandomUtilities.BayesianFactorRandom(m1.getDomain(2), m1.getDomain(1,3), 2, false);
+		BayesianFactor f2 = RandomUtilities.BayesianFactorRandom(m1.getDomain(2), m1.getDomain(1,3), 2, false);
 
 		Assert.assertEquals(
 				0.024402559772054404,

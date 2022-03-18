@@ -19,7 +19,7 @@ public class IO extends ch.idsia.crema.IO {
     public static final String[] UAIextensions = {".uai", ".uai.do", "uai.evid"};
 
     public static <T> T readUAI(String filename) throws IOException {
-        if(UAIParser.getIOTypeStr(filename).equals(UAITypes.CAUSAL.label)) {
+        if(UAIParser.getIOTypeStr(UAIParser.readLines(filename).get(0)).equals(UAITypes.CAUSAL.label)) {
             return (T) CausalUAIParser.read(filename);
         }
         return UAIParser.read(filename);

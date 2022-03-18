@@ -1,11 +1,14 @@
 package ch.idsia.credici.model;
 
+import ch.idsia.credici.factor.BayesianFactorBuilder;
 import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 
 import ch.idsia.crema.model.graphical.BayesianNetwork;
 import ch.idsia.crema.utility.RandomUtil;
+import org.jgrapht.graph.DefaultEdge;
+import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -24,8 +27,8 @@ public class CausalBuilderTest {
 		y = bnet.addVariable(2);
 		x = bnet.addVariable(2);
 
-		bnet.setFactor(y, new BayesianFactor(bnet.getDomain(y), new double[]{0.3,0.7}));
-		bnet.setFactor(x, new BayesianFactor(bnet.getDomain(x,y), new double[]{0.6,0.5, 0.5,0.5}));
+		bnet.setFactor(y, BayesianFactorBuilder.as(bnet.getDomain(y), new double[]{0.3,0.7}));
+		bnet.setFactor(x, BayesianFactorBuilder.as(bnet.getDomain(x,y), new double[]{0.6,0.5, 0.5,0.5}));
 
 	}
 
@@ -58,15 +61,16 @@ public class CausalBuilderTest {
 		StructuralCausalModel model =  CausalBuilder.of(bnet).build();
 
 
-		SparseDirectedAcyclicGraph causalDAG = new SparseDirectedAcyclicGraph();
-		causalDAG.addVariable(y);
-		causalDAG.addVariable(x);
+		DirectedAcyclicGraph causalDAG = new DirectedAcyclicGraph(DefaultEdge.class);
+		causalDAG.addVertex(y);
+		causalDAG.addVertex(x);
 
-		int u = causalDAG.addVariable();
+		int u = 3;
+		causalDAG.addVertex(u);
 
-		causalDAG.addLink(y,x);
-		causalDAG.addLink(u,x);
-		causalDAG.addLink(u,y);
+		causalDAG.addEdge(y,x);
+		causalDAG.addEdge(u,x);
+		causalDAG.addEdge(u,y);
 
 
 		RandomUtil.setRandomSeed(1);
@@ -81,7 +85,7 @@ public class CausalBuilderTest {
 		assertArrayEquals(
 				((BayesianFactor)m.getEmpiricalMap().values().toArray()[0]).getData(),
 				new double[]{0.806, 0.0, 0.0, 0.194},
-				0.00001);
+				0.001);
 
 
 	}

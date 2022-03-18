@@ -25,7 +25,8 @@ public class CounterFactualMappingTest {
 		cmodel.addParent(1,2);
 
 		cmodel.fillWithRandomFactors(2);
-		StructuralCausalModel[] models = {CausalOps.intervention(cmodel, 0,0, false), CausalOps.intervention(cmodel, 1,1, false)};
+		StructuralCausalModel[] models = {(StructuralCausalModel) CausalOps.intervention(cmodel, 0,0, false),
+				(StructuralCausalModel) CausalOps.intervention(cmodel, 1,1, false)};
 
 		merged = cmodel.merge(models);
 		cfmapping = merged.getMap();
@@ -68,9 +69,5 @@ public class CounterFactualMappingTest {
 	public void testMapDomains(){
 		assertTrue(merged.correctFactorDomains());
 	}
-
-
-
-
 
 }

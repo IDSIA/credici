@@ -158,22 +158,22 @@ public class StructuralCausalModelTest {
     private static Stream<Arguments> mergeParams() {
         return Stream.of(
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSimple2(),0,1, false)
+                        (StructuralCausalModel) CausalOps.intervention(modelSimple2(),0,1, false)
                 }),
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSimple2(),1,1, false)
+                        (StructuralCausalModel) CausalOps.intervention(modelSimple2(),1,1, false)
                 }),
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSimple2(),0,1, false),
-                        CausalOps.intervention(modelSimple2(),1,1, false)}),
+                        (StructuralCausalModel) CausalOps.intervention(modelSimple2(),0,1, false),
+                        (StructuralCausalModel) CausalOps.intervention(modelSimple2(),1,1, false)}),
 
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSingleU(),0,1, false)}),
+                        (StructuralCausalModel) CausalOps.intervention(modelSingleU(),0,1, false)}),
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSingleU(),1,1, false)}),
+                        (StructuralCausalModel) CausalOps.intervention(modelSingleU(),1,1, false)}),
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSingleU(),0,1, false),
-                        CausalOps.intervention(modelSingleU(),1,1, false)})
+                        (StructuralCausalModel) CausalOps.intervention(modelSingleU(),0,1, false),
+                        (StructuralCausalModel) CausalOps.intervention(modelSingleU(),1,1, false)})
 
         );
     }
@@ -217,7 +217,7 @@ public class StructuralCausalModelTest {
         // Check the empirical P(1,2,3 | 0)
         double[] expected = new double[] { 0.07, 0.429, 0.055, 0.006, 0.103, 0.103, 0.406, 0.057, 0.097, 0.327, 0.261, 0.003, 0.007, 0.051, 0.001, 0.024 };
         double[] actual = ((BayesianFactor)map.get(Set.of(1,2,3))).getData();
-        Assert.assertArrayEquals(expected, actual, 0.00001);
+        Assert.assertArrayEquals(expected, actual, 0.001);
 
     }
 

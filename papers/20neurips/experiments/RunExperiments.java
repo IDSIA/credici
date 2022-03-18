@@ -189,7 +189,7 @@ public class RunExperiments {
             // Store the exact result
             results.get(i).putAll(exactRes_);
 
-            // Queries union
+            // not_working.Queries union
             IntervalFactor queriesUnion =
                 IntervalFactor.mergeBounds(
                         IntStream.range(0,i).mapToObj(k -> ifactors[k]).toArray(IntervalFactor[]::new)

@@ -3,11 +3,12 @@ package ch.idsia.credici.model;
 import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+
+import ch.idsia.crema.model.graphical.BayesianNetwork;
 import ch.idsia.crema.utility.RandomUtil;
 import org.junit.Before;
 import org.junit.Test;
+
 
 import static org.junit.Assert.assertArrayEquals;
 

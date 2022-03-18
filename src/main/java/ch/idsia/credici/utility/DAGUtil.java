@@ -19,6 +19,8 @@ import org.jgrapht.traverse.TopologicalOrderIterator;
 
 import java.util.*;
 import java.util.function.BinaryOperator;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.StreamSupport;
@@ -282,5 +284,36 @@ public class DAGUtil {
 
     }
 
+    public static SparseDirectedAcyclicGraph build(String arcs) {
+        SparseDirectedAcyclicGraph dag = new SparseDirectedAcyclicGraph();
+
+
+        String regex = "([0-9]+),([0-9]+)";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(arcs);
+
+        ArrayList nodes = new ArrayList();
+        ArrayList origin = new ArrayList();
+        ArrayList dest = new ArrayList();
+
+
+        while (matcher.find()) {
+            String str = matcher.group(0);
+            int arc[] = Arrays.stream(str.split(",")).mapToInt(s -> Integer.parseInt(s)).toArray();
+            origin.add(arc[0]);
+            dest.add(arc[1]);
+            if(!nodes.contains(arc[0])) nodes.add(arc[0]);
+            if(!nodes.contains(arc[1])) nodes.add(arc[1]);
+        }
+
+        Collections.sort(nodes);
+
+        for(int n: CollectionTools.toIntArray(nodes))
+            dag.addVariable(n);
+
+        for(int i=0; i<origin.size(); i++)
+            dag.addLink(((Integer)origin.get(i)).intValue(), ((Integer)dest.get(i)).intValue());
+        return dag;
+    }
 
 }

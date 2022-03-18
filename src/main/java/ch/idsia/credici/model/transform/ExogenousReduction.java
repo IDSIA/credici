@@ -47,7 +47,9 @@ public class ExogenousReduction {
 
         for(int exoVar : model.getExogenousVars()) {
             while (model.getDomain(exoVar).getCardinality(exoVar) > minDim.get(exoVar)) {
-                SparseModel vmodel = model.toVCredal(empProbs.values());
+                SparseModel vmodel = null;
+                vmodel = model.toVCredal(empProbs.values());
+
                 VertexFactor f = (VertexFactor) vmodel.getFactor(exoVar);
                 //System.out.println(f);
                 //Get lower values

@@ -122,6 +122,28 @@ public class FactorUtil {
 	}
 
 
+	public static void printTab(BayesianFactor f, Strides iterDom, String sep){
+		// Print equation
+
+		IndexIterator it = iterDom.getIterator();
+		int[] iterVars = iterDom.getVariables();
+
+		int[] nonIterVars = ArraysUtil.difference(f.getDomain().getVariables(), iterVars);
+
+		System.out.println(ArraysTools.toString(iterVars, sep)+sep+"\\"+sep+ArraysTools.toString(nonIterVars, sep));
+		while(it.hasNext()){
+			int idx = it.next();
+			ObservationBuilder iterValues = ObservationBuilder.observe(iterVars, iterDom.statesOf(idx));
+
+			System.out.print(ArraysTools.toString(iterValues.values(),sep));
+			System.out.print(sep+":"+sep);
+			System.out.println(ArraysTools.toString(f.filter(iterValues).getData(),sep));
+
+		}
+
+	}
+
+
 	public static int getOffset(BayesianFactor f, TIntIntMap conf){
 		if(!ArraysUtil.equals(f.getDomain().getVariables(), conf.keys(), true, true))
 			throw new IllegalArgumentException("Incompatible domains");

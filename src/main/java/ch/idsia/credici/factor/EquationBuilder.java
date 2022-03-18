@@ -137,7 +137,7 @@ public class EquationBuilder {
                     ObservationBuilder endoPaValues = ObservationBuilder.observe(endoPaDom.getVariables(), endoPaDom.statesOf(idx));
                     ObservationBuilder exoPaValues = ObservationBuilder.observe(exoVar, i);
                     EquationOps.setValue(f, exoPaValues, endoPaValues, v, (int)s.get(j));
-                    //System.out.println("f"+varNames.get(v)+"("+varNames.get(exoVar)+"_"+i+","+endoPaValues+") = "+varNames.get(v)+"_"+(int)s.get(j));
+                    System.out.println("f"+v+"("+exoVar+"_"+i+","+endoPaValues+") = "+v+"_"+(int)s.get(j));
                     j++;
 
                 }

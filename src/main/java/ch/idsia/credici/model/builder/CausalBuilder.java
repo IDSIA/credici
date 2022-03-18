@@ -157,21 +157,10 @@ public class CausalBuilder {
             exoVarSizes = new TIntIntHashMap();
             for(int u : DAGUtil.getExogenous(causalDAG)){
                 int[] ch = causalDAG.getChildren(u);
-                Strides domCh = model.getDomain(ch);
-                Strides domPa = model.getDomain(model.getEndegenousParents(ch));
-                exoVarSizes.put(u, EquationOps.maxExoCardinality(domCh, domPa));
+                exoVarSizes.put(u, EquationOps.maxExoCardinality(u, causalDAG, model.getDomain(model.getEndogenousVars())));
+                System.out.println(u+": "+exoVarSizes.get(u));
             }
-   /*
-            // compute in markovian equationless case
-            exoVarSizes = new TIntIntHashMap();
-            for(int x : model.getEndogenousVars()){
-                int u = ArraysUtil.difference(causalDAG.getParents(x), empiricalDAG.getParents(x))[0];
-                int sizeX = model.getDomain(x).getCombinations();
-                int sizeEndoPaX = model.getDomain(empiricalDAG.getParents(x)).getCombinations();
-                exoVarSizes.put(u, (int) Math.pow(sizeX, sizeEndoPaX));
 
-            }
-*/
         }
 
     }

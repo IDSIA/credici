@@ -916,12 +916,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			int v = (int) it.next();
 			if(!obs.containsKey(v)) {
 				BayesianFactor f = this.getFactor(v);
+
 				if(f != null)
 					f = f.copy();
 
 				for (int pa : this.getParents(v)) {
 					f = f.filter(pa, obs.get(pa));
 				}
+
 				obs.putAll(f.sample());
 			}
 		}
@@ -1096,53 +1098,27 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return newModel;
 	}
 
-	public boolean isCompatible(TIntIntMap[] data, int fixDecimals){
-		boolean compatible = false;
-		try {
-			HashMap empMap = DataUtil.getEmpiricalMap(this, data);
 
-			//System.out.println(empMap);
+	public boolean isCompatible(TIntIntMap[] data, int fixDecimals) {
+		return this.getUncompatibleNodes(data, fixDecimals).size()==0;
+	}
 
-			if(fixDecimals>0)
-				empMap = FactorUtil.fixEmpiricalMap(empMap, fixDecimals);
+	public List<Integer> getUncompatibleNodes(TIntIntMap[] data, int fixDecimals){
+		HashMap empMap = DataUtil.getEmpiricalMap(this, data);
 
+		//System.out.println(empMap);
 
-			ExactCredalBuilder builder =
-					ExactCredalBuilder.of(this)
-							.setEmpirical(empMap.values())
-							.setToVertex()
-							.setRaiseNoFeasible(false)
-							.build();
+		if(fixDecimals>0)
+			empMap = FactorUtil.fixEmpiricalMap(empMap, fixDecimals);
 
+		ExactCredalBuilder builder =
+				ExactCredalBuilder.of(this)
+						.setEmpirical(empMap.values())
+						.setToVertex()
+						.setRaiseNoFeasible(false)
+						.build();
 
-			if (builder.getUnfeasibleNodes().size() == 0)
-				compatible = true;
-			//else
-			//	System.out.println(builder.getUnfeasibleNodes());
-		}catch(Exception e){
-			//if(data[0].keys().length>5)
-			//	System.out.println(e);
-/*
-			HashMap empMap = DataUtil.getEmpiricalMap(this, data);
-
-			if(fixDecimals>0)
-				empMap = FactorUtil.fixEmpiricalMap(empMap, fixDecimals);
-
-			System.out.println(empMap);
-
-			ExactCredalBuilder builder =
-					ExactCredalBuilder.of(this)
-							.setEmpirical(empMap.values())
-							.setToVertex()
-							.setRaiseNoFeasible(false)
-							.build();
-
-*/
-
-
-		}
-
-		return compatible;
+		return builder.getUnfeasibleNodes();
 	}
 
 	public List<int[]> endoConnectComponents(){

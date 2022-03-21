@@ -76,7 +76,7 @@ public class FrequentistCausalEM extends DiscreteEM{
 
 
                 int[] relevantVars = ArraysUtil.addToSortedArray(posteriorModel.getParents(var), var);
-                int[] hidden =  IntStream.of(relevantVars).filter(x -> !observation.containsKey(x)).toArray();
+                int[] hidden = IntStream.of(relevantVars).filter(x -> !observation.containsKey(x)).toArray();
                 int[] obsVars = IntStream.of(relevantVars).filter(x -> observation.containsKey(x)).toArray();
 
 
@@ -111,7 +111,6 @@ public class FrequentistCausalEM extends DiscreteEM{
         }
         return output;
 
-
     }
 
     private void maximization(TIntObjectMap<BayesianFactor> counts){
@@ -143,6 +142,7 @@ public class FrequentistCausalEM extends DiscreteEM{
     public double getRegularization() {
         return regularization;
     }
+
 
     @Override
     public FrequentistCausalEM setTrainableVars(int[] trainableVars) {
@@ -184,6 +184,7 @@ public class FrequentistCausalEM extends DiscreteEM{
 
     public static void main(String[] args) throws InterruptedException {
 
+        /*
 
         int N = 2500;
         int numIterations = 1000; // EM internal iterations
@@ -205,7 +206,7 @@ public class FrequentistCausalEM extends DiscreteEM{
 
 
         // randomize P(U)
-        StructuralCausalModel rmodel = (StructuralCausalModel) CausalBuilder.random(causalModel,
+        StructuralCausalModel rmodel = (StructuralCausalModel) BayesianFactor.randomModel(causalModel,
                 5, false
                 ,causalModel.getExogenousVars()
         );
@@ -229,7 +230,7 @@ public class FrequentistCausalEM extends DiscreteEM{
 
         System.out.println(em.getPosterior());
 
-
+*/
     }
 
 }

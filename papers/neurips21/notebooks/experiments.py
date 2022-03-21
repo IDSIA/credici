@@ -123,7 +123,7 @@ for i,m in enumerate(models[start:]):
                           logfile=logfile,
                           output=output_folder,
                           executions=executions,
-                          simpleOutput=False)
+                          simpleOutput=True)
             df = Path(str(m).replace(".uai",".csv"))
             
             

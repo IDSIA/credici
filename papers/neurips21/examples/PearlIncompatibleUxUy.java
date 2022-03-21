@@ -26,8 +26,8 @@ public class PearlIncompatibleUxUy {
 
 		String folder = prj_folder+"papers/neurips21/examples/";
 
-		TIntIntMap[] data = (TIntIntMap[])DataUtil.fromCSV(folder+"dataPearl.csv");
-		StructuralCausalModel mcons = (StructuralCausalModel)IO.readUAI(folder+"consPearl.uai");
+		TIntIntMap[] data = (TIntIntMap[])DataUtil.fromCSV(folder+ "examples/dataPearl.csv");
+		StructuralCausalModel mcons = (StructuralCausalModel)IO.readUAI(folder+ "examples/consPearl.uai");
 
 
 		// states x, y, z = True = 0

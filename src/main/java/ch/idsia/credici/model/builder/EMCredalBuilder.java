@@ -4,10 +4,12 @@ import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.BayesianCausalEM;
 import ch.idsia.credici.learning.FrequentistCausalEM;
+import ch.idsia.credici.learning.WeightedCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.Probability;
+import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.interval.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.separate.VertexFactor;
@@ -16,6 +18,7 @@ import ch.idsia.crema.model.graphical.DAGModel;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -55,6 +58,8 @@ public class EMCredalBuilder extends CredalBuilder{
 	private boolean verbose = false;
 
 	private boolean buildCredalModel = false;
+
+	private boolean weightedEM = true;
 
 	public enum SelectionPolicy {
 		LAST,	// Selects the last point in the trajectory.
@@ -370,6 +375,10 @@ public class EMCredalBuilder extends CredalBuilder{
 		if(this.data==null) {
 			em = new BayesianCausalEM(startingModel).setRegularization(0.0);
 			stepArgs = (Collection) endogJointProbs.values();
+		}else if(weightedEM) {
+			throw new NotImplementedException();
+			//em = new WeightedCausalEM(startingModel).setRegularization(0.0).usePosteriorCache(true);
+			//stepArgs = (Collection) Arrays.asList(data);
 		}else{
 			em = new FrequentistCausalEM(startingModel).setRegularization(0.0).usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
@@ -419,13 +428,20 @@ public class EMCredalBuilder extends CredalBuilder{
 		return this;
 	}
 
+	public EMCredalBuilder setWeightedEM(boolean weightedEM) {
+		this.weightedEM = weightedEM;
+		return this;
+	}
+
 	private void setTargetGenDist(){
-		if(this.numDecimalsRound>0)
-			this.targetGenDist = FactorUtil.fixEmpiricalMap(this.inputGenDist, numDecimalsRound);
-		else
+	//	if(this.numDecimalsRound>0)
+	//		this.targetGenDist = FactorUtil.fixEmpiricalMap(this.inputGenDist, numDecimalsRound);
+	//	else
 			this.targetGenDist = this.inputGenDist;
 
 	}
+
+
 
 
 
@@ -489,7 +505,7 @@ public class EMCredalBuilder extends CredalBuilder{
 		DAGModel vmodel = m.toVCredal(m.getEmpiricalProbs());
 		System.out.println(vmodel);
 
-		TIntIntMap[] data = m.samples(1000, m.getEndogenousVars());
+		TIntIntMap[] data = m.samples(10000, m.getEndogenousVars());
 
 		//System.out.println("PGM v-model:");
 		//System.out.println(m.toVCredal(DataUtil.getEmpiricalMap(m,data).values()));
@@ -513,12 +529,16 @@ public class EMCredalBuilder extends CredalBuilder{
 
 			System.out.println(pol);
 			System.out.println("--------------------------------------------------------");
-			EMCredalBuilder builder = EMCredalBuilder.of(m)
+
+			Watch.start();
+			EMCredalBuilder builder = EMCredalBuilder.of(m, data)
 					.setSelPolicy(pol)
 					.setMaxEMIter(200)
 					.setNumTrajectories(20)
 					.setTrueCredalModel(vmodel)
+					.setWeightedEM(true)
 					.build();
+			Watch.stopAndPrint();
 
 			//builder.getSelectedPoints().forEach(System.out::println);
 			//System.out.println(builder.getModel());
@@ -527,7 +547,8 @@ public class EMCredalBuilder extends CredalBuilder{
 			System.out.println("\tSelected points = " + builder.getSelectedPoints().size());
 
 
-			CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints());
+			CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints())
+					.setToInterval(true);
 			IntervalFactor res = (IntervalFactor) inf.causalQuery()
 					.setTarget(target)
 					.setIntervention(intervention, 0)
@@ -535,15 +556,6 @@ public class EMCredalBuilder extends CredalBuilder{
 
 			System.out.println("\n\nResult running multiple precise VE:\n\n"+res);
 
-			CredalCausalVE inf2 = new CredalCausalVE(builder.getModel());
-			VertexFactor res2 =
-					(VertexFactor) inf2.causalQuery()
-					.setTarget(target)
-					.setIntervention(intervention, 0)
-					.run();
-
-			System.out.println("\n\nResult credal VE:\n\n"+res2);
-			System.out.println("\n\n");
 
 		}
 	}

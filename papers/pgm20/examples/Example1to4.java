@@ -1,12 +1,14 @@
 package pgm20.examples;
 
+import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
+import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.credici.model.StructuralCausalModel;
 
 public class Example1to4 {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
 
         int x1, x2, u1, u2, u;
@@ -59,6 +61,22 @@ public class Example1to4 {
         System.out.println("\nCredal set for U2");
         System.out.println(csmodel_v.getFactor(u2));
         ((SeparateHalfspaceFactor) csmodel_c.getFactor(u2)).printLinearProblem();
+
+        CredalCausalVE inf = new CredalCausalVE(m, m.getEmpiricalProbs());
+        VertexFactor res1 = (VertexFactor) inf.causalQuery()
+                            .setIntervention(x1,0)
+                            .setTarget(x2)
+                            .run();
+
+        System.out.println(res1);
+
+        VertexFactor res2 = (VertexFactor) inf.counterfactualQuery()
+                .setIntervention(x1,1)
+                .setEvidence(x1, 2)
+                .setTarget(x2)
+                .run();
+
+        System.out.println(res2);
 
 
     }

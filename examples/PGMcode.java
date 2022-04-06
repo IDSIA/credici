@@ -50,6 +50,8 @@ public class PGMcode {
         // Exact inference engine
         CausalInference infExact =
                 new CredalCausalVE(causalModel, bnet.getFactors());
+                //new CredalCausalVE(vcredal);
+
 
         // Approximate inference engine
         CausalInference infApprox =

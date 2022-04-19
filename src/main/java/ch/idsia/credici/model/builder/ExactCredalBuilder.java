@@ -29,6 +29,9 @@ import java.util.stream.Stream;
 
 public class ExactCredalBuilder extends CredalBuilder {
 
+    /** should bayesian factor be kept or transformed */
+    private boolean keepBayesian = false;
+
     private boolean vertex = true;
 
     private boolean nonnegative = true;
@@ -92,6 +95,13 @@ public class ExactCredalBuilder extends CredalBuilder {
         return this;
     }
 
+
+    public ExactCredalBuilder setKeepBayesian() {
+        keepBayesian = true;
+        return this;
+    }
+
+
     public ExactCredalBuilder setNonnegative(boolean nonnegative) {
         this.nonnegative = nonnegative;
         return this;
@@ -145,8 +155,9 @@ public class ExactCredalBuilder extends CredalBuilder {
     private void buildEndoFactor(int x) {
         // Variable on the left should be the first
         BayesianFactor eqx = causalmodel.getFactor(x).reorderDomain(x);
-
-        if (vertex) {
+        if (keepBayesian) { 
+            model.setFactor(x, eqx);
+        } else if (vertex) {
             model.setFactor(x, new BayesianToVertex().apply(eqx, x));
         } else{
             SeparateHalfspaceFactor fx = new BayesianToHalfSpace().apply(eqx, x);
@@ -237,6 +248,7 @@ public class ExactCredalBuilder extends CredalBuilder {
         return true;
     }
 
+   
 
 
 }

@@ -648,6 +648,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				.setEmpirical(empiricalProbs)
 				.setNonnegative(false)
 				.setToHalfSpace()
+				.setKeepBayesian()
 				.build().getModel();
 	}
 

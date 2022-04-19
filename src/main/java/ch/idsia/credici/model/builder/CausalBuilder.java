@@ -158,7 +158,6 @@ public class CausalBuilder {
             for(int u : DAGUtil.getExogenous(causalDAG)){
                 int[] ch = causalDAG.getChildren(u);
                 exoVarSizes.put(u, EquationOps.maxExoCardinality(u, causalDAG, model.getDomain(model.getEndogenousVars())));
-                System.out.println(u+": "+exoVarSizes.get(u));
             }
 
         }

@@ -8,6 +8,8 @@ import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
@@ -311,9 +313,14 @@ public class DAGUtil {
         for(int n: CollectionTools.toIntArray(nodes))
             dag.addVariable(n);
 
-        for(int i=0; i<origin.size(); i++)
-            dag.addLink(((Integer)origin.get(i)).intValue(), ((Integer)dest.get(i)).intValue());
+        for(int i=0; i<origin.size(); i++) {
+            int x = ((Integer) origin.get(i)).intValue();
+            int y = ((Integer) dest.get(i)).intValue();
+            if(x!=y)
+                dag.addLink(x, y);
+        }
         return dag;
     }
+
 
 }

@@ -9,6 +9,7 @@ import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.IndexIterator;
+import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
@@ -230,6 +231,62 @@ public class FactorUtil {
 		Strides newRightDom = new Strides(rightDom.getVariables(), newRightCard);
 		return new VertexFactor(f.getDataDomain(), newRightDom, newData);
 
+	}
+
+	public static double getValue(BayesianFactor factor, TIntIntHashMap obs){
+
+		int[] states =  new int[factor.getDomain().getSize()];
+		for(int i=0; i< states.length; i++) {
+			int v = factor.getDomain().getVariables()[i];
+			if(!obs.containsKey(v))
+				throw new IllegalArgumentException("Missing value for variable "+v);
+			states[i] = obs.get(v);
+		}
+		return factor.getValue(states);
+	}
+
+	public static void setValue(BayesianFactor factor, TIntIntHashMap obs, double value){
+
+		int[] states =  new int[factor.getDomain().getSize()];
+		for(int i=0; i< states.length; i++) {
+			int v = factor.getDomain().getVariables()[i];
+			if(!obs.containsKey(v))
+				throw new IllegalArgumentException("Missing value for variable "+v);
+			states[i] = obs.get(v);
+		}
+		factor.setValue(value, states);
+	}
+
+	public static BayesianFactor dropState(BayesianFactor factor, int var, int state){
+
+		Strides oldDomain = factor.getDomain();
+		Strides newDomain =
+				Strides.as(
+						Arrays.stream(oldDomain.getVariables())
+								.mapToObj(v-> {
+									if(v==var) return new int[] {v, oldDomain.getCardinality(v)-1};
+									return new int[] {v, oldDomain.getCardinality(v)};
+								}).flatMapToInt(Arrays::stream)
+								.toArray()
+				);
+
+		BayesianFactor newFactor = new BayesianFactor(newDomain);
+		int vpos = ArraysUtil.indexOf(var, oldDomain.getVariables());
+
+		for(int[] Sold : DomainUtil.getEventSpace(oldDomain)){
+			if (Sold[vpos] != state) {
+				int[] Snew;
+				double val = factor.getValue(Sold);
+				if (Sold[vpos] < state) {
+					Snew = Sold;
+				} else {
+					Snew = Sold;
+					Snew[vpos] = Snew[vpos] - 1;
+				}
+				newFactor.setValue(val, Snew);
+			}
+		}
+		return newFactor;
 	}
 
 }

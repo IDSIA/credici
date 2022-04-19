@@ -79,6 +79,27 @@ public class EquationOps {
 		}
 	}
 
+	public static void setValues(BayesianFactor f, TIntIntHashMap exoPaValues, int leftVar, int... values) {
+
+		int[] endoParents = IntStream.of(f.getDomain().getVariables())
+				.filter(v -> v != leftVar && !exoPaValues.containsKey(v))
+				.toArray();
+		List endoPaSpace = DomainUtil.getEventSpace(DomainUtil.subDomain(f.getDomain(), endoParents));
+
+		if(endoPaSpace.size() != values.length){
+			throw new IllegalArgumentException("Wrong number of values");
+		}
+
+		for(int i = 0; i< values.length; i++){
+			int[] paValue = (int[]) endoPaSpace.get(i);
+			TIntIntHashMap endoPaValues = new TIntIntHashMap();
+			if(paValue.length>0)
+				endoPaValues = ObservationBuilder.observe(endoParents, paValue);
+			EquationOps.setValue(f, exoPaValues, endoPaValues, leftVar, values[i]);
+		}
+
+	}
+
 	public static int[] getValue(BayesianFactor f, TIntIntHashMap exoPaValues, TIntIntHashMap endoPaValues, int[] vars) {
 
 		TIntIntHashMap conf = new TIntIntHashMap();
@@ -92,10 +113,30 @@ public class EquationOps {
 			if (f.filter(conf).getData()[0] == 1)
 				return v;
 		}
-		return null;
+		for(int v: vars) conf.remove(v);
+		throw new IllegalArgumentException("Non-valid equation for "+conf);
 	}
 
-	// getValue: BayesianFactor f, TIntIntHashMap exoPaValues, int[] vars
+	public static int[] getValue(BayesianFactor f, TIntIntHashMap exoPaValues, int leftVar) {
+
+		int[] endoParents = IntStream.of(f.getDomain().getVariables())
+				.filter(v -> v != leftVar && !exoPaValues.containsKey(v))
+				.toArray();
+		List endoPaSpace = DomainUtil.getEventSpace(DomainUtil.subDomain(f.getDomain(), endoParents));
+		int[] values = new int[endoPaSpace.size()];
+
+		for(int i = 0; i< values.length; i++){
+			int[] paValue = (int[]) endoPaSpace.get(i);
+			TIntIntHashMap endoPaValues = new TIntIntHashMap();
+			if(paValue.length>0)
+				endoPaValues = ObservationBuilder.observe(endoParents, paValue);
+			values[i] = EquationOps.getValue(f, exoPaValues, endoPaValues, new int[]{leftVar})[0];
+		}
+		return values;
+	}
+
+
+		// getValue: BayesianFactor f, TIntIntHashMap exoPaValues, int[] vars
 
 	public static int[] getValue(BayesianFactor f, TIntIntHashMap exoPaValues, int[] vars) {
 
@@ -112,7 +153,9 @@ public class EquationOps {
 	}
 
 
-	public static boolean isConservative(BayesianFactor f, int exoVar, int[] leftVars){
+	public static boolean isConservative(BayesianFactor f, int exoVar, int... leftVars){
+
+		if(leftVars.length==0) throw new IllegalArgumentException("Wrong parameters");
 
 		int[] endoPa =Arrays.stream(f.getDomain().getVariables()).filter(v -> v != exoVar && !ArraysUtil.contains(v, leftVars)).toArray();
 		Strides domX = DomainUtil.subDomain(f.getDomain(), leftVars);
@@ -131,7 +174,35 @@ public class EquationOps {
 		}
 		return true;
 	}
-	public static List<int[]> getRedundancies(BayesianFactor f, int exoVar, int[] leftVars){
+	public static List getMissingToConservative(BayesianFactor f, int exoVar, int... leftVars){
+
+		ArrayList missingX = new ArrayList();
+		if(leftVars.length==0) throw new IllegalArgumentException("Wrong parameters");
+
+		int[] endoPa =Arrays.stream(f.getDomain().getVariables()).filter(v -> v != exoVar && !ArraysUtil.contains(v, leftVars)).toArray();
+		Strides domX = DomainUtil.subDomain(f.getDomain(), leftVars);
+		Strides domY = DomainUtil.subDomain(f.getDomain(), endoPa);
+		int m = domY.getCombinations();
+		int Usize = f.getDomain().getCardinality(exoVar);
+
+		List Xvalues =
+				IntStream.range(0,Usize).mapToObj(u ->
+						EquationOps.getValue(f, ObservationBuilder.observe(exoVar,  u), leftVars)
+				).collect(Collectors.toList());
+
+		for(int[] confX : DomainUtil.getEventSpace(IntStream.range(0,m).mapToObj(k->domX).toArray(Strides[]::new))){
+			if(!Xvalues.stream().anyMatch(xi -> Arrays.equals((int[]) xi, confX))) {
+				missingX.add(confX);
+			}
+		}
+
+		return missingX;
+	}
+
+
+	public static List<int[]> getRedundancies(BayesianFactor f, int exoVar, int...leftVars){
+
+		if(leftVars.length==0) throw new IllegalArgumentException("Wrong parameters");
 
 		int[] endoPa =Arrays.stream(f.getDomain().getVariables()).filter(v -> v != exoVar && !ArraysUtil.contains(v, leftVars)).toArray();
 		Strides domX = DomainUtil.subDomain(f.getDomain(), leftVars);
@@ -191,6 +262,57 @@ public class EquationOps {
 
 		//if (exoVar==3) return 32;
 		return size;
+	}
+
+	public static void print(StructuralCausalModel m, int var) {
+		int[] exoVar = m.getExogenousParents(var);
+		if(m.isEndogenous(var) && exoVar.length==1){
+			print(m.getFactor(var), exoVar[0], var);
+		}
+
+	}
+
+	public static void print(BayesianFactor f, int exoVar, int...leftVars){
+
+		int[] Y = IntStream.of(f.getDomain().getVariables())
+				.filter(v -> v != exoVar && !ArraysUtil.contains(v,leftVars))
+				.toArray();
+
+		Strides domY = DomainUtil.subDomain(f.getDomain(), Y);
+		Strides domU = DomainUtil.subDomain(f.getDomain(), exoVar);
+
+		for (int[] uval : DomainUtil.getEventSpace(domU))
+			System.out.print("u"+uval[0]+"\t");
+
+		System.out.println("");
+		for(int[] yval : DomainUtil.getEventSpace(domY)) {
+
+			for (int[] uval : DomainUtil.getEventSpace(domU)) {
+
+
+				int[] xvals = null;
+				try {
+					xvals = EquationOps.getValue(
+							f,
+							ObservationBuilder.observe(exoVar, uval[0]),
+							ObservationBuilder.observe(Y, yval),
+							leftVars
+					);
+				}catch (Exception e){
+
+				}
+				String str = "";
+				if (xvals == null){
+					str = str + "?";
+				}else if(xvals.length==1)
+					str = str+xvals[0];
+				else
+					str = Arrays.toString(xvals);
+
+				System.out.print(str+"\t");
+			}
+			System.out.println(Arrays.toString(Y)+"="+Arrays.toString(yval));
+		}
 	}
 
 }

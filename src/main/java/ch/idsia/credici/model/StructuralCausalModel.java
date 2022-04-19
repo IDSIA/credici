@@ -1,5 +1,6 @@
 package ch.idsia.credici.model;
 
+import ch.idsia.credici.factor.EquationOps;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.info.CausalInfo;
@@ -1142,6 +1143,62 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return this.endoConnectComponents().stream().mapToInt(c -> ((int[])c).length).max().getAsInt();
 	}
 
+
+	public boolean isConservative(){
+		for(int u: this.getExogenousVars()) {
+			int[] X = this.getChildren(u);
+			int[] Y = this.getEndegenousParents(X);
+			BayesianFactor fjoint = BayesianFactor.combineAll(this.getFactors(X));
+			if(!EquationOps.isConservative(fjoint, u, X))
+				return false;
+		}
+		return true;
+	}
+
+	public boolean summaryConservative(){
+
+		boolean conservative = true;
+		for(int u: this.getExogenousVars()) {
+			int[] X = this.getChildren(u);
+			int[] Y = this.getEndegenousParents(X);
+			BayesianFactor fjoint = BayesianFactor.combineAll(this.getFactors(X));
+			System.out.print("f_"+Arrays.toString(X)+" ");
+			List missingX = EquationOps.getMissingToConservative(fjoint, u, X);
+
+			if(missingX.isEmpty())
+				System.out.println("is conservative");
+			else {
+				System.out.println("is not conservative. Missing configurations: " + missingX.stream().map(x -> Arrays.toString((int[]) x)).collect(Collectors.joining(",")));
+				conservative = false;
+			}
+		}
+		return conservative;
+	}
+
+
+	public StructuralCausalModel dropExoState(int exoVar, int... toRemove){
+
+		System.out.println("Dropping from "+exoVar+": "+Arrays.toString(toRemove));
+
+		if(!this.isExogenous(exoVar))
+			throw new IllegalArgumentException("Non exogenous variable");
+
+		StructuralCausalModel newModel = this.copy();
+
+		for (int s : (int[]) toRemove)
+			newModel.removeState(exoVar, s);
+
+		// Variables of affected factors
+		int[] vars = ArraysUtil.append(this.getChildren(exoVar), exoVar);
+		for(int v:vars){
+			BayesianFactor f = this.getFactor(v);
+			for (int s : (int[]) toRemove)
+				f = FactorUtil.dropState(f, exoVar, s);
+			newModel.setFactor(v, f);
+		}
+
+		return newModel;
+	}
 
 
 }

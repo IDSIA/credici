@@ -166,5 +166,23 @@ public class DataUtil {
 		}
 		return dnew;
 	}
+	public static TIntIntMap[] SampleCompatible(StructuralCausalModel model, int dataSize, int maxIter){
+
+		TIntIntMap[] data = model.samples(dataSize, model.getEndogenousVars());
+		boolean isComp = false;
+
+		try {
+			for(int j=0; j<maxIter; j++) {
+				isComp = model.isCompatible(data, 5);
+				if(isComp) break;
+				data = model.samples(dataSize, model.getEndogenousVars());
+			}
+		}catch (Exception e){}
+
+		if(isComp) return data;
+		return null;
+	}
 
 }
+
+

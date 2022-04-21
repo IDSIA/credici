@@ -32,6 +32,10 @@ public abstract class Terminal implements Runnable{
 	protected static String argStr;
 	protected Logger logger = null;
 
+	protected void checkArguments(){
+
+	}
+
 
 	@Override
 	public void run(){
@@ -41,6 +45,7 @@ public abstract class Terminal implements Runnable{
 			if(seed<0)
 				seed = Timestamp.from(Instant.now()).getNanos()/1000;
 			setUpIO();
+			checkArguments();
 			this.entryPoint();
 		}catch (Exception e){
 			errMsg = e.toString();

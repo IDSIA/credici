@@ -1101,6 +1101,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 
+
+
+	public boolean isCompatible(TIntIntMap[] data) {
+		return this.isCompatible(data, FactorUtil.DEFAULT_DECIMALS);
+	}
+
 	public boolean isCompatible(TIntIntMap[] data, int fixDecimals) {
 		return this.getUncompatibleNodes(data, fixDecimals).size()==0;
 	}
@@ -1179,7 +1185,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	public StructuralCausalModel dropExoState(int exoVar, int... toRemove){
 
-		System.out.println("Dropping from "+exoVar+": "+Arrays.toString(toRemove));
+		//System.out.println("Dropping from "+exoVar+": "+Arrays.toString(toRemove));
 
 		if(!this.isExogenous(exoVar))
 			throw new IllegalArgumentException("Non exogenous variable");

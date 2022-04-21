@@ -35,8 +35,15 @@ public class ExogenousReduction {
         this.model = model.copy();
         this.empProbs = empProbs;
     }
+
+    public ExogenousReduction(StructuralCausalModel model, TIntIntMap[] data){
+        this.model = model.copy();
+        this.empProbs = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data), FactorUtil.DEFAULT_DECIMALS);
+    }
+
+
     public ExogenousReduction(StructuralCausalModel model){
-        this(model, null);
+        this(model, (HashMap) null);
     }
 
     public StructuralCausalModel getModel() {
@@ -103,7 +110,6 @@ public class ExogenousReduction {
 
                 // Identify removable dimensions
                 int[] idx = CollectionTools.shuffle(ArraysUtil.where(bounds, p -> p == 0));
-                System.out.println(Arrays.toString(idx));
                 if (idx.length==0) {
                     recalculate = false;
                     break;

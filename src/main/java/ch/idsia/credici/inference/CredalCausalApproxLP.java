@@ -38,7 +38,7 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
     }
 
     public CredalCausalApproxLP(SparseModel model){
-        CausalInfo.assertIsHCredal(model);
+        //CausalInfo.assertIsHCredal(model);
         this.model = model;
 
     }

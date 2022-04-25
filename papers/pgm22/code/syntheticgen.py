@@ -16,7 +16,7 @@ import sys
 import sys
 
 print(sys.argv)
-setname = "synthetic"
+setname = "synthetic/1000"
 
 
 if len(sys.argv) > 1:
@@ -56,8 +56,8 @@ def strtime():
 
 from pathlib import Path
 
-prj_path = Path(str(Path("../../../").resolve())+"/")
-exp_folder = Path(prj_path, "papers/journalEM/")
+prj_path = Path(str(Path("../../../").resolve()) + "/")
+exp_folder = Path(prj_path, "papers/pgm22/")
 code_folder = Path(exp_folder, "code")
 output_folder = Path(exp_folder, "models", setname)
 

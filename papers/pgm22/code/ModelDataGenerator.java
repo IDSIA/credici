@@ -1,6 +1,7 @@
 package code;
 
 import ch.idsia.credici.IO;
+import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.info.CausalInfo;
@@ -11,11 +12,14 @@ import ch.idsia.credici.utility.Combinatorial;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
-import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.credici.utility.experiments.Terminal;
+import ch.idsia.crema.factor.credal.linear.IntervalFactor;
+import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.RandomUtil;
+import com.google.common.primitives.Doubles;
 import gnu.trove.map.TIntIntMap;
+import jdk.jshell.spi.ExecutionControl;
 import org.jetbrains.annotations.NotNull;
 import picocli.CommandLine;
 
@@ -23,7 +27,9 @@ import picocli.CommandLine;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -58,11 +64,19 @@ public class ModelDataGenerator extends Terminal {
 	@CommandLine.Option(names = {"-m", "--maxDist"}, description = "Maximum distance of the cofounded endogenous variables.")
 	private int maxDist = 3;
 
-	@CommandLine.Option(names = {"-t", "--exoTreewidth"}, description = "Exogenous treewidth: 0 for markovian and 1 for quasi-markovian. Defaults to 1")
-	private int twExo = 1;
+	@CommandLine.Option(names = {"--mk", "--markovianity"}, description = "Markovianity: 0 for markovian and 1 for quasi-markovian. Defaults to 1")
+	private int markovianity = 1;
 
 	@CommandLine.Option(names = {"-r", "--reduction"}, description = "Reduction constant for the exogenous domains.")
 	private double reductionK = 1.0;
+
+
+	@CommandLine.Option(names={"--query"}, description = "Run and store ACE and PNS queries. Defaults to false")
+	boolean query = false;
+
+	String[][] queries = null;
+	String[][] info = null;
+
 
 	@Override
 	protected void checkArguments() {
@@ -71,7 +85,7 @@ public class ModelDataGenerator extends Terminal {
 		assertTrue( Arrays.asList("chain").stream().anyMatch(s -> s.equals(topology)), " Wrong value for topology: "+topology);
 		assertTrue( nEndo>2, " Wrong value for nEndo: "+nEndo);
 		assertTrue( dataSize>0, " Wrong value for dataSize: "+dataSize);
-		assertTrue( twExo ==0 || twExo ==1, " Wrong value for twExo: "+ twExo);
+		assertTrue( markovianity ==0 || markovianity ==1, " Wrong value for markovianity: "+ markovianity);
 		assertTrue( reductionK>=0.0 && reductionK<=1.0, " Wrong value for reductionK: "+reductionK);
 
 
@@ -80,8 +94,8 @@ public class ModelDataGenerator extends Terminal {
 	private String getGenID(){
 		String id = "";
 		id += topology;
-		id += "_twExo"+ twExo;
-		if(twExo >0)
+		id += "_mk"+ markovianity;
+		if(markovianity >0)
 			id += "_maxDist"+maxDist;
 		id += "_nEndo"+nEndo;
 		id += "_k"+String.valueOf(reductionK).replace(".","");
@@ -113,7 +127,7 @@ public class ModelDataGenerator extends Terminal {
 
 		buildBaseModel();
 		transformAndSample();
-		plotStats();
+		statistics();
 		save();
 	}
 
@@ -127,43 +141,125 @@ public class ModelDataGenerator extends Terminal {
 		logger.info("Saving data at:" +fullpath);
 		DataUtil.toCSV(fullpath, data);
 
+		fullpath = wdir.resolve(filename+"_info.csv").toAbsolutePath().toString();
+		logger.info("Saving info at:" +fullpath);
+		DataUtil.toCSV(fullpath, info);
+
+
 		fullpath = wdir.resolve(filename+".uai").toAbsolutePath().toString();
 		logger.info("Saving model at:" +fullpath);
 		IO.write(model, fullpath);
 
+		if(query) {
+			fullpath = wdir.resolve(filename + "_queries.csv").toAbsolutePath().toString();
+			logger.info("Saving queries at:" + fullpath);
+			DataUtil.toCSV(fullpath, queries);
+		}
+
+
 	}
 
-	private void plotStats() {
-		// Reduction
+	private void statistics() {
+
+		List<String> infoValues = new ArrayList<>();
+
 		logger.info("Resulting model:");
-		logger.info("- Average U size: "+ StatisticsModel.of(model).avgExoCardinality());
+
+		String avgExoCard = String.valueOf(StatisticsModel.of(model).avgExoCardinality());
+		String numExoVars = String.valueOf(model.getExogenousVars().length);
+		String numEndoVars = String.valueOf(model.getEndogenousVars().length);
+		String markovianity = String.valueOf(this.markovianity);
+
+		logger.info("- Average U size: "+ avgExoCard);
 		logger.info("- ExoDAG: "+model.getExogenousDAG());
-		logger.info("- Number of U vars: "+model.getExogenousVars().length);
+		logger.info("- Number of U vars: "+numExoVars);
 		logger.info("- U set: "+Arrays.toString(model.getExogenousVars()));
-		logger.info("- Number of X vars: "+model.getEndogenousVars().length);
+		logger.info("- Number of X vars: "+numEndoVars);
 		logger.info("- X set: "+Arrays.toString(model.getEndogenousVars()));
 		logger.info("- ExoTreewidth: "+model.getExogenousTreewidth());
 		logger.info("- Markovian: "+ CausalInfo.of(model).isMarkovian());
+
+
+		if(query) {
+			List<String[]> data = new ArrayList<>();
+			data.add(new String[]{"topology", "avg_exo_card", "num_exo_vars", "num_endo_vars", "markovianity",});
+			data.add(new String[]{topology, avgExoCard, numExoVars, numEndoVars, markovianity});
+			info = data.toArray(String[][]::new);
+		}
+
 	}
 
 	private void transformAndSample() {
 		int k = 0;
+		StructuralCausalModel candidateModel = null;
 		do {
 			k++;
 			try {
 				if((k % 5)==1) logger.info("Generating candidate model number "+k);
 				// Create a model with cofounders
-				StructuralCausalModel candidateModel = addCofounders(model);
+				candidateModel = addCofounders(model);
 				// sample data
 				data = DataUtil.SampleCompatible(candidateModel, dataSize, 5);
 				//Reduce the model
-				if (data != null)
-					model = reduce(candidateModel);
-			}catch (Exception e) {}
+				if (data != null) {
+					candidateModel = reduce(candidateModel);
+					if(query)
+						runQueries(candidateModel);
+				}
 
-		}while(data==null || !model.isCompatible(data));
+			}catch (Exception e) {
+				logger.info("Exception when generating candidate model");
+			}
+
+		}while(data==null || !candidateModel.isCompatible(data));
+
+		model = candidateModel;
 		logger.info("Found compatibility in model "+k);
+
 		logger.info(String.valueOf(model));
+	}
+
+
+	private void runQueries(StructuralCausalModel model) throws ExecutionControl.NotImplementedException, InterruptedException {
+
+		// runQueries(CausalInference inf)
+		List res = new ArrayList();
+		VertexFactor p = null;
+		double[] v = null;
+
+		//todo: see for other topologies
+		int[] endoOrder = DAGUtil.getTopologicalOrder(model.getNetwork(), model.getEndogenousVars());
+		int cause = endoOrder[0];
+		int effect = endoOrder[endoOrder.length-1];
+
+
+
+		logger.info("Running queries with cause="+cause+" and effect="+effect);
+		CredalCausalVE inf = new CredalCausalVE(model);
+
+		res.add(cause);
+		res.add(effect);
+
+		IntervalFactor ace = (IntervalFactor) inf.averageCausalEffects(cause, effect);
+		res.add(ace.getDataLower()[0][0]);
+		res.add(ace.getDataUpper()[0][0]);
+		logger.info("ACE: "+Arrays.toString(new double[]{ace.getDataLower()[0][0], ace.getDataUpper()[0][0]}));
+
+
+		p = (VertexFactor) inf.probNecessityAndSufficiency(cause, effect);
+		v =  Doubles.concat(p.getData()[0]);
+		if(v.length==1) v = new double[]{v[0],v[0]};
+		Arrays.sort(v);
+		for(double val : v) res.add(val);
+		logger.info("PNS: "+Arrays.toString(v));
+
+		List<String[]> data = new ArrayList<>();
+		data.add(new String[]{"cause", "effect",  "ace_l", "ace_u","pns_l", "pns_u",});
+		data.add((String[]) res.stream().map(i -> String.valueOf(i)).toArray(String[]::new));
+		queries = data.toArray(String[][]::new);
+
+		// return
+		//return res.stream().mapToDouble(d -> (double)d).toArray();
 	}
 
 	private StructuralCausalModel reduce(StructuralCausalModel candidateModel) {
@@ -182,7 +278,7 @@ public class ModelDataGenerator extends Terminal {
 	private StructuralCausalModel addCofounders(StructuralCausalModel model) {
 		// Select cofounders
 		int[][] pairsX = Combinatorial.randomPairs(model.getEndogenousVars(), maxDist);
-		int numMerged = (RandomUtil.getRandom().nextInt(pairsX.length-1) + 2) * twExo;
+		int numMerged = (RandomUtil.getRandom().nextInt(pairsX.length-1) + 2) * markovianity;
 		int[][] finalPairsX = pairsX;
 		pairsX = IntStream.range(0, numMerged).mapToObj(i -> finalPairsX[i]).toArray(int[][]::new);
 		StructuralCausalModel newModel = Cofounding.mergeExoParents(model, pairsX);

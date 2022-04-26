@@ -135,6 +135,9 @@ public abstract class CausalInference<M, R extends GenericFactor>{
     }
 
 
+    public GenericFactor averageCausalEffects(int cause, int effect) throws InterruptedException {
+        return averageCausalEffects(cause,effect, 1,1,0);
+    }
     public GenericFactor averageCausalEffects(int cause, int effect, int effectVal, int causeVal1, int causeVal2) throws InterruptedException {
 
 

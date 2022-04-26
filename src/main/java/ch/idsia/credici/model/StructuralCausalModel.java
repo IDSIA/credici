@@ -796,7 +796,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		int i = 0;
 		for(int u : getExogenousVars()){
 			int[] ch_u = getEndogenousChildren(u);
-			empirical[i] = getProb(ch_u).fixPrecission(5,ch_u);
+			empirical[i] = getProb(ch_u).fixPrecission(FactorUtil.DEFAULT_DECIMALS,ch_u);
 			i++;
 		}
 		return empirical;
@@ -808,7 +808,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		int i = 0;
 		for(int[] x : this.endoConnectComponents()) {
 			BayesianFactor p = getProb(x);
-			if(fix) p = p.fixPrecission(5, x);
+			if(fix) p = p.fixPrecission(FactorUtil.DEFAULT_DECIMALS, x);
 			empirical.put(Arrays.stream(x).boxed().collect(Collectors.toSet()), p);
 			i++;
 		}

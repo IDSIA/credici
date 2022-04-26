@@ -126,7 +126,6 @@ public class BiasSelectIncremental {
 
 
 
-
 		//// Inference variables
 		EMCredalBuilder builder = null;
 		CausalMultiVE mve = null;

@@ -1,5 +1,7 @@
 package ch.idsia.credici.utility.experiments;
 
+import org.apache.commons.logging.Log;
+
 import java.io.*;
 
 public class Logger {
@@ -52,8 +54,9 @@ public class Logger {
 		return this;
 	}
 
-	public void setLevel(Level level) {
+	public Logger setLevel(Level level) {
 		this.level = level;
+		return this;
 	}
 
 	public Logger setToStdOutput(boolean toStdOutput) {
@@ -108,6 +111,13 @@ public class Logger {
 	public void warn(String msg){print(msg, Level.WARN);}
 	public void error(String msg){print(msg, Level.ERROR);}
 	public void severe(String msg){print(msg, Level.SEVERE);}
+
+	public Logger setVerbose(boolean active){
+		if(active)
+			return this.setLevel(Level.INFO);
+		return this.setLevel(Level.OFF);
+	}
+
 
 	public static void main(String[] args) {
 		Logger logger = new Logger();

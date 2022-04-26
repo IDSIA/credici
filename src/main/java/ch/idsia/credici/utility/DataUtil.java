@@ -7,12 +7,15 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
+import com.opencsv.CSVWriter;
+import com.opencsv.CSVWriterBuilder;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -127,6 +130,17 @@ public class DataUtil {
 				.setVarNames(varNames).write();
 	}
 
+	public static void toCSV(String filename, String[][] data) throws IOException {
+		CSVWriter writer = (CSVWriter) new CSVWriterBuilder(new FileWriter(filename))
+				.withSeparator(',')
+				.withQuoteChar(CSVWriter.NO_QUOTE_CHARACTER)
+				.build();
+		writer.writeAll(List.of(data));
+		writer.close();
+
+	}
+
+
 	public static TIntIntMap[] fromCSV(String filename) throws IOException, CsvException {
 		ReaderCSV reader = new ReaderCSV(filename).read();
 		return ObservationBuilder.observe(reader.getVarNames(), reader.getData());
@@ -183,6 +197,20 @@ public class DataUtil {
 		return null;
 	}
 
+	public static void main(String[] args) throws IOException {
+
+		List<String[]> data = new ArrayList<>();
+		data.add(new String[]{"cause", "effect"});
+		data.add(new String[]{"0", "0"});
+
+		toCSV("test_ig.csv", data.toArray(String[][]::new));
+
+	}
+
+
 }
+
+
+
 
 

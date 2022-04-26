@@ -41,7 +41,7 @@ public class pipeline {
 
 	public static void main(String[] args) throws ExecutionControl.NotImplementedException, InterruptedException {
 
-
+		model = getModel();
 		cause = model.getEndogenousVars()[0];
 		effect = model.getEndogenousVars()[model.getEndogenousVars().length-1];
 		data = model.samples(dataSize, model.getEndogenousVars());
@@ -71,13 +71,10 @@ public class pipeline {
 		List<int[]> assigList = getRandomSeqIntMask(parentComb, true);
 
 
-		// Pick only some of the assigments
-		List<int[]> finalAssigList = assigList;
-		assigList = DoubleStream.of(0.,1./5, 2./5, 3./5, 4./5, 1.)
-				.mapToInt(i -> (int) Math.floor(finalAssigList.size()*i))
-				.mapToObj(i -> finalAssigList.get(i)).collect(Collectors.toList());
-
-
+		System.out.println(assigList.size()+" different selection tables");
+		for(int[] assignments : assigList){
+			System.out.println(Arrays.toString(assignments));
+		}
 
 		for(int[] assignments : assigList) {
 
@@ -87,13 +84,10 @@ public class pipeline {
 			int selectVar = ArraysUtil.difference(modelBiased.getEndogenousVars(), model.getEndogenousVars())[0];
 			TIntIntMap[] dataBiased = SelectionBias.applySelector(data, modelBiased, selectVar);
 
-
 			int n1 = (int) Stream.of(dataBiased).filter(d->d.get(selectVar)==1).count();
 			double pS1 = (1.0 * n1)/dataBiased.length;
 
-			System.out.println("\npS1:"+pS1);
-
-
+			System.out.println("p(S=1):"+pS1);
 
 			Watch.start();
 

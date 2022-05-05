@@ -1,22 +1,22 @@
 package ch.idsia.credici.inference;
 
+import java.util.Collection;
+
+import org.apache.commons.lang3.ArrayUtils;
+
+import ch.idsia.credici.inference.approxlp.ApproxLP1;
 import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
-import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
-import ch.idsia.crema.inference.approxlp.Inference;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.preprocess.BinarizeEvidence;
 import ch.idsia.crema.preprocess.CutObservedSepHalfspace;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
-import org.apache.commons.lang3.ArrayUtils;
-
-import java.util.Collection;
 
 public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalFactor> {
 
@@ -100,14 +100,14 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
         }
 
         IntervalFactor result = null;
-        Inference lp1 = new Inference();
+        ApproxLP1 lp1 = new ApproxLP1();
 
         if(filteredEvidence.size()>0) {
             int evbin = new BinarizeEvidence().executeInline(infModel, filteredEvidence, filteredEvidence.size(), false);
             result = lp1.query(infModel, target[0], evbin);
 
         }else{
-            result = lp1.query(infModel, target[0]);
+            result = lp1.query(infModel, target[0], -1);
         }
 
         return result;

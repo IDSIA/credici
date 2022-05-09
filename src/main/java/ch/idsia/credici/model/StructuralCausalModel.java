@@ -790,56 +790,65 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 
-	public BayesianFactor[] getEmpiricalProbs(){
+	public List getEmpiricalDomains(int exoVar){
 
-		BayesianFactor[] empirical = new BayesianFactor[getExogenousVars().length];
-		int i = 0;
-		for(int u : getExogenousVars()){
-			int[] ch_u = getEndogenousChildren(u);
-			empirical[i] = getProb(ch_u).fixPrecission(FactorUtil.DEFAULT_DECIMALS,ch_u);
-			i++;
+		if(!this.isExogenous(exoVar))
+			throw new IllegalArgumentException(exoVar+" is not exogenous");
+
+		List domains = new ArrayList();
+		int[] ch = DAGUtil.getTopologicalOrder(this.getNetwork(), this.getEndogenousChildren(exoVar));
+
+		for(int k = 0; k<ch.length; k++) {
+			HashMap dom = new HashMap();
+			int x = ch[k];
+			int[] previous = IntStream.range(0, k).map(i -> ch[i]).toArray();
+			int[] right = ArraysUtil.unionSet(previous, this.getEndegenousParents(ArraysUtil.append(previous, x)));
+			dom.put("left", x);
+			dom.put("right", right);
+			domains.add(dom);
 		}
-		return empirical;
+
+		return domains;
+	}
+
+
+	public BayesianFactor[] getEmpiricalProbs(){
+		return this.getEmpiricalMap(true).values().toArray(BayesianFactor[]::new);
 	}
 
 	public HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap(boolean fix){
 
 		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
-		int i = 0;
-		for(int[] x : this.endoConnectComponents()) {
-			BayesianFactor p = getProb(x);
-			if(fix) p = p.fixPrecission(FactorUtil.DEFAULT_DECIMALS, x);
-			empirical.put(Arrays.stream(x).boxed().collect(Collectors.toSet()), p);
-			i++;
+
+		VariableElimination inf = new FactorVariableElimination(this.getVariables());
+		inf.setFactors(this.getFactors());
+
+		for(int u: this.getExogenousVars()) {
+			BayesianFactor fu = null;
+			for (Object dom_ : this.getEmpiricalDomains(u)) {
+				HashMap dom = (HashMap) dom_;
+				int left = (int) dom.get("left");
+				int[] right = (int[]) dom.get("right");
+				BayesianFactor f = (BayesianFactor) inf.conditionalQuery(left, right);
+				if (fu == null)
+					fu = f;
+				else
+					fu = fu.combine(f);
+			}
+
+			if(fix)
+				fu = fu.fixPrecission(FactorUtil.DEFAULT_DECIMALS, this.getEndogenousChildren(u));
+			empirical.put(Arrays.stream(this.getEndogenousChildren(u)).boxed().collect(Collectors.toSet()), fu);
 		}
+
 		return empirical;
 	}
 
 	public HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap() {
 		return this.getEmpiricalMap(true);
 	}
-	/*
-	public HashMap<Set<Integer>, BayesianFactor> getTianFactorisation(){
 
-		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
-		for(int[] c : this.endoConnectComponents()) {
-
-			int[] pa = IntStream.of(this.getEndegenousParents(c)).filter(v -> !ArrayUtils.contains(c, v)).toArray();
-
-			for(int x : c){
-
-
-				BayesianFactor f = merge().conditionalProb(new int[]{x}, pa);
-
-
-			}
-
-			//empirical.put(Arrays.stream(x).boxed().collect(Collectors.toSet()), p);
-		}
-		return empirical;
-	}
-
-*/
+	@Deprecated
 	public BayesianNetwork getEmpiricalNet(){
 
 		if(this.getExogenousTreewidth()>1)
@@ -855,44 +864,11 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			bnet.addParents(v, getEndegenousParents(v));
 			bnet.setFactor(v, getProb(v).fixPrecission(5, v));
 		}
-
 		return bnet;
 	}
 
 
 
-	public StructuralCausalModel findModelWithEmpirical(int prob_decimals, BayesianFactor[] empirical, int[] keepFactors, long maxIterations){
-
-
-		if(this.getExogenousTreewidth()>1)
-			throw new IllegalArgumentException("Non quasi markovian model");
-
-		StructuralCausalModel smodel = this.copy();
-		SparseModel cmodel = null;
-		for (int i = 0; i < maxIterations; i++) {
-
-			try {
-				smodel.fillWithRandomFactors(prob_decimals);
-				for(int v:keepFactors)
-					smodel.setFactor(v,this.getFactor(v));
-				cmodel = smodel.toCredalNetwork(true, empirical);
-				break;
-
-			} catch (Exception e) { }
-		}
-
-
-		if(cmodel != null){
-			for(int u : smodel.getExogenousVars()){
-				smodel.setFactor(u, ((VertexFactor)cmodel.getFactor(u)).sampleVertex());
-			}
-
-		}else{
-			smodel = null;
-		}
-
-		return smodel;
-	}
 
 	public TIntIntMap[] samples(int N, int... vars) {
 		return IntStream.range(0, N).mapToObj(i -> sample(vars)).toArray(TIntIntMap[]::new);
@@ -910,8 +886,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return sample(new TIntIntHashMap(), vars);
 	}
 	public TIntIntMap sample(TIntIntMap obs, int... vars){
-
-
 
 		Iterator it = this.getNetwork().iterator();
 		while(it.hasNext()){
@@ -1113,8 +1087,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	public List<Integer> getUncompatibleNodes(TIntIntMap[] data, int fixDecimals){
 		HashMap empMap = DataUtil.getEmpiricalMap(this, data);
-
-		//System.out.println(empMap);
 
 		if(fixDecimals>0)
 			empMap = FactorUtil.fixEmpiricalMap(empMap, fixDecimals);

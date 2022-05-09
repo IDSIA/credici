@@ -92,6 +92,9 @@ public class DataUtil {
 
 
 	public static BayesianFactor getCondProb(TIntIntMap[] data, Strides left, Strides right){
+
+		if(right==null || right.getVariables().length==0)
+			return getJointProb(data, left);
 		if(ArraysUtil.intersection(left.getVariables(), right.getVariables()).length > 0)
 				throw new IllegalArgumentException("Overlapping domains");
 		BayesianFactor joint = getCounts(data, left.concat(right));
@@ -101,18 +104,29 @@ public class DataUtil {
 
 
 
-	public static HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap(StructuralCausalModel model, TIntIntMap[] data ){
 
+
+	public static HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap(StructuralCausalModel model, TIntIntMap[] data ){
 		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
 
-		for(int[] right : model.endoConnectComponents()) {
-			int[] left = model.getEndegenousParents(right);
-			BayesianFactor p = null;
-			if(left.length>0)
-				p = DataUtil.getCondProb(data,model.getDomain(right),model.getDomain(left));
-			else
-				p = DataUtil.getJointProb(data,model.getDomain(right));
-			empirical.put(Arrays.stream(right).boxed().collect(Collectors.toSet()), p);
+		for(int u: model.getExogenousVars()) {
+			BayesianFactor fu = null;
+			for (Object dom_ : model.getEmpiricalDomains(u)) {
+				HashMap dom = (HashMap) dom_;
+				int left = (int) dom.get("left");
+				int[] right = (int[]) dom.get("right");
+
+				Strides leftDom = model.getDomain((int) dom.get("left"));
+				Strides rightDom = model.getDomain((int[]) dom.get("right"));
+
+				BayesianFactor f = DataUtil.getCondProb(data, leftDom, rightDom);
+				if (fu == null)
+					fu = f;
+				else
+					fu = fu.combine(f);
+
+			}
+			empirical.put(Arrays.stream(model.getEndogenousChildren(u)).boxed().collect(Collectors.toSet()), fu);
 		}
 
 	 	return empirical;

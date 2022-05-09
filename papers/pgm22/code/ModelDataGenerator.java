@@ -123,6 +123,7 @@ public class ModelDataGenerator extends Terminal {
 		CommandLine.run(new ModelDataGenerator(), args);
 		if(errMsg!="")
 			System.exit(-1);
+		System.exit(0);
 	}
 
 

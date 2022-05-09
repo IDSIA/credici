@@ -84,6 +84,7 @@ def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reductio
 
     javafile = Path(code_folder, "ModelDataGenerator.java")
 
+    print(args)
     cmd = f"{java} -cp {jar_file} {javafile} {args}"
     print(cmd)
     exec_bash_print(cmd) 
@@ -92,8 +93,17 @@ def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reductio
 
 ## main code ##
 
+#generate("chain", nEndo, markovian=markovian, reduction=reduction, seed=seed)
+#args = {'nEndo': 7, 'markovian': False, 'reduction': 1.0, 'seed': 1}
+#generate("chain", **args)
+#print("finished")
+#exit()
 for seed in SEEDS:
     for nEndo in [5,7,10]:
         for reduction in [0.5, 0.75, 1.0]:
             for markovian in [False, True]:
-                generate("chain", nEndo, markovian=markovian, reduction=reduction, seed=seed)
+                args = dict(nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed)
+                print(f"args = {args}")
+                generate("chain", **args)
+                print("model generated")
+print("finished")

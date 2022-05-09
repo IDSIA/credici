@@ -82,6 +82,7 @@ public class Logger {
 			toFile = false;
 
 		}
+		this.info("Closed log file");
 	}
 
 	public static void setGlobal(Logger logger){

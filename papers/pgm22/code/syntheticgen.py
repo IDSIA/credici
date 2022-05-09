@@ -31,7 +31,7 @@ exp_folder = Path(prj_path, "papers/pgm22/")
 code_folder = Path(exp_folder, "code")
 output_folder = Path(exp_folder, "models", setname)
 
-# todo: update if credici version is changed. Note: requires rebuild
+# todo: update if credici version is changed. Note: requires rebuild using: mvn clean compile assembly:single
 jar_file = Path(prj_path, "target/credici-0.1.3-jar-with-dependencies.jar")
 
 #todo: set java command depending on location
@@ -67,7 +67,7 @@ def strtime():
 
 #### Function that interacts with credici
 
-def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reduction=1.0, query=True, seed = None):
+def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reduction=1.0, query=True, timeout=30, seed = None):
     args = ""
     args += f"-o {output_folder} "
     args += f"-n {nEndo} "
@@ -75,6 +75,7 @@ def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reductio
     args += f"-m {maxdist} "
     args += f"--mk {0 if markovian else 1} "
     args += f"-r {reduction} "
+    args += f"-t {timeout} "
 
     if seed != None: args += f"-s {seed} "
     if query: args += f"--query "

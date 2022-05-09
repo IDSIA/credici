@@ -12,10 +12,13 @@ import ch.idsia.credici.utility.Combinatorial;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.experiments.AsynQuery;
 import ch.idsia.credici.utility.experiments.Terminal;
+import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
+import ch.idsia.crema.utility.InvokerWithTimeout;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
 import gnu.trove.map.TIntIntMap;
@@ -30,6 +33,8 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -43,9 +48,11 @@ public class ModelDataGenerator extends Terminal {
 	-n nEndo
 	-d datasize
 	-m maxDist
-	-t twExo
+	-mk markovianity
 	-r reduction
 	chain
+
+	-n 10 -d 500 --mk 1 --query -r 0.8 chain
 	 */
 
 
@@ -63,6 +70,9 @@ public class ModelDataGenerator extends Terminal {
 
 	@CommandLine.Option(names = {"-m", "--maxDist"}, description = "Maximum distance of the cofounded endogenous variables.")
 	private int maxDist = 3;
+
+	@CommandLine.Option(names = {"-t", "--timeout"}, description = "Timeout in seconds for running the queries. Default to 60.")
+	private int timeout = 60;
 
 	@CommandLine.Option(names = {"--mk", "--markovianity"}, description = "Markovianity: 0 for markovian and 1 for quasi-markovian. Defaults to 1")
 	private int markovianity = 1;
@@ -203,12 +213,14 @@ public class ModelDataGenerator extends Terminal {
 				//Reduce the model
 				if (data != null) {
 					candidateModel = reduce(candidateModel);
-					if(query)
+					if(query) {
 						runQueries(candidateModel);
+					}
 				}
 
 			}catch (Exception e) {
 				logger.info("Exception when generating candidate model");
+				data = null;
 			}
 
 		}while(data==null || !candidateModel.isCompatible(data));
@@ -219,8 +231,7 @@ public class ModelDataGenerator extends Terminal {
 		logger.info(String.valueOf(model));
 	}
 
-
-	private void runQueries(StructuralCausalModel model) throws ExecutionControl.NotImplementedException, InterruptedException {
+	private void runQueries(StructuralCausalModel model) throws ExecutionControl.NotImplementedException, InterruptedException, ExecutionException, TimeoutException {
 
 		// runQueries(CausalInference inf)
 		List res = new ArrayList();
@@ -232,21 +243,22 @@ public class ModelDataGenerator extends Terminal {
 		int cause = endoOrder[0];
 		int effect = endoOrder[endoOrder.length-1];
 
-
-
 		logger.info("Running queries with cause="+cause+" and effect="+effect);
 		CredalCausalVE inf = new CredalCausalVE(model);
 
 		res.add(cause);
 		res.add(effect);
 
-		IntervalFactor ace = (IntervalFactor) inf.averageCausalEffects(cause, effect);
+
+		AsynQuery.setArgs(inf, "ace", cause, effect);
+		IntervalFactor ace = (IntervalFactor) new InvokerWithTimeout<GenericFactor>().run(AsynQuery::run, timeout);
+		//IntervalFactor ace = (IntervalFactor) AsynQuery.run();
 		res.add(ace.getDataLower()[0][0]);
 		res.add(ace.getDataUpper()[0][0]);
 		logger.info("ACE: "+Arrays.toString(new double[]{ace.getDataLower()[0][0], ace.getDataUpper()[0][0]}));
 
-
-		p = (VertexFactor) inf.probNecessityAndSufficiency(cause, effect);
+		AsynQuery.setArgs(inf, "pns", cause, effect);
+		p = (VertexFactor) new InvokerWithTimeout<GenericFactor>().run(AsynQuery::run, timeout);
 		v =  Doubles.concat(p.getData()[0]);
 		if(v.length==1) v = new double[]{v[0],v[0]};
 		Arrays.sort(v);

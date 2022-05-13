@@ -10,7 +10,7 @@ from pathlib import Path
 
 #### Parameter experiments
 
-setname = "synthetic/1000"
+setname = "synthetic/1000/set1"
 idx_start = None
 idx_end = None
 seed = 0

@@ -11,7 +11,7 @@ from pathlib import Path
 #### Parameter experiments
 
 print(sys.argv)
-setname = "synthetic/1000"
+setname = "synthetic/1000/set1"
 
 if len(sys.argv) > 1:
     i, j = int(sys.argv[1]), int(sys.argv[2])

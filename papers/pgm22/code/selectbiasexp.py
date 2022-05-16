@@ -20,7 +20,7 @@ if len(sys.argv)>1:
     setname = sys.argv[1]
 if len(sys.argv)>3:
     idx_start = int(sys.argv[2])
-    idx_start = int(sys.argv[3])
+    idx_end = int(sys.argv[3])
 
 if len(sys.argv)>4:
     seed = int(sys.argv[4])
@@ -113,5 +113,6 @@ def run(model, maxiter=300, executions=30):
     exec_bash_print(cmd)
 
 
-#for m in MODELS:
-#    run(m)
+for m in MODELS:
+    print(m)
+    run(m)

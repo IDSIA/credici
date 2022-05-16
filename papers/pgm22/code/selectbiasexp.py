@@ -10,26 +10,34 @@ from pathlib import Path
 
 #### Parameter experiments
 
-print(sys.argv)
 setname = "synthetic/1000/set1"
+idx_start = None
+idx_end = None
+seed = 0
 
-if len(sys.argv) > 1:
-    i, j = int(sys.argv[1]), int(sys.argv[2])
-    if j<i: i,j = j,i
-    SEEDS = list(range(i,j))
-else:
-    SEEDS = [0]
+if len(sys.argv)>1:
+    setname = sys.argv[1]
+if len(sys.argv)>3:
+    idx_start = int(sys.argv[2])
+    idx_start = int(sys.argv[3])
+
+if len(sys.argv)>4:
+    seed = int(sys.argv[4])
+
+
 
 print("Running experiments.py")
 print(setname)
-print(SEEDS)
+
 
 
 ### Global variables
 prj_path = Path(str(Path("../../../").resolve()) + "/")
 exp_folder = Path(prj_path, "papers/pgm22/")
 code_folder = Path(exp_folder, "code")
-output_folder = Path(exp_folder, "models", setname)
+output_folder = Path(exp_folder, "results", setname)
+models_folder = Path(exp_folder, "models", setname)
+
 
 # todo: update if credici version is changed. Note: requires rebuild using: mvn clean compile assembly:single
 jar_file = Path(prj_path, "target/credici-0.1.3-jar-with-dependencies.jar")
@@ -41,6 +49,7 @@ java = "java"
 print(prj_path)
 print(exp_folder)
 print(output_folder)
+print(models_folder)
 print(jar_file)
 
 #### Auxiliary function for interacting with bash
@@ -56,54 +65,48 @@ def gen_exec(cmd, check_return: bool = False):
 
 def exec_bash(cmd: str, check_return: bool = False):
     return [s for s in gen_exec(cmd.split(), check_return)]
-    
+
 def exec_bash_print(cmd: str, check_return: bool = False):
     for path in gen_exec(cmd.split(), check_return):
         print(path, end="")
-        
+
 def strtime():
     return datetime.now().strftime("%y%m%d_%H%M%S")
 
 
+
+## get in folder
+import os
+
+
+
+def select_model(f):
+    if idx_start is not None and idx_end is not None:
+        return any([f.endswith(f"_{i}.uai") for i in range(idx_start, idx_end)])
+    return f.endswith(f".uai")
+
+MODELS = [f for f in os.listdir(models_folder) if select_model(f)]
+
 #### Function that interacts with credici
 
-def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reduction=1.0, query=True, timeout=30, seed = None):
+
+# -m 50 -x 4 -s 0 --debug papers/pgm22/models/synthetic/1000/chain_mk1_maxDist3_nEndo5_k075_3.uai
+
+model = MODELS[3]
+maxiter = 30
+executions = 3
+
+def run(model, maxiter=300, executions=30):
     args = ""
     args += f"-o {output_folder} "
-    args += f"-n {nEndo} "
-    args += f"-d {datasize} "
-    args += f"-m {maxdist} "
-    args += f"--mk {0 if markovian else 1} "
-    args += f"-r {reduction} "
-    args += f"-t {timeout} "
+    args += f"-m {maxiter} "
+    args += f"-x {executions} "
+    args += f"-s {seed} "
+    args += f"{Path(models_folder, model)}"
 
-    if seed != None: args += f"-s {seed} "
-    if query: args += f"--query "
-
-    args += f"{topology} "
-
-    javafile = Path(code_folder, "ModelDataGenerator.java")
+    javafile = Path(code_folder, "SelectBiasExp.java")
 
     print(args)
     cmd = f"{java} -cp {jar_file} {javafile} {args}"
     print(cmd)
-    exec_bash_print(cmd) 
-
-
-
-## main code ##
-
-#generate("chain", nEndo, markovian=markovian, reduction=reduction, seed=seed)
-#args = {'nEndo': 7, 'markovian': False, 'reduction': 1.0, 'seed': 1}
-#generate("chain", **args)
-#print("finished")
-#exit()
-for seed in SEEDS:
-    for nEndo in [5,7,10]:
-        for reduction in [0.5, 0.75, 1.0]:
-            for markovian in [False, True]:
-                args = dict(nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed)
-                print(f"args = {args}")
-                generate("chain", **args)
-                print("model generated")
-print("finished")
+    exec_bash_print(cmd)

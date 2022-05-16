@@ -56,8 +56,6 @@ public class RunSingleEM extends Terminal {
 	protected void entryPoint() throws IOException, CsvException, InterruptedException {
 
 		Path wdir = Paths.get(".");
-
-
 		RandomUtil.setRandomSeed(seed);
 		logger.info("Starting logger with seed "+seed);
 

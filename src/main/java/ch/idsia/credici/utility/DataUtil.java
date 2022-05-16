@@ -154,6 +154,10 @@ public class DataUtil {
 
 	}
 
+	public static void toCSV(String filename, List<HashMap> data) throws IOException {
+		toCSV(filename, CollectionTools.toStringMatrix(data));
+	}
+
 
 	public static TIntIntMap[] fromCSV(String filename) throws IOException, CsvException {
 		ReaderCSV reader = new ReaderCSV(filename).read();

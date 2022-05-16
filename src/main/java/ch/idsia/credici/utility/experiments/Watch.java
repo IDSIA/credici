@@ -16,8 +16,22 @@ public class Watch {
 	}
 
 	public static void stopAndPrint(){
+		stopAndPrint("Ellapsed time: ");
+	}
+
+	public static void stopAndLog(Logger logger){
+		stopAndLog(logger, "Ellapsed time: ");
+	}
+
+
+	public static void stopAndPrint(String message){
 		watch.stop();
-		System.out.println("Ellapsed time: "+watch.getTime()+".ms");
+		System.out.println(message+watch.getTime()+".ms");
+	}
+
+	public static void stopAndLog(Logger logger, String message){
+		watch.stop();
+		logger.info(message+watch.getTime()+".ms");
 	}
 
 	public static long pause(){
@@ -40,4 +54,7 @@ public class Watch {
 		System.out.println("Ellapsed time: "+watch.getTime()+".ms");
 	}
 
+	public static StopWatch getWatch() {
+		return watch;
+	}
 }

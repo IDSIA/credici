@@ -2,13 +2,13 @@ package ch.idsia.credici.utility;
 
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class CollectionTools {
 	public static List<Integer> asList(int[] elements) {
@@ -67,7 +67,46 @@ public class CollectionTools {
 	}
 
 
+	public static String[][] toStringMatrix(List<HashMap> table){
 
+		String[] colnames = (String[]) (table.stream()
+				.map(r -> (r).keySet())
+				.reduce((s1,s2)-> Sets.union(s1,s2)).get().toArray(String[]::new));
+
+
+		String[][] out = new String[table.size()+1][];
+		out[0] = colnames;
+
+		for(int i=1; i<out.length; i++) {
+			HashMap r = (HashMap) table.get(i-1);
+			out[i] = Arrays.stream(colnames)
+					.map(c -> String.valueOf(r.getOrDefault(c, "")))
+					.toArray(String[]::new);
+		}
+
+
+		return out;
+	}
+
+
+	public static void main(String[] args) {
+
+		List table = new ArrayList<>();
+
+		HashMap r1 = new HashMap();
+		r1.put("a", true);
+		r1.put("b", 1);
+		table.add(r1);
+
+		HashMap r2 = new HashMap();
+		r2.put("a", false);
+		r2.put("c", 45.2);
+		table.add(r2);
+
+		for(String[] s : toStringMatrix(table))
+			System.out.println(Arrays.toString(s));
+
+	}
 
 
 }

@@ -112,4 +112,4 @@ def run(model, maxiter=300, executions=30):
 
 
 for m in MODELS:
-    run(model)
+    run(m)

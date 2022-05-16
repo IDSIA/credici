@@ -51,6 +51,7 @@ print(exp_folder)
 print(output_folder)
 print(models_folder)
 print(jar_file)
+print([idx_start, idx_end] if idx_start is not None and idx_end is not None else [])
 
 #### Auxiliary function for interacting with bash
 
@@ -111,5 +112,5 @@ def run(model, maxiter=300, executions=30):
     exec_bash_print(cmd)
 
 
-for m in MODELS:
-    run(m)
+#for m in MODELS:
+#    run(m)

@@ -87,14 +87,13 @@ def select_model(f):
 
 MODELS = [f for f in os.listdir(models_folder) if select_model(f)]
 
+print(f"{len(MODELS)} models in folder")
+
 #### Function that interacts with credici
 
 
 # -m 50 -x 4 -s 0 --debug papers/pgm22/models/synthetic/1000/chain_mk1_maxDist3_nEndo5_k075_3.uai
 
-model = MODELS[3]
-maxiter = 30
-executions = 3
 
 def run(model, maxiter=300, executions=30):
     args = ""
@@ -110,3 +109,7 @@ def run(model, maxiter=300, executions=30):
     cmd = f"{java} -cp {jar_file} {javafile} {args}"
     print(cmd)
     exec_bash_print(cmd)
+
+
+for m in MODELS:
+    run(model)

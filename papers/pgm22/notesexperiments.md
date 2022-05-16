@@ -3,10 +3,10 @@ commands
 
 
 Generate jar:
-
+cd /dev/credici/
 mvn clean compile assembly:single
 
-cd dev/credici/papers/pgm22/code/
+cd ./papers/pgm22/code/
 
 
 Experiments with defaults (all the models, seed=0, synthetic/1000/set1 folder)

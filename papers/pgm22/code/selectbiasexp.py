@@ -56,7 +56,7 @@ print([idx_start, idx_end] if idx_start is not None and idx_end is not None else
 
 #### Auxiliary function for interacting with bash
 
-def gen_exec(cmd, check_return: bool = False):
+def gen_exec(cmd, check_return: bool = False, timeout = None):
     popen = subprocess.Popen(cmd, stdout=subprocess.PIPE, universal_newlines=True)
     for stdout_line in iter(popen.stdout.readline, ""):
         yield stdout_line
@@ -97,7 +97,7 @@ print(f"{len(MODELS)} models in folder")
 # -m 50 -x 4 -s 0 --debug papers/pgm22/models/synthetic/1000/chain_mk1_maxDist3_nEndo5_k075_3.uai
 
 
-def run(model, maxiter=300, executions=30):
+def run(model, maxiter=300, executions=30, timeout = None):
     args = ""
     args += f"-o {output_folder} "
     args += f"-m {maxiter} "
@@ -109,10 +109,12 @@ def run(model, maxiter=300, executions=30):
 
     print(args)
     cmd = f"{java} -cp {jar_file} {javafile} {args}"
+    if timeout is not None:
+        cmd = f"timeout {timeout} {cmd}"
     print(cmd)
     exec_bash_print(cmd)
 
 
 for m in MODELS:
     print(m)
-    run(m)
+    run(m, timeout=60*60)

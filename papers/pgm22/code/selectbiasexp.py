@@ -14,6 +14,8 @@ setname = "synthetic/1000/set1"
 idx_start = None
 idx_end = None
 seed = 0
+rewrite = False
+
 
 print(f"args len = {len(sys.argv)}")
 if len(sys.argv)>1:
@@ -34,9 +36,12 @@ print(setname)
 
 ### Global variables
 prj_path = Path(str(Path("../../../").resolve()) + "/")
+#prj_path = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/"
 exp_folder = Path(prj_path, "papers/pgm22/")
 code_folder = Path(exp_folder, "code")
 output_folder = Path(exp_folder, "results", setname)
+#output_folder = Path(exp_folder, "results", "example")
+
 models_folder = Path(exp_folder, "models", setname)
 
 
@@ -81,15 +86,23 @@ def strtime():
 import os
 
 
+f = os.listdir(output_folder)[0]
+
+PROCESSED = [f[:f.index("_mIter")]+".uai" for f in os.listdir(output_folder)]
+
+
 
 def select_model(f):
+
+    if f in PROCESSED and not rewrite:
+        return False
     if idx_start is not None and idx_end is not None:
         return any([f.endswith(f"_{i}.uai") for i in range(idx_start, idx_end)])
     return f.endswith(f".uai")
 
 MODELS = [f for f in os.listdir(models_folder) if select_model(f)]
 
-print(f"{len(MODELS)} models in folder")
+print(f"{len(MODELS)} models to process")
 
 #### Function that interacts with credici
 
@@ -117,4 +130,4 @@ def run(model, maxiter=300, executions=30, timeout = None):
 
 for m in MODELS:
     print(m)
-    run(m, timeout=60*60)
+#    run(m, timeout=60*60)

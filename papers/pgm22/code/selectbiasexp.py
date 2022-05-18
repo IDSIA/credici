@@ -88,7 +88,7 @@ import os
 
 f = os.listdir(output_folder)[0]
 
-PROCESSED = [f[:f.index("_mIter")]+".uai" for f in os.listdir(output_folder)]
+PROCESSED = [f[:f.index("_mIter")]+".uai" for f in os.listdir(output_folder) if "_mIter" in f]
 
 
 
@@ -130,4 +130,4 @@ def run(model, maxiter=300, executions=30, timeout = None):
 
 for m in MODELS:
     print(m)
-#    run(m, timeout=60*60)
+    run(m, timeout=60*60*3)

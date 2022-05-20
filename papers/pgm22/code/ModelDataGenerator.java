@@ -12,6 +12,7 @@ import ch.idsia.credici.utility.Combinatorial;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.experiments.AsynIsCompatible;
 import ch.idsia.credici.utility.experiments.AsynQuery;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.crema.factor.GenericFactor;
@@ -37,6 +38,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static ch.idsia.credici.utility.Assertion.assertTrue;
 
@@ -56,7 +58,7 @@ public class ModelDataGenerator extends Terminal {
 	 */
 
 
-	@CommandLine.Parameters(description = "Topology of the endogenous model")
+	@CommandLine.Parameters(description = "Topology of the endogenous model: chain or poly")
 	private String topology;
 
 	@CommandLine.Option(names={"-o", "--output"}, description = "Output folder for the results.")
@@ -92,7 +94,7 @@ public class ModelDataGenerator extends Terminal {
 	protected void checkArguments() {
 		logger.info("Checking arguments");
 
-		assertTrue( Arrays.asList("chain").stream().anyMatch(s -> s.equals(topology)), " Wrong value for topology: "+topology);
+		assertTrue( Arrays.asList("chain", "poly").stream().anyMatch(s -> s.equals(topology)), " Wrong value for topology: "+topology);
 		assertTrue( nEndo>2, " Wrong value for nEndo: "+nEndo);
 		assertTrue( dataSize>0, " Wrong value for dataSize: "+dataSize);
 		assertTrue( markovianity ==0 || markovianity ==1, " Wrong value for markovianity: "+ markovianity);
@@ -129,7 +131,7 @@ public class ModelDataGenerator extends Terminal {
 
 
 	@Override
-	protected void entryPoint() throws IOException {
+	protected void entryPoint() throws IOException, ExecutionException, InterruptedException, TimeoutException {
 
 		wdir = Paths.get(".");
 		RandomUtil.setRandomSeed(seed);
@@ -200,36 +202,54 @@ public class ModelDataGenerator extends Terminal {
 
 	}
 
-	private void transformAndSample() {
+	private void transformAndSample() throws ExecutionException, InterruptedException, TimeoutException {
 		int k = 0;
 		StructuralCausalModel candidateModel = null;
 		do {
 			k++;
 			try {
 				if((k % 5)==1) logger.info("Generating candidate model number "+k);
+				else logger.debug("Generating candidate model number "+k);
+
 				// Create a model with cofounders
 				candidateModel = addCofounders(model);
 				// sample data
-				data = DataUtil.SampleCompatible(candidateModel, dataSize, 5);
+				logger.debug("Sampling compatible data");
+				data = DataUtil.SampleCompatible(candidateModel, dataSize, 5, timeout);
 				//Reduce the model
+				logger.debug("Sampled compatible data");
+
 				if (data != null) {
 					candidateModel = reduce(candidateModel);
+					logger.debug("Reduced Model");
+
 					if(query) {
+						logger.debug("Running queries");
 						runQueries(candidateModel);
 					}
 				}
 
 			}catch (Exception e) {
 				logger.info("Exception when generating candidate model");
+				//e.printStackTrace();
+				data = null;
+			}catch (Error e) {
+				logger.info("Error when generating candidate model");
+				//e.printStackTrace();
 				data = null;
 			}
 
-		}while(data==null || !candidateModel.isCompatible(data));
+		}while(data==null || !isCompatible(model, data));
 
 		model = candidateModel;
 		logger.info("Found compatibility in model "+k);
 
 		logger.info(String.valueOf(model));
+	}
+
+	private boolean isCompatible(StructuralCausalModel model, TIntIntMap[] data) throws ExecutionException, InterruptedException, TimeoutException {
+		AsynIsCompatible.setArgs(model, data);
+		return new InvokerWithTimeout<Boolean>().run(AsynIsCompatible::run, timeout).booleanValue();
 	}
 
 	private void runQueries(StructuralCausalModel model) throws ExecutionControl.NotImplementedException, InterruptedException, ExecutionException, TimeoutException {
@@ -260,7 +280,9 @@ public class ModelDataGenerator extends Terminal {
 
 		AsynQuery.setArgs(inf, "pns", cause, effect);
 		p = (VertexFactor) new InvokerWithTimeout<GenericFactor>().run(AsynQuery::run, timeout);
+		//p = inf.probNecessityAndSufficiency(cause,effect);
 		v =  Doubles.concat(p.getData()[0]);
+		if(v.length==0) throw new IllegalStateException("Wrong PNS result");
 		if(v.length==1) v = new double[]{v[0],v[0]};
 		Arrays.sort(v);
 		for(double val : v) res.add(val);
@@ -294,6 +316,9 @@ public class ModelDataGenerator extends Terminal {
 		int numMerged = (RandomUtil.getRandom().nextInt(pairsX.length-1) + 2) * markovianity;
 		int[][] finalPairsX = pairsX;
 		pairsX = IntStream.range(0, numMerged).mapToObj(i -> finalPairsX[i]).toArray(int[][]::new);
+
+		String str = Stream.of(pairsX).map(p -> Arrays.toString(p)).collect(Collectors.joining(","));
+		logger.debug("Cofounded: "+str);
 		StructuralCausalModel newModel = Cofounding.mergeExoParents(model, pairsX);
 		// Fill marginal distributions
 		newModel.fillExogenousWithRandomFactors(FactorUtil.DEFAULT_DECIMALS);
@@ -304,6 +329,19 @@ public class ModelDataGenerator extends Terminal {
 		// Build markovian model
 		if(topology.equals("chain")) {
 			String endoArcs = IntStream.rangeClosed(1, nEndo - 1).mapToObj(i -> "(" + (i - 1) + "," + i + ")").collect(Collectors.joining(","));
+			SparseDirectedAcyclicGraph endoDAG = DAGUtil.build(endoArcs);
+			int Xsize = Arrays.stream(endoDAG.getVariables()).max().getAsInt() + 1;
+			String exoArcs = Arrays.stream(endoDAG.getVariables()).mapToObj(x -> "(" + (x + Xsize) + "," + x + ")").collect(Collectors.joining(","));
+			SparseDirectedAcyclicGraph causalDAG = DAGUtil.build(endoArcs + exoArcs);
+			model = CausalBuilder.of(endoDAG, 2).setCausalDAG(causalDAG).build();
+		}else if(topology.equals("poly")){
+			String endoArcs =  IntStream.range(0, nEndo/2).mapToObj(t -> {
+				String str = "("+(t*2)+","+(t*2+1)+")";
+				if (t>0) str = "("+((t-1)*2+1)+","+(t*2+1)+"),"+str ;
+				return str;
+			}).collect(Collectors.joining(","));
+
+			if(nEndo % 2 == 1) endoArcs += ",("+(nEndo-2)+","+(nEndo-1)+")";
 			SparseDirectedAcyclicGraph endoDAG = DAGUtil.build(endoArcs);
 			int Xsize = Arrays.stream(endoDAG.getVariables()).max().getAsInt() + 1;
 			String exoArcs = Arrays.stream(endoDAG.getVariables()).mapToObj(x -> "(" + (x + Xsize) + "," + x + ")").collect(Collectors.joining(","));

@@ -3,7 +3,7 @@ commands
 
 
 Generate jar:
-cd /dev/credici/
+cd ~/dev/credici/
 mvn clean compile assembly:single
 
 cd ./papers/pgm22/code/

@@ -11,7 +11,8 @@ from pathlib import Path
 #### Parameter experiments
 
 print(sys.argv)
-setname = "synthetic/1000/set1"
+setname = "synthetic/1000/set2"
+overwrite = False
 
 if len(sys.argv) > 1:
     i, j = int(sys.argv[1]), int(sys.argv[2])
@@ -27,6 +28,7 @@ print(SEEDS)
 
 ### Global variables
 prj_path = Path(str(Path("../../../").resolve()) + "/")
+#prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici")
 exp_folder = Path(prj_path, "papers/pgm22/")
 code_folder = Path(exp_folder, "code")
 output_folder = Path(exp_folder, "models", setname)
@@ -67,7 +69,7 @@ def strtime():
 
 #### Function that interacts with credici
 
-def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reduction=1.0, query=True, timeout=30, seed = None):
+def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reduction=1.0, query=True, timeout=60, seed = None):
     args = ""
     args += f"-o {output_folder} "
     args += f"-n {nEndo} "
@@ -76,6 +78,7 @@ def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reductio
     args += f"--mk {0 if markovian else 1} "
     args += f"-r {reduction} "
     args += f"-t {timeout} "
+    args += "--debug "
 
     if seed != None: args += f"-s {seed} "
     if query: args += f"--query "
@@ -85,11 +88,17 @@ def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reductio
     javafile = Path(code_folder, "ModelDataGenerator.java")
 
     print(args)
-    cmd = f"{java} -cp {jar_file} {javafile} {args}"
+    cmd = f"{java} -Xmx{28*1024}m -cp {jar_file} {javafile} {args}"
     print(cmd)
-    exec_bash_print(cmd) 
+    exec_bash_print(cmd)
 
-
+def generated(args):
+    filename = args["topology"]
+    filename += "_mk0" if args["markovian"] else "_mk1_maxDist3"
+    filename += f'_nEndo{args["nEndo"]}'
+    filename += f"_k{args['reduction']}".replace(".","")
+    filename += f"_{args['seed']}.uai"
+    return Path(output_folder,filename).exists()
 
 ## main code ##
 
@@ -98,12 +107,24 @@ def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reductio
 #generate("chain", **args)
 #print("finished")
 #exit()
-for seed in SEEDS:
-    for nEndo in [5,7,10]:
+
+i = 1
+
+for nEndo in [5,7]:
+    for seed in SEEDS:
         for reduction in [0.5, 0.75, 1.0]:
             for markovian in [False, True]:
-                args = dict(nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed)
-                print(f"args = {args}")
-                generate("chain", **args)
-                print("model generated")
+                args = dict(topology="poly", nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed)
+                print(f"{i}: args = {args}")
+                i += 1
+                if overwrite or not generated(args):
+                    generate(**args)
+                    print("model generated")
 print("finished")
+
+
+
+# poly_mk1_maxDist3_nEndo5_k075_1.uai
+args
+
+

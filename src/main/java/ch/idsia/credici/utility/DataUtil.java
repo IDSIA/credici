@@ -1,12 +1,14 @@
 package ch.idsia.credici.utility;
 
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.utility.experiments.AsynIsCompatible;
 import ch.idsia.crema.data.ReaderCSV;
 import ch.idsia.crema.data.WriterCSV;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
+import ch.idsia.crema.utility.InvokerWithTimeout;
 import com.opencsv.CSVWriter;
 import com.opencsv.CSVWriterBuilder;
 import com.opencsv.exceptions.CsvException;
@@ -205,11 +207,40 @@ public class DataUtil {
 
 		try {
 			for(int j=0; j<maxIter; j++) {
+				System.out.println("sampling");
+				//AsynIsCompatible.setArgs(model, data);
+				//		return new InvokerWithTimeout<Boolean>().run(AsynIsCompatible::run, timeout).booleanValue();
 				isComp = model.isCompatible(data, 5);
+				System.out.println("Checked compatibility");
 				if(isComp) break;
 				data = model.samples(dataSize, model.getEndogenousVars());
 			}
-		}catch (Exception e){}
+		}catch (Exception e){
+			System.out.println("Exception");
+		}
+		System.out.println("sampled");
+
+
+		if(isComp) return data;
+		return null;
+	}
+
+
+	public static TIntIntMap[] SampleCompatible(StructuralCausalModel model, int dataSize, int maxIter, long timeout){
+
+		TIntIntMap[] data = model.samples(dataSize, model.getEndogenousVars());
+		boolean isComp = false;
+
+		try {
+			for(int j=0; j<maxIter; j++) {
+				AsynIsCompatible.setArgs(model, data);
+				isComp = new InvokerWithTimeout<Boolean>().run(AsynIsCompatible::run, timeout).booleanValue();
+				if(isComp) break;
+				data = model.samples(dataSize, model.getEndogenousVars());
+			}
+		}catch (Exception e){
+		}
+
 
 		if(isComp) return data;
 		return null;

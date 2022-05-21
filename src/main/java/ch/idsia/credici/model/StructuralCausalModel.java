@@ -1081,6 +1081,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return this.isCompatible(data, FactorUtil.DEFAULT_DECIMALS);
 	}
 
+	public static boolean isCompatible(StructuralCausalModel model, TIntIntMap[] data){
+		return model.isCompatible(data);
+	}
+
 	public boolean isCompatible(TIntIntMap[] data, int fixDecimals) {
 		return this.getUncompatibleNodes(data, fixDecimals).size()==0;
 	}

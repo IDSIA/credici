@@ -1,33 +1,38 @@
 package code;
 
 import ch.idsia.credici.IO;
+import ch.idsia.credici.inference.CausalInference;
 import ch.idsia.credici.inference.CausalMultiVE;
+import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.CollectionTools;
 import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.apps.SelectionBias;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.data.ReaderCSV;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
+import com.opencsv.CSVParserBuilder;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
 import picocli.CommandLine;
 
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -60,6 +65,8 @@ public class SelectBiasExp extends Terminal {
     StructuralCausalModel model = null;
     Path wdir = null;
     HashMap queriesExact; // make string,double
+    HashMap queriesExactData; // make string,double
+
     List<int[]> assigList = null;
     int cause, effect;
     int[] parents = null;
@@ -70,9 +77,10 @@ public class SelectBiasExp extends Terminal {
     protected void entryPoint() throws Exception {
         init();
         selectionParams();
-        learnUnbiassedModel();
-        learnBiasedModels();
-        save();
+        learnExactModel();    // Just for testing
+        //learnUnbiassedModel();
+        //learnBiasedModels();
+        //save();
 
     }
 
@@ -115,19 +123,30 @@ public class SelectBiasExp extends Terminal {
         int datasize = data.length;
         logger.info("Loaded "+datasize+" data instances from: "+fullpath);
 
+
         // Load queries
         fullpath = wdir.resolve(modelPath.replace(".uai","_queries.csv")).toString();
         //DataUtil.fromCSV(fullpath);
 
 
         ReaderCSV reader = new ReaderCSV(fullpath).read();
-        String[] keys = reader.getVarNames();
-        double[] values = reader.getData()[0];
-        queriesExact = new HashMap<>();
-        for(int i=0; i< keys.length; i++)
-            queriesExact.put(keys[i], values[i]);
+
+        CSVReader csvReader =  new CSVReaderBuilder(new FileReader(fullpath))
+                .withCSVParser(new CSVParserBuilder().withSeparator(',').build())
+                .build();
+        HashMap queriesExact = new HashMap<>();
+        HashMap queriesExactData = new HashMap<>();
+        String[] keys = Arrays.stream(csvReader.readNext()).filter(s -> !s.equals("data_based")).toArray(String[]::new);
+        for(String[] r : csvReader.readAll()){
+
+            HashMap queries = queriesExact;
+            if(r[0].equals("true")) queries = queriesExactData;
+            for(int i=0; i< keys.length; i++) queries.put(keys[i], Double.parseDouble(r[i+1]));
+        }
 
         logger.debug("Exact queries: "+queriesExact);
+        logger.debug("Exact queries (data-based): "+queriesExactData);
+
 
         cause = ((Double)queriesExact.get("cause")).intValue();
         effect = ((Double)queriesExact.get("effect")).intValue();
@@ -160,6 +179,9 @@ public class SelectBiasExp extends Terminal {
         logger.info("Random selector parents: "+ Arrays.toString(parents));
         int parentComb = model.getDomain(parents).getCombinations();
         assigList = getRandomSeqIntMask(parentComb, true);
+
+        //assigList = new ArrayList(Collections.singleton(assigList.get(assigList.size() - 1))); // todo: remove
+
         logger.info("Ramdom selector assignments: "+assigList.size());
 
         int i = 1;
@@ -176,7 +198,6 @@ public class SelectBiasExp extends Terminal {
 
         logger.info("Learning multiple biased model (with selector)");
 
-        //int[] assignments = (int[]) assigList.get(1);
         for(int[] assignments : assigList) {
 
             StructuralCausalModel modelBiased = SelectionBias.addSelector(model, parents, assignments);
@@ -215,7 +236,7 @@ public class SelectBiasExp extends Terminal {
         }
     }
 
-    private double[] runQueries(CausalMultiVE inf) throws InterruptedException, ExecutionControl.NotImplementedException {
+    private double[] runQueries(CausalInference inf) throws InterruptedException, ExecutionControl.NotImplementedException {
 
         double tACE, tPNS;
         List resList = new ArrayList();
@@ -246,6 +267,34 @@ public class SelectBiasExp extends Terminal {
         // return
         double[] res = resList.stream().mapToDouble(d -> (double)d).toArray();
         return res;
+    }
+
+    public void learnExactModel() throws ExecutionControl.NotImplementedException, InterruptedException {
+        logger.info("Exact learning unbiased model (without selector)");
+
+        Watch.start();
+
+
+        System.out.println(model);
+        data = model.samples(1000, model.getEndogenousVars());
+        System.out.println(model.getEmpiricalMap(true));
+        System.out.println(DataUtil.getEmpiricalMap(model, data));
+        CredalCausalVE inf = new CredalCausalVE(model);
+        System.out.println(inf.probNecessityAndSufficiency(cause, effect));
+
+        //SparseModel vmodel = model.toVCredal(DataUtil.getEmpiricalMap(model, data).values());
+        //CredalCausalVE inf = new CredalCausalVE(model, DataUtil.getEmpiricalMap(model, data).values());
+
+        Watch.stopAndLog(logger, "Performed exact learning (without selector) in ");
+        long time_learn = Watch.getWatch().getTime();
+/*
+        double[] res = runQueries(inf);
+
+
+        addResults("exact", false, 1,
+                time_learn, res[0], res[1],
+                res[2],res[3],res[4],res[5],
+                -1);*/
     }
 
     public  void learnUnbiassedModel() throws InterruptedException, ExecutionControl.NotImplementedException {

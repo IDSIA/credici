@@ -8,10 +8,7 @@ import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.model.info.StatisticsModel;
 import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.model.transform.ExogenousReduction;
-import ch.idsia.credici.utility.Combinatorial;
-import ch.idsia.credici.utility.DAGUtil;
-import ch.idsia.credici.utility.DataUtil;
-import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.*;
 import ch.idsia.credici.utility.experiments.AsynIsCompatible;
 import ch.idsia.credici.utility.experiments.AsynQuery;
 import ch.idsia.credici.utility.experiments.Terminal;
@@ -31,9 +28,7 @@ import picocli.CommandLine;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.stream.Collectors;
@@ -82,12 +77,17 @@ public class ModelDataGenerator extends Terminal {
 	@CommandLine.Option(names = {"-r", "--reduction"}, description = "Reduction constant for the exogenous domains.")
 	private double reductionK = 1.0;
 
+	@CommandLine.Option(names = {"-mr", "--minratio"}, description = "Minimum log-lk ratio between the model and the data. Defaults to 0.9")
+	private double minRatio = 0.9;
+
 
 	@CommandLine.Option(names={"--query"}, description = "Run and store ACE and PNS queries. Defaults to false")
 	boolean query = false;
 
 	String[][] queries = null;
 	String[][] info = null;
+	double ratio;
+	double intervalsize;
 
 
 	@Override
@@ -182,6 +182,9 @@ public class ModelDataGenerator extends Terminal {
 		String numExoVars = String.valueOf(model.getExogenousVars().length);
 		String numEndoVars = String.valueOf(model.getEndogenousVars().length);
 		String markovianity = String.valueOf(this.markovianity);
+		String ratio = String.valueOf(this.ratio);
+
+
 
 		logger.info("- Average U size: "+ avgExoCard);
 		logger.info("- ExoDAG: "+model.getExogenousDAG());
@@ -191,14 +194,14 @@ public class ModelDataGenerator extends Terminal {
 		logger.info("- X set: "+Arrays.toString(model.getEndogenousVars()));
 		logger.info("- ExoTreewidth: "+model.getExogenousTreewidth());
 		logger.info("- Markovian: "+ CausalInfo.of(model).isMarkovian());
+		logger.info("- Log-lk ratio model/data: "+ratio);
+		logger.info("- PNS (data) interval size:"+intervalsize);
 
 
-		if(query) {
-			List<String[]> data = new ArrayList<>();
-			data.add(new String[]{"topology", "avg_exo_card", "num_exo_vars", "num_endo_vars", "markovianity",});
-			data.add(new String[]{topology, avgExoCard, numExoVars, numEndoVars, markovianity});
-			info = data.toArray(String[][]::new);
-		}
+		List<String[]> data = new ArrayList<>();
+		data.add(new String[]{"topology", "avg_exo_card", "num_exo_vars", "num_endo_vars", "markovianity", "ratio_llk"});
+		data.add(new String[]{topology, avgExoCard, numExoVars, numEndoVars, markovianity, ratio});
+		info = data.toArray(String[][]::new);
 
 	}
 
@@ -213,6 +216,9 @@ public class ModelDataGenerator extends Terminal {
 
 				// Create a model with cofounders
 				candidateModel = addCofounders(model);
+
+
+
 				// sample data
 				logger.debug("Sampling compatible data");
 				data = DataUtil.SampleCompatible(candidateModel, dataSize, 5, timeout);
@@ -222,6 +228,23 @@ public class ModelDataGenerator extends Terminal {
 				if (data != null) {
 					candidateModel = reduce(candidateModel);
 					logger.debug("Reduced Model");
+
+					HashMap modelProbs = candidateModel.getEmpiricalMap(false);
+					//HashMap dataProbs = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(candidateModel, data), FactorUtil.DEFAULT_DECIMALS);
+					HashMap dataProbs = DataUtil.getEmpiricalMap(candidateModel, data);
+
+					ratio =  Probability.ratioLogLikelihood(modelProbs, dataProbs, 1);
+					//ratio =  Probability.ratioLogLikelihood(dataProbs,modelProbs, 1);
+					// The databased is smaller
+					logger.debug("Model: "+FactorUtil.fixEmpiricalMap(modelProbs, 4));
+					logger.debug("Data: "+FactorUtil.fixEmpiricalMap(dataProbs, 4));
+
+					logger.info("Log-lk ratio: "+ratio);
+
+					if(ratio<minRatio) {
+						logger.info("Discarding model due to low log-lk ratio");
+						throw new IllegalStateException();
+					}
 
 					if(query) {
 						logger.debug("Running queries");
@@ -255,7 +278,7 @@ public class ModelDataGenerator extends Terminal {
 	private void runQueries(StructuralCausalModel model) throws ExecutionControl.NotImplementedException, InterruptedException, ExecutionException, TimeoutException {
 
 		// runQueries(CausalInference inf)
-		List res = new ArrayList();
+		List res = null;
 		VertexFactor p = null;
 		double[] v = null;
 
@@ -265,14 +288,49 @@ public class ModelDataGenerator extends Terminal {
 		int effect = endoOrder[endoOrder.length-1];
 
 		logger.info("Running queries with cause="+cause+" and effect="+effect);
-		CredalCausalVE inf = new CredalCausalVE(model);
+		CredalCausalVE inf = null;
 
+		List<String[]> dataRes = new ArrayList<>();
+		dataRes.add(new String[]{"data_based", "cause", "effect",  "ace_l", "ace_u","pns_l", "pns_u"});
+
+
+
+		// Queries data based
+
+		HashMap probs = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data), FactorUtil.DEFAULT_DECIMALS);
+		inf = new CredalCausalVE(model, probs.values());
+		res = new ArrayList();
 		res.add(cause);
 		res.add(effect);
 
-
 		AsynQuery.setArgs(inf, "ace", cause, effect);
 		IntervalFactor ace = (IntervalFactor) new InvokerWithTimeout<GenericFactor>().run(AsynQuery::run, timeout);
+		//IntervalFactor ace = (IntervalFactor) AsynQuery.run();
+		res.add(ace.getDataLower()[0][0]);
+		res.add(ace.getDataUpper()[0][0]);
+		logger.info("ACE (data-based): "+Arrays.toString(new double[]{ace.getDataLower()[0][0], ace.getDataUpper()[0][0]}));
+
+		AsynQuery.setArgs(inf, "pns", cause, effect);
+		p = (VertexFactor) new InvokerWithTimeout<GenericFactor>().run(AsynQuery::run, timeout);
+		//p = inf.probNecessityAndSufficiency(cause,effect);
+		v =  Doubles.concat(p.getData()[0]);
+		if(v.length==0) throw new IllegalStateException("Wrong PNS result");
+		if(v.length==1) v = new double[]{v[0],v[0]};
+		Arrays.sort(v);
+		for(double val : v) res.add(val);
+		logger.info("PNS (data-based): "+Arrays.toString(v));
+		intervalsize = v[1] - v[0];
+
+		dataRes.add((String[]) Stream.concat(Stream.of("true"), res.stream().map(i -> String.valueOf(i))).toArray(String[]::new));
+
+
+		// Queries no data based
+		inf = new CredalCausalVE(model);
+		res = new ArrayList();
+		res.add(cause);
+		res.add(effect);
+		AsynQuery.setArgs(inf, "ace", cause, effect);
+		ace = (IntervalFactor) new InvokerWithTimeout<GenericFactor>().run(AsynQuery::run, timeout);
 		//IntervalFactor ace = (IntervalFactor) AsynQuery.run();
 		res.add(ace.getDataLower()[0][0]);
 		res.add(ace.getDataUpper()[0][0]);
@@ -288,10 +346,11 @@ public class ModelDataGenerator extends Terminal {
 		for(double val : v) res.add(val);
 		logger.info("PNS: "+Arrays.toString(v));
 
-		List<String[]> data = new ArrayList<>();
-		data.add(new String[]{"cause", "effect",  "ace_l", "ace_u","pns_l", "pns_u",});
-		data.add((String[]) res.stream().map(i -> String.valueOf(i)).toArray(String[]::new));
-		queries = data.toArray(String[][]::new);
+		dataRes.add((String[]) Stream.concat(Stream.of("false"), res.stream().map(i -> String.valueOf(i))).toArray(String[]::new));
+
+
+
+		queries = dataRes.toArray(String[][]::new);
 
 		// return
 		//return res.stream().mapToDouble(d -> (double)d).toArray();
@@ -300,6 +359,7 @@ public class ModelDataGenerator extends Terminal {
 	private StructuralCausalModel reduce(StructuralCausalModel candidateModel) {
 
 		logger.info("Reducing model with average U size: "+StatisticsModel.of(candidateModel).avgExoCardinality());
+		logger.info("DAG: "+candidateModel.getNetwork());
 		logger.info("ExoDAG: "+candidateModel.getExogenousDAG());
 		ExogenousReduction reducer = new ExogenousReduction(candidateModel, data)
 				.removeRedundant()

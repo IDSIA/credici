@@ -24,3 +24,9 @@ The fields in the csv file are described below. Each row corresponds to a single
 - time_learn time in ms. for learning the distributions of the Us.
 - n_convergence: number of EM runs required for reaching the at least the 90% of the interval (of that execution).
 
+
+Notes
+-------
+
+set1 and set2 are the first bunch of experiments, though a problem in the sampling
+was found: topologycal order was not always found

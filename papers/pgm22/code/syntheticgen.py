@@ -11,7 +11,9 @@ from pathlib import Path
 #### Parameter experiments
 
 print(sys.argv)
-setname = "synthetic/1000/set2"
+datasize=1000
+setname = f"synthetic/{datasize}/set3"
+topology = "chain"
 overwrite = False
 
 if len(sys.argv) > 1:
@@ -114,7 +116,7 @@ for nEndo in [5,7]:
     for seed in SEEDS:
         for reduction in [0.5, 0.75, 1.0]:
             for markovian in [False, True]:
-                args = dict(topology="poly", nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed)
+                args = dict(topology=topology, nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed, datasize=datasize)
                 print(f"{i}: args = {args}")
                 i += 1
                 if overwrite or not generated(args):

@@ -903,7 +903,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 					try{
 						sample = f.sample();
 					}catch (Exception e){
-
+						System.out.println(".");
 					}
 				}while (sample==null);
 				obs.putAll(sample);
@@ -1047,6 +1047,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			}
 		}
 		return dag;
+	}
+
+	public SparseDirectedAcyclicGraph getEndogenousDAG(){
+		return DAGUtil.getSubDAG(this.getNetwork(), this.getEndogenousVars());
 	}
 
 	public int getExogenousTreewidth(){

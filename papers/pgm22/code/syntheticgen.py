@@ -12,8 +12,8 @@ from pathlib import Path
 
 print(sys.argv)
 datasize=1000
-setname = f"synthetic/{datasize}/set3"
-topology = "chain"
+setname = f"synthetic/{datasize}/set4"
+topology = "rand13"
 overwrite = False
 
 if len(sys.argv) > 1:
@@ -71,7 +71,7 @@ def strtime():
 
 #### Function that interacts with credici
 
-def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reduction=1.0, query=True, timeout=60, seed = None):
+def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=2, reduction=1.0, query=True, timeout=120, seed = None):
     args = ""
     args += f"-o {output_folder} "
     args += f"-n {nEndo} "
@@ -112,8 +112,8 @@ def generated(args):
 
 i = 1
 
-for nEndo in [5,7]:
-    for seed in SEEDS:
+for seed in SEEDS:
+    for nEndo in [4,5,6]:
         for reduction in [0.5, 0.75, 1.0]:
             for markovian in [False, True]:
                 args = dict(topology=topology, nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed, datasize=datasize)

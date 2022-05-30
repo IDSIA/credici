@@ -77,8 +77,8 @@ public class ModelDataGenerator extends Terminal {
 	@CommandLine.Option(names = {"-r", "--reduction"}, description = "Reduction constant for the exogenous domains.")
 	private double reductionK = 1.0;
 
-	@CommandLine.Option(names = {"-mr", "--minratio"}, description = "Minimum log-lk ratio between the model and the data. Defaults to 0.9")
-	private double minRatio = 0.9;
+	@CommandLine.Option(names = {"-mr", "--minratio"}, description = "Minimum log-lk ratio between the model and the data. Defaults to 0.8")
+	private double minRatio = 0.8;
 
 
 	@CommandLine.Option(names={"--query"}, description = "Run and store ACE and PNS queries. Defaults to false")
@@ -94,7 +94,7 @@ public class ModelDataGenerator extends Terminal {
 	protected void checkArguments() {
 		logger.info("Checking arguments");
 
-		assertTrue( Arrays.asList("chain", "poly").stream().anyMatch(s -> s.equals(topology)), " Wrong value for topology: "+topology);
+		assertTrue( Arrays.asList("chain", "poly", "rand13", "rand23").stream().anyMatch(s -> s.equals(topology)), " Wrong value for topology: "+topology);
 		assertTrue( nEndo>2, " Wrong value for nEndo: "+nEndo);
 		assertTrue( dataSize>0, " Wrong value for dataSize: "+dataSize);
 		assertTrue( markovianity ==0 || markovianity ==1, " Wrong value for markovianity: "+ markovianity);
@@ -138,7 +138,6 @@ public class ModelDataGenerator extends Terminal {
 		logger.info("Starting logger with seed "+seed);
 		RandomUtil.setRandomSeed(seed);
 
-		buildBaseModel();
 		transformAndSample();
 		statistics();
 		save();
@@ -183,24 +182,29 @@ public class ModelDataGenerator extends Terminal {
 		String numEndoVars = String.valueOf(model.getEndogenousVars().length);
 		String markovianity = String.valueOf(this.markovianity);
 		String ratio = String.valueOf(this.ratio);
+		String avgIndegree = String.valueOf(DAGUtil.avgIndegree(model.getNetwork()));
+		String avgEndoIndegree = String.valueOf(DAGUtil.avgIndegree(model.getEndogenousDAG()));
 
 
 
 		logger.info("- Average U size: "+ avgExoCard);
+		logger.info("- EndoDAG: "+model.getEndogenousDAG());
 		logger.info("- ExoDAG: "+model.getExogenousDAG());
 		logger.info("- Number of U vars: "+numExoVars);
 		logger.info("- U set: "+Arrays.toString(model.getExogenousVars()));
 		logger.info("- Number of X vars: "+numEndoVars);
 		logger.info("- X set: "+Arrays.toString(model.getEndogenousVars()));
 		logger.info("- ExoTreewidth: "+model.getExogenousTreewidth());
+		logger.info("- Avg Indegree: "+avgIndegree);
+		logger.info("- Avg Endogenous Indegree: "+avgEndoIndegree);
 		logger.info("- Markovian: "+ CausalInfo.of(model).isMarkovian());
 		logger.info("- Log-lk ratio model/data: "+ratio);
-		logger.info("- PNS (data) interval size:"+intervalsize);
+		logger.info("- PNS (data) interval size: "+intervalsize);
 
 
 		List<String[]> data = new ArrayList<>();
-		data.add(new String[]{"topology", "avg_exo_card", "num_exo_vars", "num_endo_vars", "markovianity", "ratio_llk"});
-		data.add(new String[]{topology, avgExoCard, numExoVars, numEndoVars, markovianity, ratio});
+		data.add(new String[]{"topology", "avg_exo_card", "num_exo_vars", "num_endo_vars", "markovianity", "ratio_llk", "avg_indegree", "avg_endo_indegree"});
+		data.add(new String[]{topology, avgExoCard, numExoVars, numEndoVars, markovianity, ratio, avgIndegree, avgEndoIndegree});
 		info = data.toArray(String[][]::new);
 
 	}
@@ -211,6 +215,9 @@ public class ModelDataGenerator extends Terminal {
 		do {
 			k++;
 			try {
+
+				buildBaseModel();
+
 				if((k % 5)==1) logger.info("Generating candidate model number "+k);
 				else logger.debug("Generating candidate model number "+k);
 
@@ -323,9 +330,9 @@ public class ModelDataGenerator extends Terminal {
 
 		dataRes.add((String[]) Stream.concat(Stream.of("true"), res.stream().map(i -> String.valueOf(i))).toArray(String[]::new));
 
-
+/*
 		// Queries no data based
-		inf = new CredalCausalVE(model);
+		inf = new CredalCausalVE(model, model.getEmpiricalMap(true).values());
 		res = new ArrayList();
 		res.add(cause);
 		res.add(effect);
@@ -348,7 +355,7 @@ public class ModelDataGenerator extends Terminal {
 
 		dataRes.add((String[]) Stream.concat(Stream.of("false"), res.stream().map(i -> String.valueOf(i))).toArray(String[]::new));
 
-
+*/
 
 		queries = dataRes.toArray(String[][]::new);
 
@@ -372,7 +379,7 @@ public class ModelDataGenerator extends Terminal {
 	@NotNull
 	private StructuralCausalModel addCofounders(StructuralCausalModel model) {
 		// Select cofounders
-		int[][] pairsX = Combinatorial.randomPairs(model.getEndogenousVars(), maxDist);
+		int[][] pairsX = Combinatorial.randomPairs(model.getEndogenousVars(), maxDist, DAGUtil.distanceMatrix(model.getEndogenousDAG()));
 		int numMerged = (RandomUtil.getRandom().nextInt(pairsX.length-1) + 2) * markovianity;
 		int[][] finalPairsX = pairsX;
 		pairsX = IntStream.range(0, numMerged).mapToObj(i -> finalPairsX[i]).toArray(int[][]::new);
@@ -386,14 +393,13 @@ public class ModelDataGenerator extends Terminal {
 	}
 
 	private void buildBaseModel() {
+
+		SparseDirectedAcyclicGraph endoDAG = null;
+
 		// Build markovian model
 		if(topology.equals("chain")) {
 			String endoArcs = IntStream.rangeClosed(1, nEndo - 1).mapToObj(i -> "(" + (i - 1) + "," + i + ")").collect(Collectors.joining(","));
-			SparseDirectedAcyclicGraph endoDAG = DAGUtil.build(endoArcs);
-			int Xsize = Arrays.stream(endoDAG.getVariables()).max().getAsInt() + 1;
-			String exoArcs = Arrays.stream(endoDAG.getVariables()).mapToObj(x -> "(" + (x + Xsize) + "," + x + ")").collect(Collectors.joining(","));
-			SparseDirectedAcyclicGraph causalDAG = DAGUtil.build(endoArcs + exoArcs);
-			model = CausalBuilder.of(endoDAG, 2).setCausalDAG(causalDAG).build();
+			endoDAG = DAGUtil.build(endoArcs);
 		}else if(topology.equals("poly")){
 			String endoArcs =  IntStream.range(0, nEndo/2).mapToObj(t -> {
 				String str = "("+(t*2)+","+(t*2+1)+")";
@@ -402,14 +408,25 @@ public class ModelDataGenerator extends Terminal {
 			}).collect(Collectors.joining(","));
 
 			if(nEndo % 2 == 1) endoArcs += ",("+(nEndo-2)+","+(nEndo-1)+")";
-			SparseDirectedAcyclicGraph endoDAG = DAGUtil.build(endoArcs);
-			int Xsize = Arrays.stream(endoDAG.getVariables()).max().getAsInt() + 1;
-			String exoArcs = Arrays.stream(endoDAG.getVariables()).mapToObj(x -> "(" + (x + Xsize) + "," + x + ")").collect(Collectors.joining(","));
-			SparseDirectedAcyclicGraph causalDAG = DAGUtil.build(endoArcs + exoArcs);
-			model = CausalBuilder.of(endoDAG, 2).setCausalDAG(causalDAG).build();
+			endoDAG = DAGUtil.build(endoArcs);
+
+		}else if(topology.equals("rand13")){
+			endoDAG = DAGUtil.random(nEndo, 1, 3);
+		}else if(topology.equals("rand23")){
+			endoDAG = DAGUtil.random(nEndo, 2, 3);
 		}else{
 			throw new IllegalArgumentException("Unknown topology: "+topology);
 		}
+
+		logger.debug("Endogenous DAG: "+endoDAG);
+		// Add exogenous part
+		int Xsize = Arrays.stream(endoDAG.getVariables()).max().getAsInt() + 1;
+		SparseDirectedAcyclicGraph causalDAG = endoDAG.copy();
+		for(int x : endoDAG.getVariables()){
+			int u = causalDAG.addVariable();
+			causalDAG.addLink(u,x);
+		}
+		model = CausalBuilder.of(endoDAG, 2).setCausalDAG(causalDAG).build();
 	}
 
 }

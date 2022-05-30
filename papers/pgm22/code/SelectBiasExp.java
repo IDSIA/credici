@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -77,10 +78,10 @@ public class SelectBiasExp extends Terminal {
     protected void entryPoint() throws Exception {
         init();
         selectionParams();
-        learnExactModel();    // Just for testing
-        //learnUnbiassedModel();
-        //learnBiasedModels();
-        //save();
+        //learnExactModel();    // Just for testing
+        learnUnbiassedModel();
+        learnBiasedModels();
+        save();
 
     }
 
@@ -129,7 +130,7 @@ public class SelectBiasExp extends Terminal {
         //DataUtil.fromCSV(fullpath);
 
 
-        ReaderCSV reader = new ReaderCSV(fullpath).read();
+        //ReaderCSV reader = new ReaderCSV(fullpath).read();
 
         CSVReader csvReader =  new CSVReaderBuilder(new FileReader(fullpath))
                 .withCSVParser(new CSVParserBuilder().withSeparator(',').build())
@@ -162,6 +163,10 @@ public class SelectBiasExp extends Terminal {
                 (double) queriesExact.get("ace_l"), (double)queriesExact.get("ace_u"),
                 (double)queriesExact.get("pns_l"), (double)queriesExact.get("pns_u"), -1);
 
+        addResults("exact_data_based", false, 1.0,
+                Double.NaN, Double.NaN,Double.NaN,
+                (double) queriesExactData.get("ace_l"), (double)queriesExactData.get("ace_u"),
+                (double)queriesExactData.get("pns_l"), (double)queriesExactData.get("pns_u"), -1);
 
 
 
@@ -199,6 +204,7 @@ public class SelectBiasExp extends Terminal {
         logger.info("Learning multiple biased model (with selector)");
 
         for(int[] assignments : assigList) {
+            RandomUtil.setRandomSeed(seed);
 
             StructuralCausalModel modelBiased = SelectionBias.addSelector(model, parents, assignments);
 
@@ -209,6 +215,11 @@ public class SelectBiasExp extends Terminal {
             double ps1 = (1.0 * n1) / dataBiased.length;
 
             logger.info("Learning model with p(S=1)=" + ps1);
+
+            int[] trainable = Arrays.stream(modelBiased.getExogenousVars())
+                    .filter(v -> !ArraysUtil.contains(selectVar, modelBiased.getChildren(v)))
+                    .toArray();
+
 
             Watch.start();
 
@@ -221,8 +232,20 @@ public class SelectBiasExp extends Terminal {
             Watch.stopAndLog(logger, "Performed " + executions + " EM runs in ");
             long time_learn = Watch.getWatch().getTime();
 
-            CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints());
+
+            List endingPoints = builder.getSelectedPoints().stream().map(m -> {
+                m = m.copy();
+                m.removeVariable(m.getExogenousParents(selectVar)[0]);
+                m.removeVariable(selectVar);
+                return m;
+            }).collect(Collectors.toList());
+            CausalMultiVE inf = new CausalMultiVE(endingPoints);
             double[] res = runQueries(inf);
+
+            logger.debug("Converging trajectories: "+builder.getConvergingTrajectories().size());
+            int[] trsizes = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
+            logger.debug("Trajectories sizes: "+Arrays.toString(trsizes));
+
 
             int nconv = inf.pointsForConvergingPNS(ratioConv, cause, effect);
             logger.info("Convergence with " + nconv + " runs (>" + (ratioConv * 100) + "%)");
@@ -244,12 +267,14 @@ public class SelectBiasExp extends Terminal {
         double[] v = null;
 
         Watch.start();
-        IntervalFactor ace = (IntervalFactor) inf.averageCausalEffects(cause, effect, 1, 1, 0);
+        p = (VertexFactor) inf.averageCausalEffects(cause, effect, 1, 1, 0);
         Watch.stopAndLog(logger, "Computed ACE in ");
         tACE = Watch.getWatch().getTime();
-        resList.add(ace.getDataLower()[0][0]);
-        resList.add(ace.getDataUpper()[0][0]);
-        logger.info("ACE: "+Arrays.toString(new double[]{ace.getDataLower()[0][0], ace.getDataUpper()[0][0]}));
+        v =  Doubles.concat(p.getData()[0]);
+        if(v.length==1) v = new double[]{v[0],v[0]};
+        Arrays.sort(v);
+        for(double val : v) resList.add(val);
+        logger.info("ACE: "+Arrays.toString(v));
 
         Watch.start();
         p = (VertexFactor) inf.probNecessityAndSufficiency(cause, effect);
@@ -316,6 +341,8 @@ public class SelectBiasExp extends Terminal {
 
         int nconv = inf.pointsForConvergingPNS(ratioConv, cause, effect);
         logger.info("Convergence with " + nconv + " runs (>" + (ratioConv * 100) + "%)");
+        int[] trsizes = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
+        logger.debug("Trajectories sizes: "+Arrays.toString(trsizes));
 
         addResults("EMCC", false, 1,
                 time_learn, res[0], res[1],

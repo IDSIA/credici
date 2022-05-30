@@ -11,6 +11,7 @@ import ch.idsia.credici.model.transform.ExogenousReduction;
 import ch.idsia.credici.utility.*;
 import ch.idsia.credici.utility.experiments.AsynIsCompatible;
 import ch.idsia.credici.utility.experiments.AsynQuery;
+import ch.idsia.credici.utility.experiments.AsynReduce;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
@@ -260,11 +261,11 @@ public class ModelDataGenerator extends Terminal {
 				}
 
 			}catch (Exception e) {
-				logger.info("Exception when generating candidate model");
+				logger.info("Exception when generating candidate model: "+e.toString());
 				//e.printStackTrace();
 				data = null;
 			}catch (Error e) {
-				logger.info("Error when generating candidate model");
+				logger.info("Error when generating candidate model"+e.toString());
 				//e.printStackTrace();
 				data = null;
 			}
@@ -363,17 +364,13 @@ public class ModelDataGenerator extends Terminal {
 		//return res.stream().mapToDouble(d -> (double)d).toArray();
 	}
 
-	private StructuralCausalModel reduce(StructuralCausalModel candidateModel) {
+	private StructuralCausalModel reduce(StructuralCausalModel candidateModel) throws ExecutionException, InterruptedException, TimeoutException {
 
 		logger.info("Reducing model with average U size: "+StatisticsModel.of(candidateModel).avgExoCardinality());
 		logger.info("DAG: "+candidateModel.getNetwork());
 		logger.info("ExoDAG: "+candidateModel.getExogenousDAG());
-		ExogenousReduction reducer = new ExogenousReduction(candidateModel, data)
-				.removeRedundant()
-				.removeWithZeroUpper();
-		if(reductionK<1.0)
-			reducer = reducer.removeWithZeroLower(reductionK);
-		return reducer.getModel();
+		AsynReduce.setArgs(candidateModel, data, reductionK);
+		return new InvokerWithTimeout<StructuralCausalModel>().run(AsynReduce::run, timeout);
 	}
 
 	@NotNull

@@ -71,7 +71,7 @@ def strtime():
 
 #### Function that interacts with credici
 
-def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=2, reduction=1.0, query=True, timeout=120, seed = None):
+def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=2, reduction=1.0, query=True, timeout=120, ptimeout=None, seed = None):
     args = ""
     args += f"-o {output_folder} "
     args += f"-n {nEndo} "
@@ -91,8 +91,8 @@ def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=2, reductio
 
     print(args)
     cmd = f"{java} -Xmx{28*1024}m -cp {jar_file} {javafile} {args}"
-    if timeout is not None:
-        cmd = f"timeout {timeout} {cmd}"
+    if ptimeout is not None:
+        cmd = f"timeout {ptimeout} {cmd}"
     print(cmd)
     exec_bash_print(cmd)
 
@@ -118,7 +118,7 @@ for seed in SEEDS:
     for nEndo in [4,5,6]:
         for reduction in [0.5, 0.75, 1.0]:
             for markovian in [False, True]:
-                args = dict(topology=topology, nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed, datasize=datasize, timeout=5*60)
+                args = dict(topology=topology, nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed, datasize=datasize, ptimeout=15*60)
                 #print(f"{i}: args = {args}")
                 i += 1
                 if overwrite or not generated(args):

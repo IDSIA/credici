@@ -8,14 +8,10 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.CollectionTools;
 import ch.idsia.credici.utility.DataUtil;
-import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.apps.SelectionBias;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
-import ch.idsia.crema.data.ReaderCSV;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.Iterables;
@@ -149,8 +145,8 @@ public class SelectBiasExp extends Terminal {
         logger.debug("Exact queries (data-based): "+queriesExactData);
 
 
-        cause = ((Double)queriesExact.get("cause")).intValue();
-        effect = ((Double)queriesExact.get("effect")).intValue();
+        cause = ((Double)queriesExactData.get("cause")).intValue();
+        effect = ((Double)queriesExactData.get("effect")).intValue();
 
         logger.info("Loaded exact query results from : "+fullpath);
         logger.info(queriesExact.toString());
@@ -158,15 +154,16 @@ public class SelectBiasExp extends Terminal {
         // initialize results
         results = new ArrayList<HashMap>();
 
-        addResults("exact", false, 1.0,
-                Double.NaN, Double.NaN,Double.NaN,
-                (double) queriesExact.get("ace_l"), (double)queriesExact.get("ace_u"),
-                (double)queriesExact.get("pns_l"), (double)queriesExact.get("pns_u"), -1);
-
+        if (!queriesExact.isEmpty()) {
+            addResults("exact", false, 1.0,
+                    Double.NaN, Double.NaN, Double.NaN,
+                    (double) queriesExact.get("ace_l"), (double) queriesExact.get("ace_u"),
+                    (double) queriesExact.get("pns_l"), (double) queriesExact.get("pns_u"), null, null);
+        }
         addResults("exact_data_based", false, 1.0,
                 Double.NaN, Double.NaN,Double.NaN,
                 (double) queriesExactData.get("ace_l"), (double)queriesExactData.get("ace_u"),
-                (double)queriesExactData.get("pns_l"), (double)queriesExactData.get("pns_u"), -1);
+                (double)queriesExactData.get("pns_l"), (double)queriesExactData.get("pns_u"), null, null);
 
 
 
@@ -242,18 +239,14 @@ public class SelectBiasExp extends Terminal {
             CausalMultiVE inf = new CausalMultiVE(endingPoints);
             double[] res = runQueries(inf);
 
-            logger.debug("Converging trajectories: "+builder.getConvergingTrajectories().size());
             int[] trsizes = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
             logger.debug("Trajectories sizes: "+Arrays.toString(trsizes));
 
 
-            int nconv = inf.pointsForConvergingPNS(ratioConv, cause, effect);
-            logger.info("Convergence with " + nconv + " runs (>" + (ratioConv * 100) + "%)");
-
             addResults("EMCC", true, ps1,
                     time_learn, res[0], res[1],
                     res[2],res[3],res[4],res[5],
-                    nconv);
+                    builder, inf.getIndividualPNS(cause, effect, 0, 1));
 
 
         }
@@ -339,15 +332,14 @@ public class SelectBiasExp extends Terminal {
         CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints());
         double[] res = runQueries(inf);
 
-        int nconv = inf.pointsForConvergingPNS(ratioConv, cause, effect);
-        logger.info("Convergence with " + nconv + " runs (>" + (ratioConv * 100) + "%)");
+
         int[] trsizes = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
         logger.debug("Trajectories sizes: "+Arrays.toString(trsizes));
 
         addResults("EMCC", false, 1,
                 time_learn, res[0], res[1],
                 res[2],res[3],res[4],res[5],
-                nconv);
+                builder, inf.getIndividualPNS(cause, effect, 0, 1));
 
     }
 
@@ -356,7 +348,7 @@ public class SelectBiasExp extends Terminal {
     private void addResults(String method, boolean selector, double ps1,
                             double time_learn, double time_ace, double time_pns,
                             double ace_l, double ace_u, double pns_l, double pns_u,
-                            int n_convergence){
+                            EMCredalBuilder builder, double[] individualPNS){
 
         String msg = "Adding results:";
 
@@ -393,12 +385,20 @@ public class SelectBiasExp extends Terminal {
         r.put("pns_u", String.valueOf(pns_u));
         msg += " pns_u="+pns_u;
 
-        if(n_convergence>1) {
-            r.put("n_convergence", String.valueOf(n_convergence));
-            msg += " n_convergence=" + n_convergence;
-        }
-
         r.put("model_path", modelPath);
+
+        if(builder != null) {
+            int i = 0;
+            for(List<StructuralCausalModel> t : builder.getTrajectories()){
+                int size = t.size() - 1;
+                r.put("trajectory_size_"+i, size);
+                i++;
+
+            }
+        }
+        if(individualPNS != null)
+            for(int i=0; i<individualPNS.length; i++) r.put("pns_"+i, individualPNS[i]);
+
 
         results.add(r);
         logger.debug(msg);

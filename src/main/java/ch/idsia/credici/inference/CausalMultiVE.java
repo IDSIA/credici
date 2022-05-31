@@ -23,6 +23,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 
 	boolean toInterval = false;
 
+
 	private CausalMultiVE(){
 
 	}
@@ -91,11 +92,30 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 
 		return new VertexFactor(Strides.empty(), Strides.empty(), vals);
 	}
+
+	public double[] getIndividualPNS(int cause, int effect, int trueState, int falseState){
+		return this.getInferenceList()
+				.stream()
+				.mapToDouble( i -> {
+					try {
+						return i.probNecessityAndSufficiency(cause, effect, trueState, falseState).getValue(0);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+						return Double.NaN;
+					} catch (ExecutionControl.NotImplementedException e) {
+						e.printStackTrace();
+						return Double.NaN;
+					}
+				})
+				.toArray();
+	}
+
 	@Override
 	public GenericFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
 
 		double max = Double.NEGATIVE_INFINITY;
 		double min = Double.POSITIVE_INFINITY;
+
 
 		for (CausalVE i : this.getInferenceList()) {
 			double psn = i.probNecessityAndSufficiency(cause, effect, trueState, falseState).getValue(0);

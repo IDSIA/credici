@@ -10,7 +10,7 @@ from pathlib import Path
 
 #### Parameter experiments
 
-setname = "synthetic/1000/set2"
+setname = "synthetic/1000/set4"
 idx_start = None
 idx_end = None
 seed = 0
@@ -36,7 +36,7 @@ print(setname)
 
 ### Global variables
 prj_path = Path(str(Path("../../../").resolve()) + "/")
-#prj_path = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/"
+prj_path = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/"
 exp_folder = Path(prj_path, "papers/pgm22/")
 code_folder = Path(exp_folder, "code")
 output_folder = Path(exp_folder, "results", setname)
@@ -130,5 +130,5 @@ def run(model, maxiter=300, executions=30, timeout = None):
 i = 1
 for m in MODELS:
     print(f"{i}/{len(MODELS)}: {m}")
-    run(m, timeout=60*60*3)
+    run(m, timeout=60*60*1)
     i+=1

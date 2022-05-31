@@ -36,7 +36,7 @@ print(setname)
 
 ### Global variables
 prj_path = Path(str(Path("../../../").resolve()) + "/")
-prj_path = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/"
+#prj_path = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/"
 exp_folder = Path(prj_path, "papers/pgm22/")
 code_folder = Path(exp_folder, "code")
 output_folder = Path(exp_folder, "results", setname)

@@ -1,7 +1,9 @@
 package code;
 
 import ch.idsia.credici.IO;
+import ch.idsia.credici.inference.CausalInference;
 import ch.idsia.credici.inference.CausalMultiVE;
+import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.CollectionTools;
@@ -9,25 +11,25 @@ import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.apps.SelectionBias;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
-import ch.idsia.crema.data.ReaderCSV;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
+import com.opencsv.CSVParserBuilder;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
 import picocli.CommandLine;
 
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -60,6 +62,8 @@ public class SelectBiasExp extends Terminal {
     StructuralCausalModel model = null;
     Path wdir = null;
     HashMap queriesExact; // make string,double
+    HashMap queriesExactData; // make string,double
+
     List<int[]> assigList = null;
     int cause, effect;
     int[] parents = null;
@@ -70,6 +74,7 @@ public class SelectBiasExp extends Terminal {
     protected void entryPoint() throws Exception {
         init();
         selectionParams();
+        //learnExactModel();    // Just for testing
         learnUnbiassedModel();
         learnBiasedModels();
         save();
@@ -115,22 +120,33 @@ public class SelectBiasExp extends Terminal {
         int datasize = data.length;
         logger.info("Loaded "+datasize+" data instances from: "+fullpath);
 
+
         // Load queries
         fullpath = wdir.resolve(modelPath.replace(".uai","_queries.csv")).toString();
         //DataUtil.fromCSV(fullpath);
 
 
-        ReaderCSV reader = new ReaderCSV(fullpath).read();
-        String[] keys = reader.getVarNames();
-        double[] values = reader.getData()[0];
-        queriesExact = new HashMap<>();
-        for(int i=0; i< keys.length; i++)
-            queriesExact.put(keys[i], values[i]);
+        //ReaderCSV reader = new ReaderCSV(fullpath).read();
+
+        CSVReader csvReader =  new CSVReaderBuilder(new FileReader(fullpath))
+                .withCSVParser(new CSVParserBuilder().withSeparator(',').build())
+                .build();
+        HashMap queriesExact = new HashMap<>();
+        HashMap queriesExactData = new HashMap<>();
+        String[] keys = Arrays.stream(csvReader.readNext()).filter(s -> !s.equals("data_based")).toArray(String[]::new);
+        for(String[] r : csvReader.readAll()){
+
+            HashMap queries = queriesExact;
+            if(r[0].equals("true")) queries = queriesExactData;
+            for(int i=0; i< keys.length; i++) queries.put(keys[i], Double.parseDouble(r[i+1]));
+        }
 
         logger.debug("Exact queries: "+queriesExact);
+        logger.debug("Exact queries (data-based): "+queriesExactData);
 
-        cause = ((Double)queriesExact.get("cause")).intValue();
-        effect = ((Double)queriesExact.get("effect")).intValue();
+
+        cause = ((Double)queriesExactData.get("cause")).intValue();
+        effect = ((Double)queriesExactData.get("effect")).intValue();
 
         logger.info("Loaded exact query results from : "+fullpath);
         logger.info(queriesExact.toString());
@@ -138,11 +154,16 @@ public class SelectBiasExp extends Terminal {
         // initialize results
         results = new ArrayList<HashMap>();
 
-        addResults("exact", false, 1.0,
+        if (!queriesExact.isEmpty()) {
+            addResults("exact", false, 1.0,
+                    Double.NaN, Double.NaN, Double.NaN,
+                    (double) queriesExact.get("ace_l"), (double) queriesExact.get("ace_u"),
+                    (double) queriesExact.get("pns_l"), (double) queriesExact.get("pns_u"), null, null);
+        }
+        addResults("exact_data_based", false, 1.0,
                 Double.NaN, Double.NaN,Double.NaN,
-                (double) queriesExact.get("ace_l"), (double)queriesExact.get("ace_u"),
-                (double)queriesExact.get("pns_l"), (double)queriesExact.get("pns_u"), -1);
-
+                (double) queriesExactData.get("ace_l"), (double)queriesExactData.get("ace_u"),
+                (double)queriesExactData.get("pns_l"), (double)queriesExactData.get("pns_u"), null, null);
 
 
 
@@ -160,6 +181,9 @@ public class SelectBiasExp extends Terminal {
         logger.info("Random selector parents: "+ Arrays.toString(parents));
         int parentComb = model.getDomain(parents).getCombinations();
         assigList = getRandomSeqIntMask(parentComb, true);
+
+        //assigList = new ArrayList(Collections.singleton(assigList.get(assigList.size() - 1))); // todo: remove
+
         logger.info("Ramdom selector assignments: "+assigList.size());
 
         int i = 1;
@@ -176,8 +200,8 @@ public class SelectBiasExp extends Terminal {
 
         logger.info("Learning multiple biased model (with selector)");
 
-        //int[] assignments = (int[]) assigList.get(1);
         for(int[] assignments : assigList) {
+            RandomUtil.setRandomSeed(seed);
 
             StructuralCausalModel modelBiased = SelectionBias.addSelector(model, parents, assignments);
 
@@ -188,6 +212,11 @@ public class SelectBiasExp extends Terminal {
             double ps1 = (1.0 * n1) / dataBiased.length;
 
             logger.info("Learning model with p(S=1)=" + ps1);
+
+            int[] trainable = Arrays.stream(modelBiased.getExogenousVars())
+                    .filter(v -> !ArraysUtil.contains(selectVar, modelBiased.getChildren(v)))
+                    .toArray();
+
 
             Watch.start();
 
@@ -200,22 +229,30 @@ public class SelectBiasExp extends Terminal {
             Watch.stopAndLog(logger, "Performed " + executions + " EM runs in ");
             long time_learn = Watch.getWatch().getTime();
 
-            CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints());
+
+            List endingPoints = builder.getSelectedPoints().stream().map(m -> {
+                m = m.copy();
+                m.removeVariable(m.getExogenousParents(selectVar)[0]);
+                m.removeVariable(selectVar);
+                return m;
+            }).collect(Collectors.toList());
+            CausalMultiVE inf = new CausalMultiVE(endingPoints);
             double[] res = runQueries(inf);
 
-            int nconv = inf.pointsForConvergingPNS(ratioConv, cause, effect);
-            logger.info("Convergence with " + nconv + " runs (>" + (ratioConv * 100) + "%)");
+            int[] trsizes = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
+            logger.debug("Trajectories sizes: "+Arrays.toString(trsizes));
+
 
             addResults("EMCC", true, ps1,
                     time_learn, res[0], res[1],
                     res[2],res[3],res[4],res[5],
-                    nconv);
+                    builder, inf.getIndividualPNS(cause, effect, 0, 1));
 
 
         }
     }
 
-    private double[] runQueries(CausalMultiVE inf) throws InterruptedException, ExecutionControl.NotImplementedException {
+    private double[] runQueries(CausalInference inf) throws InterruptedException, ExecutionControl.NotImplementedException {
 
         double tACE, tPNS;
         List resList = new ArrayList();
@@ -223,12 +260,14 @@ public class SelectBiasExp extends Terminal {
         double[] v = null;
 
         Watch.start();
-        IntervalFactor ace = (IntervalFactor) inf.averageCausalEffects(cause, effect, 1, 1, 0);
+        p = (VertexFactor) inf.averageCausalEffects(cause, effect, 1, 1, 0);
         Watch.stopAndLog(logger, "Computed ACE in ");
         tACE = Watch.getWatch().getTime();
-        resList.add(ace.getDataLower()[0][0]);
-        resList.add(ace.getDataUpper()[0][0]);
-        logger.info("ACE: "+Arrays.toString(new double[]{ace.getDataLower()[0][0], ace.getDataUpper()[0][0]}));
+        v =  Doubles.concat(p.getData()[0]);
+        if(v.length==1) v = new double[]{v[0],v[0]};
+        Arrays.sort(v);
+        for(double val : v) resList.add(val);
+        logger.info("ACE: "+Arrays.toString(v));
 
         Watch.start();
         p = (VertexFactor) inf.probNecessityAndSufficiency(cause, effect);
@@ -248,6 +287,34 @@ public class SelectBiasExp extends Terminal {
         return res;
     }
 
+    public void learnExactModel() throws ExecutionControl.NotImplementedException, InterruptedException {
+        logger.info("Exact learning unbiased model (without selector)");
+
+        Watch.start();
+
+
+        System.out.println(model);
+        data = model.samples(1000, model.getEndogenousVars());
+        System.out.println(model.getEmpiricalMap(true));
+        System.out.println(DataUtil.getEmpiricalMap(model, data));
+        CredalCausalVE inf = new CredalCausalVE(model);
+        System.out.println(inf.probNecessityAndSufficiency(cause, effect));
+
+        //SparseModel vmodel = model.toVCredal(DataUtil.getEmpiricalMap(model, data).values());
+        //CredalCausalVE inf = new CredalCausalVE(model, DataUtil.getEmpiricalMap(model, data).values());
+
+        Watch.stopAndLog(logger, "Performed exact learning (without selector) in ");
+        long time_learn = Watch.getWatch().getTime();
+/*
+        double[] res = runQueries(inf);
+
+
+        addResults("exact", false, 1,
+                time_learn, res[0], res[1],
+                res[2],res[3],res[4],res[5],
+                -1);*/
+    }
+
     public  void learnUnbiassedModel() throws InterruptedException, ExecutionControl.NotImplementedException {
 
         logger.info("Learning unbiased model (without selector)");
@@ -265,13 +332,14 @@ public class SelectBiasExp extends Terminal {
         CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints());
         double[] res = runQueries(inf);
 
-        int nconv = inf.pointsForConvergingPNS(ratioConv, cause, effect);
-        logger.info("Convergence with " + nconv + " runs (>" + (ratioConv * 100) + "%)");
+
+        int[] trsizes = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
+        logger.debug("Trajectories sizes: "+Arrays.toString(trsizes));
 
         addResults("EMCC", false, 1,
                 time_learn, res[0], res[1],
                 res[2],res[3],res[4],res[5],
-                nconv);
+                builder, inf.getIndividualPNS(cause, effect, 0, 1));
 
     }
 
@@ -280,7 +348,7 @@ public class SelectBiasExp extends Terminal {
     private void addResults(String method, boolean selector, double ps1,
                             double time_learn, double time_ace, double time_pns,
                             double ace_l, double ace_u, double pns_l, double pns_u,
-                            int n_convergence){
+                            EMCredalBuilder builder, double[] individualPNS){
 
         String msg = "Adding results:";
 
@@ -317,12 +385,20 @@ public class SelectBiasExp extends Terminal {
         r.put("pns_u", String.valueOf(pns_u));
         msg += " pns_u="+pns_u;
 
-        if(n_convergence>1) {
-            r.put("n_convergence", String.valueOf(n_convergence));
-            msg += " n_convergence=" + n_convergence;
-        }
-
         r.put("model_path", modelPath);
+
+        if(builder != null) {
+            int i = 0;
+            for(List<StructuralCausalModel> t : builder.getTrajectories()){
+                int size = t.size() - 1;
+                r.put("trajectory_size_"+i, size);
+                i++;
+
+            }
+        }
+        if(individualPNS != null)
+            for(int i=0; i<individualPNS.length; i++) r.put("pns_"+i, individualPNS[i]);
+
 
         results.add(r);
         logger.debug(msg);

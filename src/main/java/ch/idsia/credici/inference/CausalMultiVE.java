@@ -23,6 +23,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 
 	boolean toInterval = false;
 
+
 	private CausalMultiVE(){
 
 	}
@@ -74,10 +75,47 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 	}
 
 	@Override
+	public GenericFactor averageCausalEffects(int cause, int effect, int effectVal, int causeVal1, int causeVal2) throws InterruptedException {
+
+		double max = Double.NEGATIVE_INFINITY;
+		double min = Double.POSITIVE_INFINITY;
+
+		for (CausalVE i : this.getInferenceList()) {
+			double ace = ((BayesianFactor)i.averageCausalEffects(cause, effect, effectVal, causeVal1, causeVal2)).getValueAt(0);
+			if (ace > max) max = ace;
+			if (ace < min) min = ace;
+		}
+
+		double[][][] vals = new double[1][2][1];
+		vals[0][0][0] = min;
+		vals[0][1][0] = max;
+
+		return new VertexFactor(Strides.empty(), Strides.empty(), vals);
+	}
+
+	public double[] getIndividualPNS(int cause, int effect, int trueState, int falseState){
+		return this.getInferenceList()
+				.stream()
+				.mapToDouble( i -> {
+					try {
+						return i.probNecessityAndSufficiency(cause, effect, trueState, falseState).getValue(0);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+						return Double.NaN;
+					} catch (ExecutionControl.NotImplementedException e) {
+						e.printStackTrace();
+						return Double.NaN;
+					}
+				})
+				.toArray();
+	}
+
+	@Override
 	public GenericFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
 
 		double max = Double.NEGATIVE_INFINITY;
 		double min = Double.POSITIVE_INFINITY;
+
 
 		for (CausalVE i : this.getInferenceList()) {
 			double psn = i.probNecessityAndSufficiency(cause, effect, trueState, falseState).getValue(0);

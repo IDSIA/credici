@@ -1,6 +1,7 @@
 package ch.idsia.credici.utility;
 
 import ch.idsia.crema.utility.ArraysUtil;
+import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Booleans;
 
 import java.util.ArrayList;
@@ -75,7 +76,7 @@ public class EncodingUtil {
 	public static List<int[]> getRandomSeqIntMask(int size) {
 		List out = new ArrayList();
 		List idx = IntStream.range(0, size).boxed().collect(Collectors.toList());
-		Collections.shuffle(idx);
+		Collections.shuffle(idx, RandomUtil.getRandom());
 		int[] m = new int[size];
 
 		for (int i : idx.stream().mapToInt(i -> ((Integer) i).intValue()).toArray()) {

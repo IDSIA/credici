@@ -10,6 +10,7 @@ import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
 import org.jgrapht.alg.connectivity.ConnectivityInspector;
@@ -198,6 +199,11 @@ public class DAGUtil {
         return (List<int[]>) connectedComponentList.stream().map(s -> Ints.toArray((Set)s)).collect(Collectors.toList());
     }
 
+    public static  boolean isConnected(Graph g){
+        return new ConnectivityInspector(g).isConnected();
+    }
+
+
     public static boolean dseparated(SparseDirectedAcyclicGraph dag, int a, int b, int... obs){
 
         if(a==b || dag.containsEdge(a,b) || dag.containsEdge(b,a))
@@ -218,6 +224,22 @@ public class DAGUtil {
     public static int nodesDistance(SparseDirectedAcyclicGraph dag, int x, int y){
         if(x==y) return 0;
         return DijkstraShortestPath.findPathBetween(getUndirected(dag), x,y).getLength();
+    }
+
+    public static int[][] distanceMatrix(SparseDirectedAcyclicGraph graph){
+
+        int nNodes = graph.getVariables().length;
+        int[][] distanceMatrix = new int[nNodes][nNodes];
+        for(int x : graph.getVariables()){
+            for(int y:graph.getVariables()){
+                if(x<y){
+                    int d = DAGUtil.nodesDistance(graph, x,y);
+                    distanceMatrix[x][y] = d;
+                    distanceMatrix[y][x] = d;
+                }
+            }
+        }
+        return distanceMatrix;
     }
 
     public static DefaultUndirectedGraph getUndirected(SparseDirectedAcyclicGraph dag) {
@@ -320,6 +342,42 @@ public class DAGUtil {
                 dag.addLink(x, y);
         }
         return dag;
+    }
+
+
+    public static SparseDirectedAcyclicGraph random(int numNodes, int lambda, int maxIndegree) {
+
+        PoissonDistribution poiss = new PoissonDistribution(lambda);
+        poiss.reseedRandomGenerator(RandomUtil.getRandom().nextInt());
+        SparseDirectedAcyclicGraph graph = new SparseDirectedAcyclicGraph();
+
+        for(int i=0; i<numNodes; i++) graph.addVariable(i);
+
+        for(int i=1; i<numNodes; i++){
+            int p = poiss.sample();
+            p = Math.min(p, Math.min(i, maxIndegree));
+            int[] Pa = CollectionTools.choice(p, IntStream.range(0,i).toArray());
+            for(int j: Pa) {
+                graph.addLink(j, i);
+                //System.out.println(j+","+i);
+            }
+        }
+
+
+        while(!DAGUtil.isConnected(graph)){
+            int[] candidate = graph.vertexSet().stream().mapToInt(x->x).filter(x -> x != 0 && graph.getParents(x).length<maxIndegree).toArray();
+            int i = CollectionTools.choice(1, candidate)[0];
+            int j = CollectionTools.choice(1, IntStream.range(0,i).toArray())[0];
+            graph.addLink(j, i);
+            //System.out.println(j+","+i);
+        }
+
+        return graph;
+
+    }
+
+    public static double avgIndegree(SparseDirectedAcyclicGraph graph){
+        return graph.vertexSet().stream().mapToDouble(x -> graph.getParents(x).length).average().getAsDouble();
     }
 
 

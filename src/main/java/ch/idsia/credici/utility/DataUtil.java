@@ -1,5 +1,6 @@
 package ch.idsia.credici.utility;
 
+import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.experiments.AsynIsCompatible;
 import ch.idsia.crema.data.ReaderCSV;
@@ -228,18 +229,22 @@ public class DataUtil {
 
 	public static TIntIntMap[] SampleCompatible(StructuralCausalModel model, int dataSize, int maxIter, long timeout){
 
-		TIntIntMap[] data = model.samples(dataSize, model.getEndogenousVars());
+		TIntIntMap[] data = null;
 		boolean isComp = false;
+
+
 
 		try {
 			for(int j=0; j<maxIter; j++) {
+				data = model.samples(dataSize, model.getEndogenousVars());
 				AsynIsCompatible.setArgs(model, data);
 				isComp = new InvokerWithTimeout<Boolean>().run(AsynIsCompatible::run, timeout).booleanValue();
 				if(isComp) break;
-				data = model.samples(dataSize, model.getEndogenousVars());
 			}
 		}catch (Exception e){
+		}catch (Error e){
 		}
+
 
 
 		if(isComp) return data;

@@ -8,6 +8,7 @@ import com.google.common.primitives.Ints;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class CollectionTools {
@@ -106,6 +107,11 @@ public class CollectionTools {
 		for(String[] s : toStringMatrix(table))
 			System.out.println(Arrays.toString(s));
 
+	}
+
+	public static int[] choice(int n, int... elements){
+		int[] finalElements =  CollectionTools.shuffle(elements);;
+		return IntStream.range(0,n).map(i -> finalElements[i]).toArray();
 	}
 
 

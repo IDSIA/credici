@@ -372,8 +372,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		StructuralCausalModel startingModel =
 				(StructuralCausalModel) BayesianFactor.randomModel(
-						causalmodel, 5, false
-						,causalmodel.getExogenousVars()
+						causalmodel, 10, false
+						,trainableVars
 		);
 
 		ExpectationMaximization em = null;

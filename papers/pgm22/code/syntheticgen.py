@@ -11,7 +11,9 @@ from pathlib import Path
 #### Parameter experiments
 
 print(sys.argv)
-setname = "synthetic/1000/set2"
+datasize=1000
+setname = f"synthetic/{datasize}/set5"
+topology = "rand13"
 overwrite = False
 
 if len(sys.argv) > 1:
@@ -69,7 +71,7 @@ def strtime():
 
 #### Function that interacts with credici
 
-def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reduction=1.0, query=True, timeout=60, seed = None):
+def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=2, reduction=1.0, query=True, timeout=120, ptimeout=None, seed = None):
     args = ""
     args += f"-o {output_folder} "
     args += f"-n {nEndo} "
@@ -89,6 +91,8 @@ def generate(topology, nEndo, markovian=True, datasize=1000, maxdist=3, reductio
 
     print(args)
     cmd = f"{java} -Xmx{28*1024}m -cp {jar_file} {javafile} {args}"
+    if ptimeout is not None:
+        cmd = f"timeout {ptimeout} {cmd}"
     print(cmd)
     exec_bash_print(cmd)
 
@@ -110,16 +114,19 @@ def generated(args):
 
 i = 1
 
-for nEndo in [5,7]:
-    for seed in SEEDS:
+for seed in SEEDS:
+    for nEndo in [7,8]:
         for reduction in [0.5, 0.75, 1.0]:
             for markovian in [False, True]:
-                args = dict(topology="poly", nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed)
-                print(f"{i}: args = {args}")
+                args = dict(topology=topology, nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed, datasize=datasize, ptimeout=20*60)
+                #print(f"{i}: args = {args}")
                 i += 1
                 if overwrite or not generated(args):
+                    print(f"{i}: args = {args}")
                     generate(**args)
-                    print("model generated")
+                    #print("model generated")
+                else: print(f"{i}: args = {args} -- generated")
+
 print("finished")
 
 

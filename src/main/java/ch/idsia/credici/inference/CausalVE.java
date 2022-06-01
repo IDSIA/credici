@@ -3,6 +3,7 @@ package ch.idsia.credici.inference;
 import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
+import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
@@ -95,6 +96,9 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
 
         WorldMapping map = WorldMapping.getMap(pns_model);
         int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
+
+
+        for(int x: CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
 
         CausalVE infInternal =  new CausalVE(pns_model);
         BayesianFactor prob = (BayesianFactor) infInternal.causalQuery().setTarget(target).run();

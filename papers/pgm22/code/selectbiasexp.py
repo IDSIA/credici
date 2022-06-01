@@ -10,7 +10,7 @@ from pathlib import Path
 
 #### Parameter experiments
 
-setname = "synthetic/1000/set2"
+setname = "synthetic/1000/set4"
 idx_start = None
 idx_end = None
 seed = 0
@@ -130,5 +130,5 @@ def run(model, maxiter=300, executions=30, timeout = None):
 i = 1
 for m in MODELS:
     print(f"{i}/{len(MODELS)}: {m}")
-    run(m, timeout=60*60*3)
+    run(m, timeout=60*60*1)
     i+=1

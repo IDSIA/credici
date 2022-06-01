@@ -886,10 +886,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return sample(new TIntIntHashMap(), vars);
 	}
 	public TIntIntMap sample(TIntIntMap obs, int... vars){
-
-		Iterator it = this.getNetwork().iterator();
-		while(it.hasNext()){
-			int v = (int) it.next();
+		for(int v : DAGUtil.getTopologicalOrder(this.getNetwork())){
 			if(!obs.containsKey(v)) {
 				BayesianFactor f = this.getFactor(v);
 
@@ -900,7 +897,16 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 					f = f.filter(pa, obs.get(pa));
 				}
 
-				obs.putAll(f.sample());
+
+				TIntIntMap sample = null;
+				do{
+					try{
+						sample = f.sample();
+					}catch (Exception e){
+						System.out.println(".");
+					}
+				}while (sample==null);
+				obs.putAll(sample);
 			}
 		}
 
@@ -1041,6 +1047,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			}
 		}
 		return dag;
+	}
+
+	public SparseDirectedAcyclicGraph getEndogenousDAG(){
+		return DAGUtil.getSubDAG(this.getNetwork(), this.getEndogenousVars());
 	}
 
 	public int getExogenousTreewidth(){

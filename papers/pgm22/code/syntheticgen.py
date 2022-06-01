@@ -12,7 +12,7 @@ from pathlib import Path
 
 print(sys.argv)
 datasize=1000
-setname = f"synthetic/{datasize}/set4"
+setname = f"synthetic/{datasize}/set5"
 topology = "rand13"
 overwrite = False
 
@@ -115,7 +115,7 @@ def generated(args):
 i = 1
 
 for seed in SEEDS:
-    for nEndo in [4,5,6]:
+    for nEndo in [7,8]:
         for reduction in [0.5, 0.75, 1.0]:
             for markovian in [False, True]:
                 args = dict(topology=topology, nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed, datasize=datasize, ptimeout=20*60)

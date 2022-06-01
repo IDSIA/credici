@@ -118,7 +118,7 @@ for seed in SEEDS:
     for nEndo in [7,8]:
         for reduction in [0.5, 0.75, 1.0]:
             for markovian in [False, True]:
-                args = dict(topology=topology, nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed, datasize=datasize, ptimeout=20*60)
+                args = dict(topology=topology, nEndo=nEndo, markovian=markovian, reduction=reduction, seed=seed, datasize=datasize, ptimeout=40*60)
                 #print(f"{i}: args = {args}")
                 i += 1
                 if overwrite or not generated(args):

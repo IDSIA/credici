@@ -1053,6 +1053,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return DAGUtil.getSubDAG(this.getNetwork(), this.getEndogenousVars());
 	}
 
+
+	public int getEndogenousTreewidth(){
+		Graph moral = DAGUtil.moral(this.getEndogenousDAG());
+		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size();
+
+	}
 	public int getExogenousTreewidth(){
 		Graph moral = DAGUtil.moral(this.getExogenousDAG());
 		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() - 1;
@@ -1060,7 +1066,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 	public int getTreewidth(){
 		Graph moral = DAGUtil.moral(this.getNetwork());
-		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() - 1;
+		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size();
 
 	}
 

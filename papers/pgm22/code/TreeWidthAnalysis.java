@@ -25,7 +25,7 @@ public class TreeWidthAnalysis {
         String[][] info = new String[files.length+1][];
 
 
-        info[0] = new String[]{"name", "tw", "exotw"};
+        info[0] = new String[]{"name", "treewidth", "endo_treewidth"};
         for(int i = 0; i< files.length; i++){
 
 

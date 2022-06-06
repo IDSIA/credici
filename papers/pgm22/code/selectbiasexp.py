@@ -130,5 +130,5 @@ def run(model, maxiter=300, executions=30, timeout = None):
 i = 1
 for m in MODELS:
     print(f"{i}/{len(MODELS)}: {m}")
-    run(m, timeout=60*60*3)
+    run(m, timeout=60*60*5)
     i+=1

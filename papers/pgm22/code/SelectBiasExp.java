@@ -57,6 +57,10 @@ public class SelectBiasExp extends Terminal {
     @CommandLine.Option(names = {"-r", "--ratioConv"}, description = "For the output statistics, ratio of the maximum interval. Default to 0.95")
     private double ratioConv = 0.90;
 
+    @CommandLine.Option(names = {"-as", "--addSeed"}, description = "Aaddional seed only for staring points. Defaults to 0")
+    private long addSeed = 0;
+
+
     /// Global ///
     TIntIntMap[] data = null;
     StructuralCausalModel model = null;
@@ -68,6 +72,14 @@ public class SelectBiasExp extends Terminal {
     int cause, effect;
     int[] parents = null;
     List<HashMap> results = null;
+
+    String treewidth = "";
+    String endoTreewidth = "";
+    String biasTreewidth = "";
+    String biasEndoTreewidth = "";
+
+
+
 
 
     @Override
@@ -114,6 +126,15 @@ public class SelectBiasExp extends Terminal {
         model = (StructuralCausalModel) IO.readUAI(fullpath);
         logger.info("Loaded model from: "+fullpath);
 
+        try {
+            treewidth = String.valueOf(model.getTreewidth());
+            endoTreewidth = String.valueOf(model.getTreewidth());
+        }catch (Exception e){
+            logger.warn("error calculating model treewidth");
+        }
+
+
+
         // Load data
         fullpath = wdir.resolve(modelPath.replace(".uai",".csv")).toString();
         data = DataUtil.fromCSV(fullpath);
@@ -143,7 +164,6 @@ public class SelectBiasExp extends Terminal {
 
         logger.debug("Exact queries: "+queriesExact);
         logger.debug("Exact queries (data-based): "+queriesExactData);
-
 
         cause = ((Double)queriesExactData.get("cause")).intValue();
         effect = ((Double)queriesExactData.get("effect")).intValue();
@@ -200,10 +220,21 @@ public class SelectBiasExp extends Terminal {
 
         logger.info("Learning multiple biased model (with selector)");
 
+        int i = 0;
+
         for(int[] assignments : assigList) {
-            RandomUtil.setRandomSeed(seed);
+            RandomUtil.setRandomSeed(seed+addSeed);
 
             StructuralCausalModel modelBiased = SelectionBias.addSelector(model, parents, assignments);
+
+            if(i==0) {
+                try {
+                    biasTreewidth = String.valueOf(modelBiased.getTreewidth());
+                    biasEndoTreewidth = String.valueOf(modelBiased.getTreewidth());
+                }catch (Exception e){
+                    logger.warn("error calculating bias treewidth");
+                }
+            }
 
             int selectVar = ArraysUtil.difference(modelBiased.getEndogenousVars(), model.getEndogenousVars())[0];
             TIntIntMap[] dataBiased = SelectionBias.applySelector(data, modelBiased, selectVar);
@@ -247,6 +278,8 @@ public class SelectBiasExp extends Terminal {
                     time_learn, res[0], res[1],
                     res[2],res[3],res[4],res[5],
                     builder, inf.getIndividualPNS(cause, effect, 0, 1));
+
+            i++;
 
 
         }
@@ -387,6 +420,14 @@ public class SelectBiasExp extends Terminal {
 
         r.put("model_path", modelPath);
 
+        if(selector)
+            r.put("sparents", Arrays.toString(parents));
+
+        r.put("treewdith", treewidth);
+        r.put("endo_treewdith", endoTreewidth);
+        r.put("bias_treewdith", biasTreewidth);
+        r.put("bias_endo_treewdith", biasEndoTreewidth);
+
         if(builder != null) {
             int i = 0;
             for(List<StructuralCausalModel> t : builder.getTrajectories()){
@@ -414,8 +455,6 @@ public class SelectBiasExp extends Terminal {
         logger.info("Saving info at:" +fullpath);
         DataUtil.toCSV(fullpath, results);
 
-
-        // todo: transform results to String[][] and save
 
 
 

@@ -10,11 +10,13 @@ from pathlib import Path
 
 #### Parameter experiments
 
-setname = "synthetic/1000/set5"
+setname = "synthetic/1000/set4"
 idx_start = None
 idx_end = None
 seed = 0
 rewrite = False
+addSeed = 1
+
 
 
 print(f"args len = {len(sys.argv)}")
@@ -40,7 +42,9 @@ prj_path = Path(str(Path("../../../").resolve()) + "/")
 exp_folder = Path(prj_path, "papers/pgm22/")
 code_folder = Path(exp_folder, "code")
 output_folder = Path(exp_folder, "results", setname)
-#output_folder = Path(exp_folder, "results", "example")
+if addSeed>0:
+    output_folder = Path(output_folder, f"additional{addSeed}")
+
 
 models_folder = Path(exp_folder, "models", setname)
 
@@ -86,10 +90,13 @@ def strtime():
 import os
 
 
-f = os.listdir(output_folder)[0]
+f = os.listdir(output_folder)
 
-PROCESSED = [f[:f.index("_mIter")]+".uai" for f in os.listdir(output_folder) if "_mIter" in f]
-
+if len(f)>0:
+    f = f[0]
+    PROCESSED = [f[:f.index("_mIter")]+".uai" for f in os.listdir(output_folder) if "_mIter" in f]
+else:
+    PROCESSED = []
 
 
 def select_model(f):
@@ -110,12 +117,14 @@ print(f"{len(MODELS)} models to process")
 # -m 50 -x 4 -s 0 --debug papers/pgm22/models/synthetic/1000/chain_mk1_maxDist3_nEndo5_k075_3.uai
 
 
-def run(model, maxiter=300, executions=30, timeout = None):
+def run(model, maxiter=300, executions=50, timeout = None):
     args = ""
     args += f"-o {output_folder} "
     args += f"-m {maxiter} "
     args += f"-x {executions} "
     args += f"-s {seed} "
+    args += f"-as {addSeed} "
+
     args += f"{Path(models_folder, model)}"
 
     javafile = Path(code_folder, "SelectBiasExp.java")
@@ -128,7 +137,14 @@ def run(model, maxiter=300, executions=30, timeout = None):
     exec_bash_print(cmd)
 
 i = 1
+
+# SORT in reverse order for the number of endogenous
+MODELS = [m for n,m in sorted([(n[5:n.index("_")],m)
+                               for n,m in [(m[m.index("nEndo"):],m)
+                                           for m in MODELS]],
+                              key=lambda tup: tup[1], reverse=True)]
+
 for m in MODELS:
     print(f"{i}/{len(MODELS)}: {m}")
-    run(m, timeout=60*60*5)
+    run(m, timeout=60*60*3)
     i+=1

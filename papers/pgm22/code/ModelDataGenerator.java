@@ -20,12 +20,18 @@ import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.InvokerWithTimeout;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
+import com.opencsv.CSVParserBuilder;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVReaderBuilder;
+import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
 import org.jetbrains.annotations.NotNull;
 import picocli.CommandLine;
 
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -50,7 +56,7 @@ public class ModelDataGenerator extends Terminal {
 	-r reduction
 	chain
 
-	-n 10 -d 500 --mk 1 --query -r 0.8 chain
+	-n 5 -d 500 --mk 1 --query -r 1.0 -db ./papers/pgm22/models/dagdb/bngen1_tw2.csv dagdb
 	 */
 
 
@@ -59,6 +65,9 @@ public class ModelDataGenerator extends Terminal {
 
 	@CommandLine.Option(names={"-o", "--output"}, description = "Output folder for the results.")
 	String outputPath = ".";
+
+	@CommandLine.Option(names={"-db", "--dagdb"}, description = "When topolgy is dagdb, a csv with DAGs must be set.")
+	String dagdbPath = "";
 
 	@CommandLine.Option(names = {"-n", "--nEndo"}, description = "Number of endogenous variables. Default 5")
 	private int nEndo = 5;
@@ -81,7 +90,6 @@ public class ModelDataGenerator extends Terminal {
 	@CommandLine.Option(names = {"-mr", "--minratio"}, description = "Minimum log-lk ratio between the model and the data. Defaults to 0.8")
 	private double minRatio = 0.8;
 
-
 	@CommandLine.Option(names={"--query"}, description = "Run and store ACE and PNS queries. Defaults to false")
 	boolean query = false;
 
@@ -90,16 +98,19 @@ public class ModelDataGenerator extends Terminal {
 	double ratio;
 	double intervalsize;
 
+	HashMap[] dagdb = null;
+
 
 	@Override
 	protected void checkArguments() {
 		logger.info("Checking arguments");
 
-		assertTrue( Arrays.asList("chain", "poly", "rand13", "rand23").stream().anyMatch(s -> s.equals(topology)), " Wrong value for topology: "+topology);
+		assertTrue( Arrays.asList("chain", "poly", "rand13", "rand23", "dagdb").stream().anyMatch(s -> s.equals(topology)), " Wrong value for topology: "+topology);
 		assertTrue( nEndo>2, " Wrong value for nEndo: "+nEndo);
 		assertTrue( dataSize>0, " Wrong value for dataSize: "+dataSize);
 		assertTrue( markovianity ==0 || markovianity ==1, " Wrong value for markovianity: "+ markovianity);
 		assertTrue( reductionK>=0.0 && reductionK<=1.0, " Wrong value for reductionK: "+reductionK);
+		assertTrue(topology!="dagdb" || dagdbPath!="", "Specify a path for the DAG database.");
 
 
 	}
@@ -121,6 +132,8 @@ public class ModelDataGenerator extends Terminal {
 	private static TIntIntMap[] data = null;
 	Path wdir = null;
 
+	Random r = null;
+
 	public static void main(String[] args) {
 		argStr = String.join(";", args);
 		CommandLine.run(new ModelDataGenerator(), args);
@@ -138,7 +151,6 @@ public class ModelDataGenerator extends Terminal {
 		RandomUtil.setRandomSeed(seed);
 		logger.info("Starting logger with seed "+seed);
 		RandomUtil.setRandomSeed(seed);
-
 		transformAndSample();
 		statistics();
 		save();
@@ -157,7 +169,6 @@ public class ModelDataGenerator extends Terminal {
 		fullpath = wdir.resolve(filename+"_info.csv").toAbsolutePath().toString();
 		logger.info("Saving info at:" +fullpath);
 		DataUtil.toCSV(fullpath, info);
-
 
 		fullpath = wdir.resolve(filename+".uai").toAbsolutePath().toString();
 		logger.info("Saving model at:" +fullpath);
@@ -196,6 +207,7 @@ public class ModelDataGenerator extends Terminal {
 		logger.info("- Number of X vars: "+numEndoVars);
 		logger.info("- X set: "+Arrays.toString(model.getEndogenousVars()));
 		logger.info("- ExoTreewidth: "+model.getExogenousTreewidth());
+		logger.info("- EndoTreewidth: "+model.getEndogenousTreewidth());
 		logger.info("- Avg Indegree: "+avgIndegree);
 		logger.info("- Avg Endogenous Indegree: "+avgEndoIndegree);
 		logger.info("- Markovian: "+ CausalInfo.of(model).isMarkovian());
@@ -389,7 +401,7 @@ public class ModelDataGenerator extends Terminal {
 		return newModel;
 	}
 
-	private void buildBaseModel() {
+	private void buildBaseModel() throws IOException, CsvException {
 
 		SparseDirectedAcyclicGraph endoDAG = null;
 
@@ -409,8 +421,33 @@ public class ModelDataGenerator extends Terminal {
 
 		}else if(topology.equals("rand13")){
 			endoDAG = DAGUtil.random(nEndo, 1, 3);
-		}else if(topology.equals("rand23")){
+		}else if(topology.equals("rand23")) {
 			endoDAG = DAGUtil.random(nEndo, 2, 3);
+		}else if(topology.equals("dagdb")){
+
+			if(dagdb == null) {
+				CSVReader reader = new CSVReaderBuilder(new FileReader(dagdbPath))
+						.withCSVParser(new CSVParserBuilder().withSeparator(';').build())
+						.build();
+
+				dagdb = reader.readAll().stream().map(d -> {
+
+					int numNodes = Integer.parseInt(d[0]);
+					HashMap m = new HashMap();
+					if (numNodes == nEndo) {
+						m.put("numNodes", numNodes);
+						m.put("arcs", d[1]);
+					}
+					return m;
+				}).filter(d -> !d.isEmpty()).toArray(HashMap[]::new);
+
+				if (dagdb.length == 0)
+					throw new IllegalArgumentException("None of the DAGs in database fits the constraints.");
+			}
+			if(r==null) r = new Random(argStr.hashCode());
+			endoDAG = DAGUtil.build((String) dagdb[r.nextInt(dagdb.length)].get("arcs"));
+
+
 		}else{
 			throw new IllegalArgumentException("Unknown topology: "+topology);
 		}

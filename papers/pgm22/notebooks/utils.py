@@ -1,14 +1,14 @@
 from unittest import case
 
 
-def load_data(folders):
+def load_data(folders, filter=""):
     import pandas as pd
     import glob
     import numpy as np
 
     d = pd.DataFrame()
     for folder in np.array([folders]).flatten():
-        files = glob.glob(f"{folder}/*.csv")
+        files = glob.glob(f"{folder}/*{filter}.csv")
         for f in files:
             d1 = pd.read_csv(f)
             d1["file"] = f

@@ -15,7 +15,7 @@ idx_start = None
 idx_end = None
 seed = 0
 rewrite = False
-addSeed = 1
+addSeed = 0
 
 
 

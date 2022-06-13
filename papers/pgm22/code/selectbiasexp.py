@@ -117,7 +117,7 @@ print(f"{len(MODELS)} models to process")
 # -m 50 -x 4 -s 0 --debug papers/pgm22/models/synthetic/1000/chain_mk1_maxDist3_nEndo5_k075_3.uai
 
 
-def run(model, maxiter=300, executions=50, timeout = None):
+def run(model, maxiter=300, executions=80, timeout = None):
     args = ""
     args += f"-o {output_folder} "
     args += f"-m {maxiter} "
@@ -136,7 +136,6 @@ def run(model, maxiter=300, executions=50, timeout = None):
     print(cmd)
     exec_bash_print(cmd)
 
-i = 1
 
 # SORT in reverse order for the number of endogenous
 MODELS = [m for n,m in sorted([(n[5:n.index("_")],m)
@@ -144,6 +143,12 @@ MODELS = [m for n,m in sorted([(n[5:n.index("_")],m)
                                            for m in MODELS]],
                               key=lambda tup: tup[1], reverse=True)]
 
+i = 1
+print("MODELS:")
+for m in MODELS:
+    print(f"{i}/{len(MODELS)}: {m}")
+
+i=1
 for m in MODELS:
     print(f"{i}/{len(MODELS)}: {m}")
     run(m, timeout=60*60*3)

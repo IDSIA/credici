@@ -5,8 +5,10 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.CollectionTools;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
+import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import org.eclipse.persistence.internal.libraries.asm.tree.TypeInsnNode;
@@ -55,7 +57,7 @@ public class SelectionBias {
 
 		BayesianFactor fs = EquationBuilder.fromVector(
 				selectModel.getDomain(s),
-				selectModel.getDomain(selectModel.getParents(s)),
+				selectModel.getDomain(Ints.concat(parents, new int[]{us})),
 				assignments
 		);
 		selectModel.setFactor(s, fs);
@@ -91,4 +93,21 @@ public class SelectionBias {
 		return data;
 
 	}
+
+	public static int[] getAssignmentWithHidden(StructuralCausalModel model, int[] Sparents, int[]... hiddenConf){
+		Strides dom = model.getDomain(Sparents);
+		int assignments[] = IntStream.range(0, dom.getCombinations()).map(i->1).toArray();
+		for(int[] c : hiddenConf)
+			assignments[dom.getOffset(c)] = 0;
+		return assignments;
+	}
+
+	public static int[] getAssignmentWithVisible(StructuralCausalModel model, int[] Sparents, int[]... visibleConf){
+		Strides dom = model.getDomain(Sparents);
+		int assignments[] = IntStream.range(0, dom.getCombinations()).map(i->0).toArray();
+		for(int[] c : visibleConf)
+			assignments[dom.getOffset(c)] = 1;
+		return assignments;
+	}
+
 }

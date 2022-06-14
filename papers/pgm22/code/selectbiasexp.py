@@ -151,5 +151,5 @@ for m in MODELS:
 i=1
 for m in MODELS:
     print(f"{i}/{len(MODELS)}: {m}")
-    run(m, timeout=60*60*3)
+    run(m, timeout=60*60*6)
     i+=1

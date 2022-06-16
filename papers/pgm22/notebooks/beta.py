@@ -55,7 +55,8 @@ def p_beta(row, n, eps = None):
             den, e2 = dblquad(f, 0,  a + (1 - b), lambda y: 0, lambda y: a + (1 - b) - y, epsabs=epsabs)
 
             return [num/den, e1, e2, num, den, len(w)]
-    except:
+    except RuntimeError as err:
+        print("exception: ", err, eps)
         return [np.nan, np.nan, np.nan, np.nan, np.nan, len(w)]
 
 def prob_unif_data(data, n, eps):
@@ -76,17 +77,11 @@ def filter_data(data):
 
 n = int(sys.argv[1])
 eps = float(sys.argv[2])
-data_folder = sys.argv[3]
-#n=20
-#eps =0.01
-#data_folder  = "../results/synthetic/1000/set4_aggregated/"
+data_file = sys.argv[3]
 
-print(n, eps, data_folder)
+print(n, eps, data_file)
 
-input = utils.load_data(data_folder, "_x80_*")
-data2 = utils.merge_exact(input, "exact_data_based")
-
-data = filter_data(data2)
+data = pd.read_csv(data_file)
 
 #%%
 data[f'p_unif_{n}_{eps}'] = prob_unif_data(data, n, eps)

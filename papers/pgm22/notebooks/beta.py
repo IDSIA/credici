@@ -80,9 +80,10 @@ def filter_data(data):
 
 
 n = int(sys.argv[1])
-eps = int(sys.argv[2])
+eps = float(sys.argv[2])
 data_folder = sys.argv[3]
 
+print(n, eps, data_folder)
 
 input = utils.load_data(data_folder, "_x80_*")
     #[

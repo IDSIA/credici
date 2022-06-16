@@ -5,6 +5,7 @@ import ch.idsia.crema.factor.convert.BayesianToVertex;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.Strides;
 import com.google.common.primitives.Doubles;
+import gnu.trove.map.TIntIntMap;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -37,6 +38,22 @@ public class Probability {
 		return l;
 	}
 
+	public static double logLikelihood(BayesianFactor prob, TIntIntMap[] data) {
+		Strides dom = prob.getDomain();
+		TIntIntMap[] D =  DataUtil.selectColumns(data, dom.getVariables());
+		BayesianFactor counts = DataUtil.getCounts(D, dom);
+
+		double llk = 0;
+
+		for(int i=0; i<dom.getCombinations(); i++) {
+			int s[] = dom.statesOf(i);
+			double c = counts.getValue(s);
+			if(c>0)
+				llk += c * Math.log(prob.getValue(s));
+		}
+		return llk;
+	}
+
 
 	public static double likelihood(HashMap<Set<Integer>, BayesianFactor> prob,
 										 HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
@@ -53,6 +70,15 @@ public class Probability {
 		double l = 0.0;
 		for(Set<Integer> k : emp.keySet())
 			l += Probability.logLikelihood((BayesianFactor) prob.get(k), (BayesianFactor)emp.get(k), counts);
+
+		return l;
+	}
+
+	public static double logLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
+									   TIntIntMap[] data) {
+		double l = 0.0;
+		for(Set<Integer> k : prob.keySet())
+			l += Probability.logLikelihood((BayesianFactor) prob.get(k), data);
 
 		return l;
 	}

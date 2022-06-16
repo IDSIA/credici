@@ -2,6 +2,7 @@ package ch.idsia.credici.utility.apps;
 
 import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.CollectionTools;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -13,6 +14,9 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import org.eclipse.persistence.internal.libraries.asm.tree.TypeInsnNode;
 
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -39,6 +43,10 @@ public class SelectionBias {
 		return addSelector(m, parents, assignments);
 	}
 
+
+	public static StructuralCausalModel addSelector(StructuralCausalModel m, int[] parents, int[]... hidden_conf){
+		return addSelector(m, parents, SelectionBias.getAssignmentWithHidden(m, parents, hidden_conf));
+	}
 
 	public static StructuralCausalModel addSelector(StructuralCausalModel m, int[] parents, int... assignments) {
 		if(assignments.length != m.getDomain(parents).getCombinations())
@@ -108,6 +116,27 @@ public class SelectionBias {
 		for(int[] c : visibleConf)
 			assignments[dom.getOffset(c)] = 1;
 		return assignments;
+	}
+
+	public static List<StructuralCausalModel> runEM(StructuralCausalModel modelBiased, int selectVar, TIntIntMap[] dataBiased, int maxIter, int executions) throws InterruptedException {
+		int[] trainable = Arrays.stream(modelBiased.getExogenousVars())
+				.filter(v -> !ArraysUtil.contains(selectVar, modelBiased.getChildren(v)))
+				.toArray();
+
+		EMCredalBuilder builder = EMCredalBuilder.of(modelBiased, dataBiased)
+				.setMaxEMIter(maxIter)
+				.setNumTrajectories(executions)
+				.setTrainableVars(trainable)
+				.setWeightedEM(true)
+				.build();
+
+		List endingPoints = builder.getSelectedPoints().stream().map(m -> {
+			m = m.copy();
+			m.removeVariable(m.getExogenousParents(selectVar)[0]);
+			m.removeVariable(selectVar);
+			return m;
+		}).collect(Collectors.toList());
+		return endingPoints;
 	}
 
 }

@@ -201,6 +201,16 @@ public class DataUtil {
 		}
 		return dnew;
 	}
+
+	public static TIntIntMap[] selectColumns(TIntIntMap[] data, int... keys){
+		return Arrays.stream(data).map(d -> DataUtil.select(d, keys)).toArray(TIntIntMap[]::new);
+	}
+
+
+	public static TIntIntMap[] removeColumns(TIntIntMap[] data, int... keys){
+		return Arrays.stream(data).map(d -> DataUtil.remove(d, keys)).toArray(TIntIntMap[]::new);
+	}
+
 	public static TIntIntMap[] SampleCompatible(StructuralCausalModel model, int dataSize, int maxIter){
 
 		TIntIntMap[] data = model.samples(dataSize, model.getEndogenousVars());
@@ -208,18 +218,14 @@ public class DataUtil {
 
 		try {
 			for(int j=0; j<maxIter; j++) {
-				System.out.println("sampling");
 				//AsynIsCompatible.setArgs(model, data);
 				//		return new InvokerWithTimeout<Boolean>().run(AsynIsCompatible::run, timeout).booleanValue();
 				isComp = model.isCompatible(data, 5);
-				System.out.println("Checked compatibility");
 				if(isComp) break;
 				data = model.samples(dataSize, model.getEndogenousVars());
 			}
 		}catch (Exception e){
-			System.out.println("Exception");
 		}
-		System.out.println("sampled");
 
 
 		if(isComp) return data;

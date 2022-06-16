@@ -35,6 +35,13 @@ import java.util.stream.Stream;
 
 import static ch.idsia.credici.utility.EncodingUtil.getRandomSeqIntMask;
 
+/*
+
+Parameters CLI:
+-w -x 20 --seed 0 ./papers/pgm22/models/synthetic/1000/set4/rand13_mk0_nEndo4_k05_0.uai
+
+* */
+
 public class SelectBiasExp extends Terminal {
     @CommandLine.Parameters(description = "Model path in UAI format.")
     private String modelPath;
@@ -325,7 +332,6 @@ public class SelectBiasExp extends Terminal {
 
         Watch.start();
 
-
         System.out.println(model);
         data = model.samples(1000, model.getEndogenousVars());
         System.out.println(model.getEmpiricalMap(true));
@@ -421,7 +427,7 @@ public class SelectBiasExp extends Terminal {
         r.put("model_path", modelPath);
 
         if(selector)
-            r.put("sparents", Arrays.toString(parents));
+            r.put("sparents", Arrays.toString(parents).replace(", ", "|"));
 
         r.put("treewdith", treewidth);
         r.put("endo_treewdith", endoTreewidth);
@@ -454,7 +460,6 @@ public class SelectBiasExp extends Terminal {
         String fullpath = this.wdir.resolve(this.output).resolve(filename+".csv").toString();
         logger.info("Saving info at:" +fullpath);
         DataUtil.toCSV(fullpath, results);
-
 
 
 

@@ -98,7 +98,7 @@ data[f'p_unif_{n}_{eps}'] = prob_unif_data(data, n, eps)
 
 #%%
 f = partial(p_beta, n=n, eps=eps)
-data[f'p_beta_{n}_{eps}'],  = data.apply(f, axis=1)
+data  = data.apply(f, axis=1)
 
 data.to_csv(f"probs_{n}_{eps}.csv")
 

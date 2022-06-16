@@ -36,26 +36,27 @@ def _p_beta2(x, y, L, alpha, beta, n):
 
 def p_beta(row, n, eps = None):
     epsabs=1e-30
-
     import warnings
-    with warnings.catch_warnings(record=True) as w:
-        alpha, beta = fit(row, n)
-        a = min(row[[f'pns_{i}' for i in range(n)]])
-        b = max(row[[f'pns_{i}' for i in range(n)]]) 
-        L = b - a
+    try:
+        with warnings.catch_warnings(record=True) as w:
+            alpha, beta = fit(row, n)
+            a = min(row[[f'pns_{i}' for i in range(n)]])
+            b = max(row[[f'pns_{i}' for i in range(n)]]) 
+            L = b - a
 
-        delta = eps * 2 * L
+            delta = eps * 2 * L
 
-        f = partial(_p_beta2, L = L, alpha = alpha, beta = beta, n = n)
+            f = partial(_p_beta2, L = L, alpha = alpha, beta = beta, n = n)
 
-        num, e1 = dblquad(f, 0, delta / 2, lambda y: 0, lambda y: delta / 2, epsabs=epsabs)
+            num, e1 = dblquad(f, 0, delta / 2, lambda y: 0, lambda y: delta / 2, epsabs=epsabs)
 
-        #f(y1, x1), x1_, x1^, y1_, y1^
+            #f(y1, x1), x1_, x1^, y1_, y1^
 
-        den, e2 = dblquad(f, 0,  a + (1 - b), lambda y: 0, lambda y: a + (1 - b) - y, epsabs=epsabs)
+            den, e2 = dblquad(f, 0,  a + (1 - b), lambda y: 0, lambda y: a + (1 - b) - y, epsabs=epsabs)
 
-        return [num/den, e1, e2, num, den, len(w)]
-
+            return [num/den, e1, e2, num, den, len(w)]
+    except:
+        return [np.nan, np.nan, np.nan, np.nan, np.nan, len(w)]
 
 def prob_unif_data(data, n, eps):
     a = data[[f'pns_{i}' for i in range(n)]].min(axis=1)

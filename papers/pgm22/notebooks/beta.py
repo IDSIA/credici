@@ -49,15 +49,25 @@ def p_beta(row, n, eps = None):
             f = partial(_p_beta2, L = L, alpha = alpha, beta = beta, n = n)
 
             num, e1 = dblquad(f, 0, delta / 2, lambda y: 0, lambda y: delta / 2, epsabs=epsabs)
-
-            #f(y1, x1), x1_, x1^, y1_, y1^
-
             den, e2 = dblquad(f, 0,  a + (1 - b), lambda y: 0, lambda y: a + (1 - b) - y, epsabs=epsabs)
 
-            return [num/den, e1, e2, num, den, len(w)]
+            row[f'p_beta_{n}_{eps}'] = num/den
+            row[f'num_p_beta_{n}_{eps}'] = num
+            row[f'den_p_beta_{n}_{eps}'] = den
+            row[f'enum_p_beta_{n}_{eps}'] = e1
+            row[f'eden_p_beta_{n}_{eps}'] = e2
+            row[f'warn_p_beta_{n}_{eps}'] = len(w)
+            
+            return row
     except RuntimeError as err:
         print("exception: ", err, eps)
-        return [np.nan, np.nan, np.nan, np.nan, np.nan, len(w)]
+        row[f'p_beta_{n}_{eps}'] = np.nan
+        row[f'num_p_beta_{n}_{eps}'] = np.nan
+        row[f'den_p_beta_{n}_{eps}'] = np.nan
+        row[f'enum_p_beta_{n}_{eps}'] = np.nan
+        row[f'eden_p_beta_{n}_{eps}'] = np.nan
+        row[f'warn_p_beta_{n}_{eps}'] = -1
+        return row
 
 def prob_unif_data(data, n, eps):
     a = data[[f'pns_{i}' for i in range(n)]].min(axis=1)
@@ -88,7 +98,7 @@ data[f'p_unif_{n}_{eps}'] = prob_unif_data(data, n, eps)
 
 #%%
 f = partial(p_beta, n=n, eps=eps)
-data[f'p_beta_{n}_{eps}'] = data.apply(f, axis=1)
+data[f'p_beta_{n}_{eps}'],  = data.apply(f, axis=1)
 
 data.to_csv(f"probs_{n}_{eps}.csv")
 

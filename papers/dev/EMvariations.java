@@ -34,36 +34,47 @@ public class EMvariations {
 
 
 
-        for(int i=0; i<4; i++) {
 
+        for(int method=3; method<5; method++) {
+            int finalMethod = method;
+            double time = IntStream.range(0,5).mapToLong(i->runVariation(numIterations, causalModel, data, finalMethod, false)).average().getAsDouble();
+            System.out.println("EM variation "+ method +": Average time: "+time+"ms.");
+        }
+    }
 
-            // randomize P(U)
-            RandomUtil.setRandomSeed(0);
-            StructuralCausalModel rmodel = (StructuralCausalModel) BayesianFactor.randomModel(causalModel,
-                    5, false
-                    ,causalModel.getExogenousVars()
-            );
+    private static long runVariation(int numIterations, StructuralCausalModel causalModel, TIntIntMap[] data, int method, boolean verbose){
+        // randomize P(U)
+        RandomUtil.setRandomSeed(0);
+        StructuralCausalModel rmodel = (StructuralCausalModel) BayesianFactor.randomModel(causalModel,
+                5, false
+                , causalModel.getExogenousVars()
+        );
 
-            //System.out.println(rmodel);
-            // Run EM in the causal model
-            ExpectationMaximization em =
-                    new WeightedCausalEM(rmodel)
-                            .setInferenceVariation(i)
-                            .setVerbose(false)
-                            .setRegularization(0.0)
-                            .usePosteriorCache(false)
-                            .setTrainableVars(causalModel.getExogenousVars());
+        //System.out.println(rmodel);
+        // Run EM in the causal model
+        ExpectationMaximization em =
+                new WeightedCausalEM(rmodel)
+                        .setInferenceVariation(method)
+                        .setVerbose(false)
+                        .setRegularization(0.0)
+                        .usePosteriorCache(false)
+                        .setTrainableVars(causalModel.getExogenousVars());
 
-            StopWatch watch = new StopWatch();
-            watch.start();
+        StopWatch watch = new StopWatch();
+        watch.start();
 
-            // run the method
+        // run the method
+        try {
             em.run(Arrays.asList(data), numIterations);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
 
-            watch.stop();
-            System.out.println("EM variation "+i+": Time Elapsed: " + watch.getTime() + " ms.");
-
+        watch.stop();
+        if (verbose) {
+            System.out.println("EM variation " + method + ": Time Elapsed: " + watch.getTime() + " ms.");
             System.out.println(em.getPosterior());
         }
+        return watch.getTime();
     }
 }

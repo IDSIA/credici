@@ -182,6 +182,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 case 1: p = inferenceVariation1(query, obs); break;
                 case 2: p = inferenceVariation2(query, obs, hash); break;
                 case 3: p = inferenceVariation3(query, obs); break;
+                case 4: p = inferenceVariation4(query, obs, hash); break;
+
             }
 
             if(usePosteriorCache)
@@ -269,6 +271,41 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     }
 
 
+    private HashMap<String, BayesianFactor> equationsCache = new HashMap<>();
+
+
+    /*
+     * The model is simplified at the first posterior query and stored in a caché
+     * */
+    BayesianFactor inferenceVariation4(int[] query, TIntIntMap obs, String hash) throws InterruptedException {
+
+        int U = query[0];
+        int[] chU = posteriorModel.getChildren(U);
+
+        BayesianFactor pU = posteriorModel.getFactor(U);
+        BayesianFactor pX = null;
+
+        if (equationsCache.containsKey(hash)) {
+            pX = equationsCache.get(hash);
+        }else {
+            ArrayList<BayesianFactor> factors = new ArrayList<>();
+            for (int X : chU) {
+                TIntIntHashMap newObs = new TIntIntHashMap();
+                BayesianFactor fx = posteriorModel.getFactor(X);
+                for (int x : obs.keys()) {
+                    if (ArraysUtil.contains(x, fx.getDomain().getVariables()))
+                        newObs.put(x, obs.get(x));
+                }
+                factors.add(fx.filter(newObs));
+            }
+            pX = BayesianFactor.combineAll(factors);
+            equationsCache.put(hash, pX);
+        }
+
+        BayesianFactor pjoin = pX.combine(pU);
+        return pjoin.divide(pjoin.marginalize(U));
+
+    }
 
 
     void clearPosteriorCache(){

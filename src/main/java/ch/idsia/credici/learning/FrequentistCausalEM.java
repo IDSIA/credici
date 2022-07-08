@@ -15,11 +15,14 @@ import ch.idsia.crema.learning.ExpectationMaximization;
 import ch.idsia.crema.model.GraphicalModel;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
+import ch.idsia.crema.preprocess.CutObserved;
+import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.time.StopWatch;
 
@@ -28,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 
 public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
@@ -39,6 +43,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     private HashMap<String, BayesianFactor> posteriorCache = new HashMap<>();
 
     private boolean usePosteriorCache = true;
+
+    private int inferenceVariation = 0;
 
 
 
@@ -169,7 +175,15 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, obs.keys(), obs.values()));
 
         if(!posteriorCache.containsKey(hash) || !usePosteriorCache) {
-            BayesianFactor p = inferenceEngine.apply(posteriorModel, query, obs);
+
+            BayesianFactor p = null;
+            switch (this.inferenceVariation){
+                case 0: p = inferenceVariation0(query, obs); break;
+                case 1: p = inferenceVariation1(query, obs); break;
+                case 2: p = inferenceVariation2(query, obs, hash); break;
+                case 3: p = inferenceVariation3(query, obs); break;
+            }
+
             if(usePosteriorCache)
                 posteriorCache.put(hash, p);
             else
@@ -177,8 +191,84 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         }
         return posteriorCache.get(hash);
 
-
     }
+
+    /*
+        Original implementation: inference engine is invoked without any simplification of the model
+     */
+    BayesianFactor inferenceVariation0(int[] query, TIntIntMap obs) throws InterruptedException {
+        return inferenceEngine.apply(posteriorModel, query, obs);  // P(U|X=obs)
+    }
+
+
+    /*
+    * The model is simplified at each posterior query
+    * */
+    BayesianFactor inferenceVariation1(int[] query, TIntIntMap obs) throws InterruptedException {
+        GraphicalModel infModel = new CutObserved().execute(posteriorModel, obs);
+        infModel = new RemoveBarren().execute(infModel, query, obs);
+
+        TIntIntMap newObs = new TIntIntHashMap();
+        for(int x: obs.keys())
+            if(ArraysUtil.contains(x, infModel.getVariables()))
+                newObs.put(x, obs.get(x));
+        return inferenceEngine.apply(infModel, query, newObs);  // P(U|X=obs)
+    }
+
+
+    private HashMap<String, StructuralCausalModel> modelCache = new HashMap<>();
+
+
+    /*
+     * The model is simplified at the first posterior query and stored in a caché
+     * */
+    BayesianFactor inferenceVariation2(int[] query, TIntIntMap obs, String hash) throws InterruptedException {
+        StructuralCausalModel infModel = null;
+
+        if(!modelCache.containsKey(hash)) {
+            infModel = (StructuralCausalModel) new CutObserved().execute(posteriorModel, obs);
+            infModel = new RemoveBarren().execute(infModel, query, obs);
+        } else{
+            infModel = modelCache.get(hash);
+            for(int u: infModel.getExogenousVars()){
+                infModel.setFactor(u, posteriorModel.getFactor(u));
+            }
+        }
+
+        TIntIntMap newObs = new TIntIntHashMap();
+        for(int x: obs.keys())
+            if(ArraysUtil.contains(x, infModel.getVariables()))
+                newObs.put(x, obs.get(x));
+        return inferenceEngine.apply(infModel, query, newObs);  // P(U|X=obs)
+    }
+
+    /*
+     The inference engine is not invoked, operations over factors are directly perfomed.
+     */
+    BayesianFactor inferenceVariation3(int[] query, TIntIntMap obs) throws InterruptedException {
+        // todo: only with M and QM... set checks
+
+        int U = query[0];
+        int[] chU = posteriorModel.getChildren(U);
+
+        ArrayList<BayesianFactor> factors = new ArrayList<>();
+        factors.add(posteriorModel.getFactor(U));
+
+        for(int X: chU){
+            TIntIntHashMap newObs = new TIntIntHashMap();
+            BayesianFactor fx = posteriorModel.getFactor(X);
+            for(int x: obs.keys()) {
+                if (ArraysUtil.contains(x, fx.getDomain().getVariables()))
+                    newObs.put(x, obs.get(x));
+            }
+            factors.add(fx.filter(newObs));
+        }
+
+        BayesianFactor pjoin = BayesianFactor.combineAll(factors);
+        return pjoin.divide(pjoin.marginalize(U));
+    }
+
+
 
 
     void clearPosteriorCache(){
@@ -235,6 +325,12 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     }
 
+
+    public FrequentistCausalEM setInferenceVariation(int inferenceVariation) {
+        this.inferenceVariation = inferenceVariation;
+        return this;
+    }
+
     public static void main(String[] args) throws InterruptedException {
 
 
@@ -266,6 +362,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         // Run EM in the causal model
         ExpectationMaximization em =
                 new FrequentistCausalEM(rmodel)
+                        .setInferenceVariation(0)
                         .setVerbose(false)
                         .setRegularization(0.0)
                         .usePosteriorCache(true)

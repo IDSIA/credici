@@ -83,7 +83,6 @@ public class WeightedCausalEM extends FrequentistCausalEM {
 
     protected TIntObjectMap<BayesianFactor> expectation(Pair[] dataWeighted) throws InterruptedException {
 
-
         TIntObjectMap<BayesianFactor> counts = new TIntObjectHashMap<>();
         for (int variable : posteriorModel.getVariables()) {
             counts.put(variable, new BayesianFactor(posteriorModel.getFactor(variable).getDomain(), false));
@@ -139,7 +138,7 @@ public class WeightedCausalEM extends FrequentistCausalEM {
 
         int N = 5000;
         int numIterations = 1000; // EM internal iterations
-        int n = 3;
+        int n = 8;
         int endoVarSize = 2;
         int exoVarSize = 4;
 
@@ -162,9 +161,11 @@ public class WeightedCausalEM extends FrequentistCausalEM {
                 ,causalModel.getExogenousVars()
         );
 
+
         // Run EM in the causal model
         ExpectationMaximization em =
                 new WeightedCausalEM(rmodel)
+                        .setInferenceVariation(1)
                         .setVerbose(false)
                         .setRegularization(0.0)
                         .usePosteriorCache(true)

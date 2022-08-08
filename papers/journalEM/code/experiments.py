@@ -4,16 +4,17 @@
 import subprocess
 import datetime
 import os
-import pandas as pd
+import sys
+
+
 from datetime import datetime
+from pathlib import Path
 
 #### Parameter experiments
 
 
-import sys
 
 
-import sys
 
 print(sys.argv)
 
@@ -59,7 +60,6 @@ def strtime():
 
 
 
-from pathlib import Path
 
 prj_path = Path(str(Path("../../../").resolve())+"/")
 exp_folder = Path(prj_path, "papers/journalEM/")

@@ -22,7 +22,7 @@ public class RunSingleEM extends Terminal {
 
 	/*
 
-	 -s 0 --maxiter 100 -w --output ./papers/journalEM/ouput/party/ -d ./papers/journalEM/data/data-party.csv ./papers/journalEM/models/party_causal.uai
+	 -s 0 --maxiter 100 -w  -d ./papers/journalEM/data/party_data.csv ./papers/journalEM/models/party_causal.uai
 
 	 -d 500 --seed 0 -o /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/data/triangolo_data_d500.csv /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo_empirical.uai
 
@@ -110,9 +110,6 @@ public class RunSingleEM extends Terminal {
 		logger.info("Saving statistics at at "+fullpath);
 		int[][] stats = new int[][]{new int[]{datasize, (int)time, iter}};
 		new WriterCSV(stats, fullpath).setVarNames("datasize", "time", "iterations").write();
-
-
-
 
 
 	}

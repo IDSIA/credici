@@ -44,9 +44,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private boolean usePosteriorCache = true;
 
-    private int inferenceVariation = 0;
-
-
+    private int inferenceVariation = 4;
 
 
     public FrequentistCausalEM(StructuralCausalModel model,

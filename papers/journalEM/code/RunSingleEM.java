@@ -4,9 +4,11 @@ import ch.idsia.credici.IO;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.Probability;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.data.WriterCSV;
+import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.utility.RandomUtil;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
@@ -15,7 +17,10 @@ import picocli.CommandLine;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Set;
 
 
 public class RunSingleEM extends Terminal {
@@ -72,7 +77,7 @@ public class RunSingleEM extends Terminal {
 		int datasize = data.length;
 		logger.info("Loaded "+datasize+" data instances from: "+fullpath);
 
-		HashMap empMap = DataUtil.getEmpiricalMap(model, data);
+		HashMap<Set<Integer>, BayesianFactor> empMap = DataUtil.getEmpiricalMap(model, data);
 		logger.info("Empirical distribution from data: "+empMap.toString());
 
 		model.fillExogenousWithRandomFactors(3);
@@ -90,10 +95,14 @@ public class RunSingleEM extends Terminal {
 		long time = Watch.stop();
 		int iter = builder.getTrajectories().get(0).size() - 1;
 		StructuralCausalModel m = builder.getSelectedPoints().get(0);
-		HashMap inducedDist = m.getEmpiricalMap();
+		HashMap<Set<Integer>, BayesianFactor> inducedDist = m.getEmpiricalMap();
+		double ratio = Probability.ratioLogLikelihood(inducedDist, empMap, 1);
 
 		logger.info("Single EM run ("+iter+" iterations) finished in "+time+" ms.");
-		logger.info("Induced distribution from data: "+inducedDist.toString());
+		logger.info("Induced distribution from model: "+inducedDist.toString());
+		logger.info("Llk-ratio: "+ratio);
+
+
 
 		String modelName = Path.of(modelPath).getFileName().toString().replace(".uai","");
 		String outputModel = modelName+"_"+seed+".uai";
@@ -108,9 +117,20 @@ public class RunSingleEM extends Terminal {
 
 		fullpath = wdir.resolve(output).resolve(outputStats).toString();
 		logger.info("Saving statistics at at "+fullpath);
-		int[][] stats = new int[][]{new int[]{datasize, (int)time, iter}};
-		new WriterCSV(stats, fullpath).setVarNames("datasize", "time", "iterations").write();
+		/*int[][] stats = new int[][]{new int[]{(int) seed, datasize, (int)time, iter}};
+		new WriterCSV(stats, fullpath).setVarNames("seed","datasize", "time", "iterations").write();
+*/
 
+		HashMap<String, String> stats = new HashMap<>();
+		stats.put("seed", String.valueOf(seed));
+		stats.put("datasize", String.valueOf(datasize));
+		stats.put("time", String.valueOf(time));
+		stats.put("iterations", String.valueOf(iter));
+		stats.put("ratio", String.valueOf(ratio));
+
+		List<HashMap> res = new ArrayList<>();
+		res.add(stats);
+		DataUtil.toCSV(fullpath, res);
 
 	}
 

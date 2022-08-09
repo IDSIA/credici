@@ -19,22 +19,24 @@ from pathlib import Path
 print(sys.argv)
 
 modelname = "triangolo" # party triangolo
-#sizes = len(sys.argv)>1: [int(sys.argv[i]) for i in range(1,len(sys.argv))]
 sizes = [1000]
 resampling = False
 run_em = True
 
-i, j = int(sys.argv[1]), int(sys.argv[2])
-if j<i: i,j = j,i 
-EM_SEEDS = list(range(i,j))
 
 
-print("Running experiments.py")
+max_iter = int(sys.argv[1])
+EM_SEEDS = [int(sys.argv[2])]
+
+
+print("Running triangololearn.py")
 print(modelname)
 print(sizes)
 print(f"resampling={resampling}")
 print(f"runEM={run_em}")
-print(EM_SEEDS)
+print(f"max_iter={max_iter}")
+print(f"SEEDS={EM_SEEDS}")
+
 
 ####
 
@@ -138,4 +140,4 @@ if run_em:
                 os.makedirs(output)
 
             datafile = f"{data_folder}/{modelname}_data_d{datasize}.csv"
-            runEM(model_causal, datafile, output, seed=s, maxiter=200)
+            runEM(model_causal, datafile, output, seed=s, maxiter=max_iter)

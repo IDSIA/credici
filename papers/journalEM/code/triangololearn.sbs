@@ -1,0 +1,16 @@
+#!/bin/bash
+#SBATCH -o /mnt/beegfs/rcabanas/dev/slurm.out
+
+echo ${initseed}
+maxiter=3
+
+for i in $(seq 0 ${SLURM_NTASKS}); do
+  s=$[init_seed+i]
+  srun -n 1 -N 1 -c 1 sing python3 -u triangololearn.py $maxiter $s 2> /dev/null &
+done
+
+
+
+wait
+
+

@@ -820,20 +820,35 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
 
-		VariableElimination inf = new FactorVariableElimination(this.getVariables());
-		inf.setFactors(this.getFactors());
 
 		for(int u: this.getExogenousVars()) {
+
 			BayesianFactor fu = null;
-			for (Object dom_ : this.getEmpiricalDomains(u)) {
-				HashMap dom = (HashMap) dom_;
-				int left = (int) dom.get("left");
-				int[] right = (int[]) dom.get("right");
-				BayesianFactor f = (BayesianFactor) inf.conditionalQuery(left, right);
-				if (fu == null)
-					fu = f;
-				else
-					fu = fu.combine(f);
+
+			int[] chU = this.getEndogenousChildren(u);
+			if(chU.length==1) {
+				fu = BayesianFactor.combineAll(this.getFactors(ArraysUtil.append(chU, u))).marginalize(u);
+			}else {
+
+				for (Object dom_ : this.getEmpiricalDomains(u)) {
+					HashMap dom = (HashMap) dom_;
+					int left = (int) dom.get("left");
+					int[] right = (int[]) dom.get("right");
+					StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
+					VariableElimination inf = new FactorVariableElimination(infModel.getVariables());
+					inf.setFactors(infModel.getFactors());
+
+					System.out.println(left);
+					if (left == 0)
+						System.out.println();
+					BayesianFactor f = null;
+					f = (BayesianFactor) inf.conditionalQuery(left, right);
+
+					if (fu == null)
+						fu = f;
+					else
+						fu = fu.combine(f);
+				}
 			}
 
 			if(fix)

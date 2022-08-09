@@ -330,7 +330,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 if(i % 10 == 0) {
                     watch.stop();
                     long time = watch.getTime();
-                    Logger.getGlobal().info(i + " EM iterations in "+time+" ms.");
+                    Logger.getGlobal().debug(i + " EM iterations in "+time+" ms.");
                     watch.reset();
                     watch.start();
                 }

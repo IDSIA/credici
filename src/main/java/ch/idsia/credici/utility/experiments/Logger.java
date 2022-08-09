@@ -30,6 +30,7 @@ public class Logger {
 	private Level level = Level.INFO;
 	boolean toStdOutput = true;
 	private boolean toFile = false;
+	private String label = "java";
 
 	public static Logger global = null;
 
@@ -96,7 +97,7 @@ public class Logger {
 
 	private void print(String msg, Level level){
 		if(this.level.getID() <= level.getID() ) {
-			String s = "[" + java.time.LocalDateTime.now() + "][" + level.toString() + "][java] " + msg;
+			String s = "[" + java.time.LocalDateTime.now() + "][" + level.toString() + "]["+this.label+"] " + msg;
 			if (toStdOutput)
 				System.out.println(s);
 			if (toFile)
@@ -123,5 +124,10 @@ public class Logger {
 	public static void main(String[] args) {
 		Logger logger = new Logger();
 		logger.info("Reading model at ./papers/neurips21/models/set1/chain_twExo1_nEndo4_1.uai");
+	}
+
+	public Logger setLabel(String label) {
+		this.label = label;
+		return this;
 	}
 }

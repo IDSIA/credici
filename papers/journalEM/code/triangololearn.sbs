@@ -2,11 +2,11 @@
 #SBATCH -o /mnt/beegfs/rcabanas/dev/slurm.out
 
 echo ${initseed}
-maxiter=3
+maxiter=300
 
 for i in $(seq 0 ${SLURM_NTASKS}); do
   s=$[init_seed+i]
-  srun -n 1 -N 1 -c 1 sing python3 -u triangololearn.py $maxiter $s 2> /dev/null &
+  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u triangololearn.py $maxiter $s 2> /dev/null &
 done
 
 
@@ -14,3 +14,5 @@ done
 wait
 
 
+
+## usage: sbatch --export=init_seed=0 -n 100 triangololearn.sbs

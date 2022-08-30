@@ -19,7 +19,7 @@ from pathlib import Path
 print(sys.argv)
 
 
-MODELS = ["triangolo_biassoft", "triangolo_biasshard"]
+MODELS = ["triangolo_biassoft", "triangolo_biashard"]
 sizes = [1000]
 run_em = True
 
@@ -107,5 +107,5 @@ if run_em:
                     os.makedirs(output)
                 model_causal = f"{model_folder}/{modelname}.uai"
 
-                datafile = f"{data_folder}/{modelname}_data_d{datasize}.csv"
+                datafile = f"{data_folder}/triangolo_data_d{datasize}.csv"
                 runEMbias(model_causal, datafile, output, seed=s, maxiter=max_iter)

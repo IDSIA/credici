@@ -89,7 +89,9 @@ def runEMbias(model, datafile, output, seed=0, maxiter=200):
     args += f"--seed {seed} "
     args += f"--output {output} "
     args += f"-d {datafile} "
+    args += "--debug "
     args += f"{model} "
+
     
     javafile = Path(code_folder, "RunSingleEM.java")
 

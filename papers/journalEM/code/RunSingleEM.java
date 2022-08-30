@@ -3,12 +3,15 @@ package code;
 import ch.idsia.credici.IO;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
+import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.Probability;
+import ch.idsia.credici.utility.apps.SelectionBias;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.data.WriterCSV;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
@@ -17,10 +20,7 @@ import picocli.CommandLine;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 
 public class RunSingleEM extends Terminal {
@@ -48,7 +48,10 @@ public class RunSingleEM extends Terminal {
 	@CommandLine.Option(names={"-o", "--output"}, description = "Output folder for the results. Default working dir.")
 	String output = ".";
 
+	@CommandLine.Option(names={"-b", "--bias"}, description = "If activated, the input model should be consistent with the selection bias scheme.")
+	boolean bias = false;
 
+	double p1 = 1.0;
 
 	public static void main(String[] args) {
 		argStr = String.join(";", args);
@@ -68,8 +71,10 @@ public class RunSingleEM extends Terminal {
 
 		// Load model
 		String fullpath = wdir.resolve(modelPath).toString();
+		if(bias) CausalUAIParser.ignoreChecks = true;
 		StructuralCausalModel model = (StructuralCausalModel)IO.readUAI(fullpath);
 		logger.info("Loaded model from: "+fullpath);
+
 
 		// Load data
 		fullpath = wdir.resolve(dataPath).toString();
@@ -77,18 +82,43 @@ public class RunSingleEM extends Terminal {
 		int datasize = data.length;
 		logger.info("Loaded "+datasize+" data instances from: "+fullpath);
 
+
+
 		HashMap<Set<Integer>, BayesianFactor> empMap = DataUtil.getEmpiricalMap(model, data);
 		logger.info("Empirical distribution from data: "+empMap.toString());
 
 		model.fillExogenousWithRandomFactors(3);
 
+		// Determine trainable
+		int[] trainableVars = model.getExogenousVars();
+
+		// Selection bias info
+		int selectVar = -1;
+		if(bias){
+			selectVar = SelectionBias.findSelector(model);
+			data = SelectionBias.applySelector(data, model, selectVar);
+			int exoPaS = model.getExogenousParents(selectVar)[0];
+			trainableVars = Arrays.stream(trainableVars).filter(v -> v!=exoPaS).toArray();
+
+			int finalSelectVar = selectVar;
+			long sizeObs = Arrays.stream(DataUtil.selectColumns(data, selectVar)).filter(d -> d.get(finalSelectVar) == 1).count();
+
+			p1 = ((double)sizeObs)/data.length;
+			logger.info("Applyied bias modifications for selector "+selectVar+". Data observed size: "+sizeObs+" out of "+data.length+". P(S=1)="+p1);
+
+		}
+
 		logger.info("Starting EM algorithm");
+
+		logger.info("Trainable variables: "+ Arrays.toString(trainableVars));
+
 		Watch.start();
 
 		EMCredalBuilder builder = new EMCredalBuilder(model, data)
 				.setMaxEMIter(maxIter)
 				.setWeightedEM(weighted)
 				.setNumTrajectories(1)
+				.setTrainableVars(trainableVars)
 				.setVerbose(!quiet)
 				.build();
 
@@ -127,6 +157,8 @@ public class RunSingleEM extends Terminal {
 		stats.put("time", String.valueOf(time));
 		stats.put("iterations", String.valueOf(iter));
 		stats.put("ratio", String.valueOf(ratio));
+		stats.put("p1", String.valueOf(p1));
+
 
 		List<HashMap> res = new ArrayList<>();
 		res.add(stats);

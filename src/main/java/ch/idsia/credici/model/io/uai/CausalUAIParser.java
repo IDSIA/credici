@@ -20,6 +20,8 @@ public class CausalUAIParser extends NetUAIParser<StructuralCausalModel> {
 
     private double[][] probs;
 
+    public static boolean ignoreChecks = false;
+
     public CausalUAIParser(String file) throws FileNotFoundException {
         TYPE = UAITypes.CAUSAL;
         this.bufferedReader = initReader(file);
@@ -75,7 +77,8 @@ public class CausalUAIParser extends NetUAIParser<StructuralCausalModel> {
 
     @Override
     protected void sanityChecks() {
-        super.sanityChecks();
+        if(!ignoreChecks)
+            super.sanityChecks();
     }
 
     private void parseFactors(){

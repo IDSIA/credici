@@ -139,4 +139,22 @@ public class SelectionBias {
 		return endingPoints;
 	}
 
+	public static int findSelector(StructuralCausalModel modelBiased){
+
+		int[] exoPa = Arrays.stream(modelBiased.getExogenousVars())
+				.filter(u-> modelBiased.getDomain(u).getCombinations()== 1).toArray();
+
+
+		if (exoPa.length != 1 || modelBiased.getChildren(exoPa[0]).length !=1)
+			throw new IllegalArgumentException("Model should have only one vacuous exogenous with one child.");
+
+		int S = modelBiased.getEndogenousChildren(exoPa[0])[0];
+
+		if(modelBiased.getChildren(S).length>0)
+			throw new IllegalArgumentException("Selector cannot have children.");
+
+		return S;
+
+	}
+
 }

@@ -54,7 +54,7 @@ def add_info(data, filename:str):
 
 
 def merge_exact(data, exact_method, eps=0.00001):
-    exact = data[data.method == exact_method].copy()
+    exact = data[data['method'] == exact_method].copy()
     exact["identifiable"] = (exact.pns_u - exact.pns_l).abs() < eps
     
     merged = data.merge(exact[["file", "identifiable", "pns_l", "pns_u"]], on="file")

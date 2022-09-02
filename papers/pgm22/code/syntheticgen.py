@@ -23,7 +23,7 @@ if len(sys.argv) > 1:
 else:
     SEEDS = [0]
 
-print("Running experiments.py")
+print("Running triangololearn.py")
 print(setname)
 print(SEEDS)
 

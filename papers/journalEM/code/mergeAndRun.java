@@ -161,8 +161,8 @@ public class mergeAndRun extends Terminal {
     @Override
     protected void entryPoint() throws Exception {
 
-        //wdir = Paths.get(".");
-        wdir = Paths.get("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/");
+        wdir = Paths.get(".");
+        //wdir = Paths.get("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/");
         results = new ArrayList<double[]>();
 
         RandomUtil.setRandomSeed(seed);

@@ -99,6 +99,7 @@ public class EMCredalBuilder extends CredalBuilder{
 	}
 
 
+
 	public EMCredalBuilder(StructuralCausalModel causalModel, TIntIntMap[] data, HashMap genDist){
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();

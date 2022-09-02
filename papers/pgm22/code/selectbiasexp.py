@@ -31,7 +31,7 @@ if len(sys.argv)>4:
 
 
 
-print("Running experiments.py")
+print("Running triangololearn.py")
 print(setname)
 
 

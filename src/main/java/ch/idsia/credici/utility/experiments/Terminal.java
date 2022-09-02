@@ -69,7 +69,7 @@ public abstract class Terminal implements Runnable{
 	protected void setUpIO() throws IOException {
 		disableWarning();
 		// Set up the verbose and output files
-		logger = new Logger().setToStdOutput(!quiet);
+		logger = new Logger().setLabel("seed"+this.seed).setToStdOutput(!quiet);
 		if(debug)
 			logger.setLevel(Logger.Level.DEBUG);
 

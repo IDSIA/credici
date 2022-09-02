@@ -44,9 +44,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private boolean usePosteriorCache = true;
 
-    private int inferenceVariation = 0;
-
-
+    private int inferenceVariation = 2;
 
 
     public FrequentistCausalEM(StructuralCausalModel model,
@@ -130,7 +128,6 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
             BayesianFactor countVar = counts.get(var);
 
             if(regularization>0.0) {
-
                 BayesianFactor reg = posteriorModel.getFactor(var).scalarMultiply(regularization);
                 countVar = countVar.addition(reg);
             }
@@ -173,6 +170,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException {
         String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, obs.keys(), obs.values()));
+
 
         if(!posteriorCache.containsKey(hash) || !usePosteriorCache) {
 
@@ -332,7 +330,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 if(i % 10 == 0) {
                     watch.stop();
                     long time = watch.getTime();
-                    Logger.getGlobal().info(i + " EM iterations in "+time+" ms.");
+                    Logger.getGlobal().debug(i + " EM iterations in "+time+" ms.");
                     watch.reset();
                     watch.start();
                 }

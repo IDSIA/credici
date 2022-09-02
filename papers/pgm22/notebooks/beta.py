@@ -67,7 +67,7 @@ def p_beta_new(row, n, eps, epsabs=1e-30):
             row[f'eden_p_beta_{n}_{eps}'] = e2
             row[f'warn_p_beta_{n}_{eps}'] = len(w)
         
-            return num/den
+            return row
 
     except RuntimeError as err:
         print("exception: ", err)
@@ -78,7 +78,7 @@ def p_beta_new(row, n, eps, epsabs=1e-30):
         row[f'eden_p_beta_{n}_{eps}'] = np.nan
         row[f'warn_p_beta_{n}_{eps}'] = -1
 
-    return np.nan
+    return row
 
 
 #log(x+y) = log(x) + log(1 + exp(log(y) - log(x)))

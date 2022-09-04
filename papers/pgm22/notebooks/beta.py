@@ -120,7 +120,7 @@ out = sys.argv[at_param + 1]
 data = utils.load_data(sys.argv[at_param])
 print(data.shape)
 data = utils.merge_exact(data, "exact_data_based")
-data = data[(~data.identifiable) & data.selector]
+data = data[(~data.identifiable) & data['index'] >= 1 ]
 
 print(data.shape)
 

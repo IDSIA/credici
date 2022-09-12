@@ -12,14 +12,10 @@ from pathlib import Path
 
 #### Parameter experiments
 
-
-
-
-
 print(sys.argv)
 
 
-MODELS = ["triangolo_biassoft", "triangolo_biashard"]
+MODELS = ["triangolo_bias_0110", "triangolo_bias_0111", "triangolo_bias_0001"]
 sizes = [1000]
 run_em = True
 
@@ -64,7 +60,7 @@ def strtime():
 prj_path = Path(str(Path("../../../").resolve())+"/")
 exp_folder = Path(prj_path, "papers/journalEM/")
 code_folder = Path(exp_folder, "code")
-res_folder = Path(exp_folder, "output")
+res_folder = Path(exp_folder, "output_test")
 model_folder = Path(exp_folder, "models")
 data_folder = Path(exp_folder, "data")
 

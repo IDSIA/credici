@@ -344,7 +344,13 @@ public class DAGUtil {
         return dag;
     }
 
+    public static SparseDirectedAcyclicGraph randomFromBNGenerator() {
 
+        // Code invoking BNGenerator
+
+        String dag = "";
+        return DAGUtil.build(dag);
+    }
     public static SparseDirectedAcyclicGraph random(int numNodes, int lambda, int maxIndegree) {
 
         PoissonDistribution poiss = new PoissonDistribution(lambda);

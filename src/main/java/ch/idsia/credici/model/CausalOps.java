@@ -255,4 +255,10 @@ public class CausalOps {
     }
 
 
+    public static SparseDirectedAcyclicGraph makeValidForSCMs(SparseDirectedAcyclicGraph dag) {
+        // todo: implement
+        return dag;
+    }
+
+
 }

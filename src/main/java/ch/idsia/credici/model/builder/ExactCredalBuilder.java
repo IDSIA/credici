@@ -1,7 +1,6 @@
 package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.utility.ConstraintsOps;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
@@ -17,7 +16,6 @@ import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.THashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 

@@ -1,20 +1,16 @@
 package ch.idsia.credici.learning;
 
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.info.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.JoinInference;
-import ch.idsia.crema.inference.ve.order.MinFillOrdering;
-import ch.idsia.crema.learning.DiscreteEM;
 import ch.idsia.crema.learning.ExpectationMaximization;
 import ch.idsia.crema.model.GraphicalModel;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
-import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;

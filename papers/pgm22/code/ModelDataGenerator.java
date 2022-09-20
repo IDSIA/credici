@@ -4,10 +4,9 @@ import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
-import ch.idsia.credici.model.info.CausalInfo;
-import ch.idsia.credici.model.info.StatisticsModel;
+import ch.idsia.credici.model.tools.CausalInfo;
+import ch.idsia.credici.model.tools.StatisticsModel;
 import ch.idsia.credici.model.transform.Cofounding;
-import ch.idsia.credici.model.transform.ExogenousReduction;
 import ch.idsia.credici.utility.*;
 import ch.idsia.credici.utility.experiments.AsynIsCompatible;
 import ch.idsia.credici.utility.experiments.AsynQuery;
@@ -30,7 +29,6 @@ import org.jetbrains.annotations.NotNull;
 import picocli.CommandLine;
 
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;

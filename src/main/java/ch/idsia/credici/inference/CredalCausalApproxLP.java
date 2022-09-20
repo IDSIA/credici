@@ -5,7 +5,7 @@ import java.util.Collection;
 import org.apache.commons.lang3.ArrayUtils;
 
 import ch.idsia.credici.inference.approxlp.ApproxLP1;
-import ch.idsia.credici.model.CausalOps;
+import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;

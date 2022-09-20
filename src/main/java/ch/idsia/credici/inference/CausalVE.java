@@ -1,12 +1,11 @@
 package ch.idsia.credici.inference;
 
-import ch.idsia.credici.model.CausalOps;
+import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
-import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;

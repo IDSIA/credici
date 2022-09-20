@@ -1,6 +1,6 @@
 package ch.idsia.credici.model.builder;
 
-import ch.idsia.credici.model.CausalOps;
+import ch.idsia.credici.model.tools.CausalGraphTools;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.experiments.Logger;
@@ -112,7 +112,7 @@ public class CompatibleCausalModelGenerator {
         logger.debug("DAG before making valid: "+dag);
 
         // step 2,3
-        dag = CausalOps.makeValidForSCMs(dag);  // todo: implement the code inside
+        dag = CausalGraphTools.makeValidCausalDAG(dag);  // todo: implement the code inside
 
         logger.info("Sampled DAG: "+dag);
         return dag;

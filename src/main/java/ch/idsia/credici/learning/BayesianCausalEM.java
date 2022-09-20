@@ -1,7 +1,7 @@
 package ch.idsia.credici.learning;
 
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;

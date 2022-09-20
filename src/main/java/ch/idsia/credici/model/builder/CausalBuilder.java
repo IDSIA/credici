@@ -3,11 +3,11 @@ package ch.idsia.credici.model.builder;
 import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.factor.EquationOps;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.model.tools.CausalGraphTools;
+import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
-import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -155,7 +155,7 @@ public class CausalBuilder {
             throw new NotImplementedException("");
         }else{
             exoVarSizes = new TIntIntHashMap();
-            for(int u : DAGUtil.getExogenous(causalDAG)){
+            for(int u : DAGUtil.getRootNodes(causalDAG)){
                 int[] ch = causalDAG.getChildren(u);
                 exoVarSizes.put(u, EquationOps.maxExoCardinality(u, causalDAG, model.getDomain(model.getEndogenousVars())));
             }
@@ -250,11 +250,11 @@ public class CausalBuilder {
     }
 
     private boolean isQuasiMarkovian(){
-        return (!isMarkovian()) && DAGUtil.getExogenousTreewidth(causalDAG) == 1;
+        return (!isMarkovian()) && CausalGraphTools.getExogenousTreewidth(causalDAG) == 1;
     }
 
     private boolean isNonQuasiMarkovian(){
-        return  DAGUtil.getExogenousTreewidth(causalDAG) > 1;
+        return  CausalGraphTools.getExogenousTreewidth(causalDAG) > 1;
     }
 
 

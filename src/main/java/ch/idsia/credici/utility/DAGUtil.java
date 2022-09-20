@@ -8,8 +8,6 @@ import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
-import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
@@ -272,36 +270,15 @@ public class DAGUtil {
         return dist;
     }
 
-    public static int[] getExogenous(SparseDirectedAcyclicGraph dag){
+    public static int[] getRootNodes(SparseDirectedAcyclicGraph dag){
         return Arrays.stream(dag.getVariables()).filter(v -> dag.getParents(v).length==0).toArray();
     }
 
-    public static int[] getEndogenous(SparseDirectedAcyclicGraph dag){
+    public static int[] getNonRootNodes(SparseDirectedAcyclicGraph dag){
         return Arrays.stream(dag.getVariables()).filter(v -> dag.getParents(v).length!=0).toArray();
     }
 
-    public static SparseDirectedAcyclicGraph getExogenousDag(SparseDirectedAcyclicGraph dag){
-        //getExogenousDAG
-        int[] endoVars = Arrays.stream(dag.getVariables()).filter(v -> dag.getParents(v).length!=0).toArray();
 
-        SparseDirectedAcyclicGraph subDag = dag.copy();
-        for(int x : endoVars){
-            for(int y: dag.getParents(x)){
-                if(dag.getParents(y).length>0) {
-                    subDag.removeLink(y, x);
-                }
-            }
-        }
-        return subDag;
-    }
-
-
-
-    public static int getExogenousTreewidth(DirectedAcyclicGraph dag){
-        Graph moral = DAGUtil.moral(getExogenousDag((SparseDirectedAcyclicGraph) dag));
-        return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() - 1;
-
-    }
     public int getTreewidth(DirectedAcyclicGraph dag){
         Graph moral = DAGUtil.moral((SparseDirectedAcyclicGraph) dag);
         return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() - 1;

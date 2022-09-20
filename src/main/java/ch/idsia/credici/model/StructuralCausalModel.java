@@ -3,7 +3,8 @@ package ch.idsia.credici.model;
 import ch.idsia.credici.factor.EquationOps;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.ExactCredalBuilder;
-import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.model.tools.CausalInfo;
+import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
@@ -22,7 +23,6 @@ import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
@@ -460,7 +460,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	public StructuralCausalModel intervention(int var, int state){
-		return CausalOps.intervention(this, var, state, true);
+		return ch.idsia.credici.model.tools.CausalOps.intervention(this, var, state, true);
 	}
 
 

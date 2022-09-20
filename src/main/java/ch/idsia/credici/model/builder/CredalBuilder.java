@@ -1,9 +1,8 @@
 package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.crema.model.graphical.SparseModel;
-import gnu.trove.map.hash.THashMap;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,10 +1,9 @@
 package ch.idsia.credici.learning;
 
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.info.CausalInfo;
+import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;
-import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.Probability;
 import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -13,7 +12,6 @@ import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.learning.DiscreteEM;
 import ch.idsia.crema.learning.ExpectationMaximization;
 import ch.idsia.crema.model.GraphicalModel;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
@@ -31,7 +29,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 
 public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {

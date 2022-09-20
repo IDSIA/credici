@@ -1,8 +1,8 @@
 package ch.idsia.credici.model;
 
 import ch.idsia.credici.IO;
-import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
+import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
@@ -21,8 +21,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import static org.junit.Assert.*;
@@ -186,21 +184,21 @@ public class StructuralCausalModelTest {
     private static Stream<Arguments> mergeParams() {
         return Stream.of(
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSimple2(),0,1, false)
+                        ch.idsia.credici.model.tools.CausalOps.intervention(modelSimple2(),0,1, false)
                 }),
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSimple2(),1,1, false)
+                        ch.idsia.credici.model.tools.CausalOps.intervention(modelSimple2(),1,1, false)
                 }),
                 Arguments.of(modelSimple2(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSimple2(),0,1, false),
-                        CausalOps.intervention(modelSimple2(),1,1, false)}),
+                        ch.idsia.credici.model.tools.CausalOps.intervention(modelSimple2(),0,1, false),
+                        ch.idsia.credici.model.tools.CausalOps.intervention(modelSimple2(),1,1, false)}),
 
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSingleU(),0,1, false)}),
+                        ch.idsia.credici.model.tools.CausalOps.intervention(modelSingleU(),0,1, false)}),
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSingleU(),1,1, false)}),
+                        ch.idsia.credici.model.tools.CausalOps.intervention(modelSingleU(),1,1, false)}),
                 Arguments.of(modelSingleU(), new StructuralCausalModel[]{
-                        CausalOps.intervention(modelSingleU(),0,1, false),
+                        ch.idsia.credici.model.tools.CausalOps.intervention(modelSingleU(),0,1, false),
                         CausalOps.intervention(modelSingleU(),1,1, false)})
 
         );

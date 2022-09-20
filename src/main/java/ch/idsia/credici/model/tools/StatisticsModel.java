@@ -1,4 +1,4 @@
-package ch.idsia.credici.model.info;
+package ch.idsia.credici.model.tools;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 

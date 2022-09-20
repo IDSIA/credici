@@ -1,22 +1,6 @@
 package ch.idsia.credici.model;
 
-import ch.idsia.credici.factor.EquationBuilder;
-import ch.idsia.credici.inference.CausalMultiVE;
-import ch.idsia.credici.model.builder.EMCredalBuilder;
-import ch.idsia.credici.model.builder.ExactCredalBuilder;
-import ch.idsia.credici.model.info.CausalInfo;
-import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.graphical.SparseModel;
-import ch.idsia.crema.utility.RandomUtil;
-import com.google.common.primitives.Doubles;
-import jdk.jshell.spi.ExecutionControl;
-import org.junit.Assert;
 import org.junit.Test;
-
-import java.util.Arrays;
-import java.util.List;
 
 public class EquationBuilderTest {
 

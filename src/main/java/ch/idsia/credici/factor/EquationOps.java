@@ -1,6 +1,5 @@
 package ch.idsia.credici.factor;
 
-import ch.idsia.credici.model.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.CollectionTools;
 import ch.idsia.credici.utility.DAGUtil;
@@ -239,7 +238,7 @@ public class EquationOps {
 	public static int maxExoCardinality(int exoVar, DirectedAcyclicGraph causalDAG, Strides domains) {
 
 
-		DirectedAcyclicGraph endoDAG = DAGUtil.getSubDAG((SparseDirectedAcyclicGraph) causalDAG, DAGUtil.getEndogenous((SparseDirectedAcyclicGraph) causalDAG));
+		DirectedAcyclicGraph endoDAG = DAGUtil.getSubDAG((SparseDirectedAcyclicGraph) causalDAG, DAGUtil.getNonRootNodes((SparseDirectedAcyclicGraph) causalDAG));
 
 		int[] endoCh = DAGUtil.getTopologicalOrder(endoDAG, ((SparseDirectedAcyclicGraph) causalDAG).getChildren(exoVar));
 		List previousVars = new ArrayList();

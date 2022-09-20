@@ -1,15 +1,13 @@
-package ch.idsia.credici.model;
+package ch.idsia.credici.model.tools;
 
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
-import ch.idsia.credici.model.info.CausalInfo;
-import ch.idsia.crema.factor.Factor;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.SeparatelySpecified;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
-import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
@@ -252,12 +250,6 @@ public class CausalOps {
 
     public static SparseModel counterfactualModel(SparseModel model, TIntIntMap... intervention){
         return (SparseModel) counterfactualModel((GenericSparseModel) model, intervention);
-    }
-
-
-    public static SparseDirectedAcyclicGraph makeValidForSCMs(SparseDirectedAcyclicGraph dag) {
-        // todo: implement
-        return dag;
     }
 
 

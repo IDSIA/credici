@@ -329,42 +329,6 @@ public class DAGUtil {
 
 
 
-    public static SparseDirectedAcyclicGraph fixNetwork(SparseDirectedAcyclicGraph in){
-        SparseDirectedAcyclicGraph out = in.copy();
-        Set<Integer> roots = new HashSet<>();
-
-        for (int variable : out.getVariables()) {
-            if (in.getParents(variable).length == 0) {
-                roots.add(variable);
-            }
-        }
-        
-        ArrayList<Integer> inNeed = new ArrayList<>();
-        for (int variable : out.getVariables()) {
-            // roots do not need a root parent
-            if(roots.contains(variable)) {
-                continue;
-            }
-
-            boolean needsRoot = true;
-            for (int parent : in.getParents(variable)) {
-                if (roots.contains(parent)) {
-                    needsRoot = false;
-                    break;
-                }
-            }
-
-            if(needsRoot) {
-                inNeed.add(variable);
-            }
-        }
-        
-        for(int variable: inNeed) {
-            int newRoot = out.addVariable();
-            out.addEdge(newRoot, variable);
-        }
-        return out;
-    }
 
 
 
@@ -475,11 +439,6 @@ public class DAGUtil {
     }
 
 
-    public static void main(String[] args) {
-       var a  = DAGUtil.randomFromBNGenerator(5, 3);
-       
-       fixNetwork(a);
-    }
 
 
     public static SparseDirectedAcyclicGraph random(int numNodes, int lambda, int maxIndegree) {

@@ -21,6 +21,8 @@ import org.jgrapht.graph.DefaultUndirectedGraph;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 import org.jgrapht.traverse.TopologicalOrderIterator;
 
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.*;
 import java.util.function.BinaryOperator;
 import java.util.logging.Logger;
@@ -375,6 +377,10 @@ public class DAGUtil {
      */
     public static SparseDirectedAcyclicGraph randomFromBNGenerator(int numberNodes, int maxInducedWidth) {
 
+        // Silence stdout in this function
+        PrintStream out = System.out;
+        System.setOut(new PrintStream(OutputStream.nullOutputStream()));
+
         int nGraphs=1;
         String structure="multi"; // default structure
         String format="xml"; // default format
@@ -460,7 +466,10 @@ public class DAGUtil {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
-      
+
+        // Reset the stdout
+        System.setOut(out);
+
         String dag = bn.toDag();
         return DAGUtil.build(dag);
     }
@@ -474,6 +483,8 @@ public class DAGUtil {
 
 
     public static SparseDirectedAcyclicGraph random(int numNodes, int lambda, int maxIndegree) {
+
+
 
         PoissonDistribution poiss = new PoissonDistribution(lambda);
         poiss.reseedRandomGenerator(RandomUtil.getRandom().nextInt());
@@ -499,6 +510,8 @@ public class DAGUtil {
             graph.addLink(j, i);
             //System.out.println(j+","+i);
         }
+
+
 
         return graph;
 

@@ -14,7 +14,7 @@ import java.util.stream.Collectors;
 public class CompatibleCausalModelGenerator {
 
     // Parameters
-    private boolean DAGfromBNG = false; // todo: default value will be changed to true
+    private boolean DAGfromBNG = true;
 
     /** Number of nodes in the first DAG .*/
     private int numNodes = 5;
@@ -201,8 +201,8 @@ public class CompatibleCausalModelGenerator {
             CompatibleCausalModelGenerator gen = new CompatibleCausalModelGenerator()
                     .setMaxIndegree(2)
                     //.setLambda(2)
-                    .setMarkovianity(0)
-                    .setNumNodes(30);
+                    .setMarkovianity(1)
+                    .setNumNodes(10);
 
             gen.run();
             StructuralCausalModel m = gen.getModel();

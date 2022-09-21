@@ -404,8 +404,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 
-
-
 	/**
 	 * Gets the empirical probability of a endogenous variable by marginalizing out
 	 * all its exogenous parents. In case of more than one input variable, returns

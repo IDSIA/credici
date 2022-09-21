@@ -30,6 +30,8 @@ public class CompatibleCausalModelGenerator {
 
     private int maxDataResamples = 5;
 
+    private int maxExoFactorsResamples = 5;
+
     private int maxModelResamples = Integer.MAX_VALUE;
 
     // Global variables
@@ -73,6 +75,11 @@ public class CompatibleCausalModelGenerator {
         return this;
     }
 
+    public CompatibleCausalModelGenerator setMaxExoFactorsResamples(int maxExoFactorsResamples) {
+        this.maxExoFactorsResamples = maxExoFactorsResamples;
+        return this;
+    }
+
     public CompatibleCausalModelGenerator setMaxModelResamples(int maxModelResamples) {
         this.maxModelResamples = maxModelResamples;
         return this;
@@ -90,11 +97,14 @@ public class CompatibleCausalModelGenerator {
         modelLoop:
         for(int j=0; j<maxModelResamples; j++) {
             SparseDirectedAcyclicGraph causalDAG = generateDAG();
-            sampleCausalModel(causalDAG);
-            for (int i = 0; i < maxDataResamples; i++) {
-                sampleData();
-                compatibleFound = checkCompatibility();
-                if (compatibleFound) break modelLoop;
+            initializeModel(causalDAG);
+            for (int k = 0; k < maxExoFactorsResamples; k++) {
+                sampleExoFactors();
+                for (int i = 0; i < maxDataResamples; i++) {
+                    sampleData();
+                    compatibleFound = checkCompatibility();
+                    if (compatibleFound) break modelLoop;
+                }
             }
         }
         if(!compatibleFound)
@@ -151,12 +161,17 @@ public class CompatibleCausalModelGenerator {
     }
 
 
-    /* Steps 4 to 7 */
-    private void sampleCausalModel(SparseDirectedAcyclicGraph causalDAG) {
+    /* Steps 4 to 6 */
+    private void initializeModel(SparseDirectedAcyclicGraph causalDAG) {
         //todo: set this.model
-        logger.info("Creating SCM ");
+        logger.info("Initializing SCM ");
         logger.info("Exo CC: "+ CausalGraphTools.exoConnectComponents(causalDAG).stream().map(c -> Arrays.toString(c)).collect(Collectors.joining("|")));
         logger.info("Endo CC: "+CausalGraphTools.endoConnectComponents(causalDAG).stream().map(c -> Arrays.toString(c)).collect(Collectors.joining("|")));
+
+    }
+
+    /*Step 7*/
+    private void sampleExoFactors(){
 
     }
 
@@ -184,10 +199,10 @@ public class CompatibleCausalModelGenerator {
             Logger.setGlobal(new Logger().setLabel("model_gen").setToStdOutput(true).setLevel(Logger.Level.DEBUG));
 
             CompatibleCausalModelGenerator gen = new CompatibleCausalModelGenerator()
-                    .setMaxIndegree(1)
+                    .setMaxIndegree(2)
                     //.setLambda(2)
                     .setMarkovianity(0)
-                    .setNumNodes(20);
+                    .setNumNodes(30);
 
             gen.run();
             StructuralCausalModel m = gen.getModel();

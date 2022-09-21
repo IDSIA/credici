@@ -104,7 +104,7 @@ public class CompatibleCausalModelGenerator {
         SparseDirectedAcyclicGraph dag = null;
 
         if(DAGfromBNG){
-            dag = DAGUtil.randomFromBNGenerator(); // note: you might use some of the parameters in the alternative generator
+            dag = DAGUtil.randomFromBNGenerator(numNodes, maxIndegree); // note: you might use some of the parameters in the alternative generator
         }else{
             dag = DAGUtil.random(numNodes, lambda, maxIndegree);
         }

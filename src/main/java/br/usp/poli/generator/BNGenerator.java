@@ -1,4 +1,4 @@
-package generator;
+package br.usp.poli.generator;
 //================================================================
 //     Copyright (c) 2005, Escola Polit�cnica-USP
 //                     All Rights Reserved
@@ -57,13 +57,20 @@ package generator;
 */
 
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.PrintStream;
 import java.io.PrintWriter;
+import java.io.StringWriter;
 import java.io.DataInputStream;
 import java.io.File;
 import java.util.Vector;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.math3.random.MersenneTwister;
+
+import com.opencsv.CSVWriter;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -113,20 +120,20 @@ public class BNGenerator {
     Matrix repository[] = new Matrix[numberStates];	// for testing Uniformity
     int lastPosition=0;								// for testing Uniformity
     double expectedFrequency=0, quiSquare=0;                     // for uniformity test
-    boolean fixed_nValue = false;
-    int nPointProb=3; // default number of points used to generate credal sets
+    private boolean fixed_nValue = false;
+    private int nPointProb=3; // default number of points used to generate credal sets
 		
     EmBayes ejb = new EmBayes();
-    DataFactory dataFactory;
-    InferFactory inferFactory;
+    private DataFactory dataFactory;
+    private InferFactory inferFactory;
     int iwOfEachGraphType[]= new int[numberStates]; // IW
     int iwDistribution[]= new int[100]; // IW
     
     String lin="bnLink";
     StringTokenizer st = new StringTokenizer(lin);
     
-	float lowerP=0; // default interval (added on March 2006)
-	float upperP=1; // default interval (added on March 2006)
+	private float lowerP=0; // default interval (added on March 2006)
+	private float upperP=1; // default interval (added on March 2006)
 
 	/**
      * Default Constructor
@@ -135,6 +142,72 @@ public class BNGenerator {
         parentMatrix = new int[nVertices][maxDeg+2];
         sonMatrix = new int[nVertices][maxDeg+2];
         nStates = new int[nVertices];
+    }
+    public float getUpperP() {
+        return upperP;
+    }
+    public void setUpperP(float upperP) {
+        this.upperP = upperP;
+    }
+    public float getLowerP() {
+        return lowerP;
+    }
+    public void setLowerP(float lowerP) {
+        this.lowerP = lowerP;
+    }
+    public int getnPointProb() {
+        return nPointProb;
+    }
+    public void setnPointProb(int nPointProb) {
+        this.nPointProb = nPointProb;
+    }
+    public boolean isFixed_nValue() {
+        return fixed_nValue;
+    }
+    public void setFixed_nValue(boolean fixed_nValue) {
+        this.fixed_nValue = fixed_nValue;
+    }
+    public DataFactory getDataFactory() {
+        return dataFactory;
+    }
+    public void setDataFactory(DataFactory dataFactory) {
+        this.dataFactory = dataFactory;
+    }
+    public InferFactory getInferFactory() {
+        return inferFactory;
+    }
+    public void setInferFactory(InferFactory inferFactory) {
+        this.inferFactory = inferFactory;
+    }
+    public int getMaxArcs() {
+        return maxArcs;
+    }
+    public void setMaxArcs(int maxArcs) {
+        this.maxArcs = maxArcs;
+    }
+    public int getMaxOutDegree() {
+        return maxOutDegree;
+    }
+    public void setMaxOutDegree(int maxOutDegree) {
+        this.maxOutDegree = maxOutDegree;
+    }
+    public int getMaxInDegree() {
+        return maxInDegree;
+    }
+    public void setMaxInDegree(int maxInDegree) {
+        this.maxInDegree = maxInDegree;
+    }
+    public int getMaxDegree() {
+        return maxDegree;
+    }
+    public void setMaxDegree(int maxDegree) {
+        this.maxDegree = maxDegree;
+    }
+    public int getnNodes() {
+        return nNodes;
+    }
+    public void setnNodes(int nNodes) {
+        this.nNodes = nNodes;
     }
     /**
      * Auxiliar constructor
@@ -309,10 +382,15 @@ public class BNGenerator {
                 else if (param.compareTo("-format") == 0){
                     i++;
                     format = argv[i];
-                    if ( (format.compareTo("xml") !=0) && (format.compareTo("cif") !=0)
-                    &&(format.compareTo("xml_interval") !=0)&&(format.compareTo("cif_interval") !=0)
-						&&(format.compareTo("cif_bin") !=0) &&(format.compareTo("java") !=0) &&
-                            (format.compareTo("xmljava") !=0) && (format.compareTo("loadEmB") !=0)) {
+                    if ( (format.compareTo("xml") !=0) 
+                        && (format.compareTo("cif") !=0)
+                        &&(format.compareTo("xml_interval") !=0)
+                        &&(format.compareTo("cif_interval") !=0)
+						&&(format.compareTo("cif_bin") !=0) 
+                        &&(format.compareTo("java") !=0)
+                        &&(format.compareTo("dag") !=0) 
+                        &&(format.compareTo("xmljava") !=0) 
+                        &&(format.compareTo("loadEmB") !=0)) {
                         System.out.println("Wrong output format") ;
                         auxBN.printHelp();
                         System.exit(0);
@@ -375,7 +453,7 @@ public class BNGenerator {
 				bnAux.generateXmlFromFile(nGraphs, auxName);
                 System.out.println(nGraphs+" Bayesian networks were generated from the file "+auxName+".xml!");
 			} else if (format.compareTo("cif") ==0) {
-					bnAux.nPointProb=nPoints;
+					bnAux.setnPointProb(nPoints);
 					bnAux.generateCifFromFile(nGraphs, auxName);
                     System.out.println(nGraphs+" credal networks were generated from the file "+auxName+".xml! Each local credal set has "+nPoints+" point probabilities.");
 					}	else System.out.println("Please, specify the -format that the networks will be generated (cif or xml).");
@@ -427,31 +505,31 @@ public class BNGenerator {
         }
         // Set global variables
         bn = new BNGenerator(numberNodes,numberMaxDegree);
-        bn.nNodes=numberNodes;  // set nNodes
-        bn.maxDegree=numberMaxDegree;  // set maxDegree
-        bn.maxInDegree=numberMaxInDegree;  // set maximum number of incoming arcs
-        bn.maxOutDegree=numberMaxOutDegree;  // set maximum number of outgoing arcs
-        bn.maxArcs=numberMaxArcs;  // set maxArcs(a global variable)
-        bn.dataFactory = embayes.data.impl.DataBasicFactory.getInstance();
-        bn.inferFactory = embayes.infer.impl.InferBasicFactory.getInstance(bn.dataFactory);
-        bn.fixed_nValue=fixed_nVal;
-		bn.nPointProb=nPoints;
-		bn.lowerP=lowerP;
-		bn.upperP=upperP;
+        bn.setnNodes(numberNodes);  // set nNodes
+        bn.setMaxDegree(numberMaxDegree);  // set maxDegree
+        bn.setMaxInDegree(numberMaxInDegree);  // set maximum number of incoming arcs
+        bn.setMaxOutDegree(numberMaxOutDegree);  // set maximum number of outgoing arcs
+        bn.setMaxArcs(numberMaxArcs);  // set maxArcs(a global variable)
+        bn.setDataFactory(embayes.data.impl.DataBasicFactory.getInstance());
+        bn.setInferFactory(embayes.infer.impl.InferBasicFactory.getInstance(bn.getDataFactory()));
+        bn.setFixed_nValue(fixed_nVal);
+		bn.setnPointProb(nPoints);
+		bn.setLowerP(lowerP);
+		bn.setUpperP(upperP);
         
         // Determining the number of iterations for
         // the chain to converge is a difficult task.
         // This value follows the DagAlea (see Melancon;Bousque,2000) suggestion,
         // and we verified that this number is satisfatory:
         if (nIterations == 0)
-            nIterations = 6*bn.nNodes*bn.nNodes;
+            nIterations = 6*bn.getnNodes()*bn.getnNodes();
         
         boolean exist,conditionSatisfied; // auxiliary variables
         bn.inicializeGraph(); // Inicialize a simple ordered tree as a BN structure
         
         if ( (testU.compareTo("yes") == 0))	{										// for testing Uniformity
             for (int i=0;i<bn.numberStates;i++ )  bn.repository[i] = new Matrix();	// for testing Uniformity
-            bn.repository[0].inicializeTable(bn.nNodes,bn.maxDegree+2);				// for testing Uniformity
+            bn.repository[0].inicializeTable(bn.getnNodes(),bn.getMaxDegree()+2);				// for testing Uniformity
         }
         
         //// Generating process ////
@@ -511,13 +589,13 @@ public class BNGenerator {
     public void printInformations(int nG, int nI,int maxV,boolean fixed_nVal,String sty, String f, String fName, String testUnif, int maxIW){
         System.out.println();
         System.out.println("Structural informations of generated graphs:");
-        System.out.println("\tNumber of nodes:"+nNodes);
+        System.out.println("\tNumber of nodes:"+getnNodes());
         System.out.println("\tMax value of states for each node:"+maxV);
         if (fixed_nVal) System.out.println("\t\t(value of states for every node was fixed)");
-        System.out.println("\tMax degree for each node:"+maxDegree);
-        System.out.println("\tMaximum number of incoming arcs for each node:"+maxInDegree);
-        System.out.println("\tMaximum number of outgoing arcs for each node:"+maxOutDegree);
-        System.out.println("\tMaximum total number of arcs:"+maxArcs+" of "+(nNodes*maxDegree/2)+" possibles" );
+        System.out.println("\tMax degree for each node:"+getMaxDegree());
+        System.out.println("\tMaximum number of incoming arcs for each node:"+getMaxInDegree());
+        System.out.println("\tMaximum number of outgoing arcs for each node:"+getMaxOutDegree());
+        System.out.println("\tMaximum total number of arcs:"+getMaxArcs()+" of "+(getnNodes()*getMaxDegree()/2)+" possibles" );
         if (maxIW==-1)  System.out.println("\tMaximum induced-width allowed: (without restriction) ");
         else   System.out.println("\tMaximum induced-width allowed:"+maxIW);
         System.out.println("\tStyle of generated graphs:"+sty);
@@ -544,7 +622,7 @@ public class BNGenerator {
                 //if (verifyCoherency()== true)	{
                 boolean exist;
                 sampleArc();
-                if (followMaxDegree(maxDegree-1))
+                if (followMaxDegree(getMaxDegree()-1))
                     exist=existArc(randP,randS);
                 else exist=true;
                 
@@ -554,8 +632,8 @@ public class BNGenerator {
                         addArc(randS,randP); // note that arc was inverted!! randP and randS are atualized
                         removeArc(remove[0],remove[1]); // old one is removed
                         //@	System.out.println("\t Node was inverted and added");
-                        if (followMaxInDegree(maxInDegree))	{
-                            if (followMaxOutDegree(maxOutDegree))	{
+                        if (followMaxInDegree(getMaxInDegree()))	{
+                            if (followMaxOutDegree(getMaxOutDegree()))	{
                                 if (maxIW!=-1)   {// induced width contraint was selected and it is necessary to verify
                                     int auxIW=inducedWidth;
                                     loadToEmBayes("loadingBN"); // IW
@@ -581,8 +659,8 @@ public class BNGenerator {
                         addArc(randP,randS);
                         removeArc(remove[0],remove[1]);
                         //@	System.out.println("\t Node just added");
-                        if (followMaxInDegree(maxInDegree))	{
-                            if (followMaxOutDegree(maxOutDegree))	{
+                        if (followMaxInDegree(getMaxInDegree()))	{
+                            if (followMaxOutDegree(getMaxOutDegree()))	{
                                 if (maxIW!=-1)   {// induced width contraint was selected and it is necessary to verify
                                     int auxIW=inducedWidth;
                                     loadToEmBayes("loadingBN"); // IW
@@ -622,6 +700,9 @@ public class BNGenerator {
                 if ((format.compareTo("xml") ==0))	{
                     saveBNXML(baseFileName,format,g,maxValues);
                 }
+                if ((format.compareTo("dag") ==0))	{
+                    saveDAG(baseFileName,format,g,maxValues, inducedWidth, getMaxDegree(), getMaxInDegree(), getMaxOutDegree(), getMaxArcs());
+                }
                 if ((format.compareTo("java") == 0)) {
                     saveBNJava(baseFileName,format,g,maxValues);
                 }
@@ -640,6 +721,7 @@ public class BNGenerator {
 				if ((format.compareTo("cif_interval") ==0))	{
                     saveCIF_interval(baseFileName,format,g,maxValues);
                 }
+
             }
         } // end of for(graphs)
         if ( (testU.compareTo("yes") == 0))  System.out.println("\t Maximum induced-width reached was: "+max); // IW
@@ -651,11 +733,11 @@ public class BNGenerator {
     void generateMultiConnected(int nGraphs, int nIterations, int maxValues,
             String testU, String format, String baseFileName)	throws Exception	{
         int inducedWidth=1;
-        int totalArcs=nNodes-1; // Simple tree has (nNodes-1)arcs
+        int totalArcs=getnNodes()-1; // Simple tree has (nNodes-1)arcs
         for (int g = 0; g < nGraphs; g++) {
             //inicializeGraph();	// Inicialize a simple ordered tree as a BN structure
             System.out.println("Generating multi-connected graph:"+g);
-            int auxTotal = maxArcs;
+            int auxTotal = getMaxArcs();
             // totalArcs=nNodes-1; // totalArcs must be inicialized if graph is inicialized
             for (int i=0;i<nIterations;i++ )  {
                 //if (verifyCoherency()== true)	{
@@ -677,9 +759,9 @@ public class BNGenerator {
                 conditionSatisfied=false;
                 if (exist==false) {
                     if (totalArcs<=auxTotal)
-                        if (followMaxDegree(maxDegree))
-                            if (followMaxInDegree(maxInDegree))
-                                if (followMaxOutDegree(maxOutDegree))
+                        if (followMaxDegree(getMaxDegree()))
+                            if (followMaxInDegree(getMaxInDegree()))
+                                if (followMaxOutDegree(getMaxOutDegree()))
                                     if(isAcyclic())  conditionSatisfied=true;
                 } // end of if(exist)
                 else   // if the node has removed, it is necessary just verify if continue connected
@@ -715,6 +797,9 @@ public class BNGenerator {
                 if ((format.compareTo("xml") ==0))	{
                     saveBNXML(baseFileName,format,g,maxValues);
                 }
+                if ((format.compareTo("dag") ==0))	{
+                    saveDAG(baseFileName,format,g,maxValues, inducedWidth, getMaxDegree(), getMaxInDegree(), getMaxOutDegree(), getMaxArcs());
+                }
                 if ((format.compareTo("java") == 0)) {
                     saveBNJava(baseFileName,format,g,maxValues);
                 }
@@ -749,8 +834,8 @@ public class BNGenerator {
         //double rate3=0.1; // transition rate
         inicializeGraph(); // Inicialize a simple ordered tree as a BN structure
         int inducedWidth=1;
-        int totalArcs=nNodes-1; // Simple tree has (nNodes-1)arcs
-        int auxTotal = maxArcs;
+        int totalArcs=getnNodes()-1; // Simple tree has (nNodes-1)arcs
+        int auxTotal = getMaxArcs();
         double  random;
         System.out.println("**** Maximum Induced-width allowed is:"+maxIW);
         int statistics[]= new int[6];
@@ -760,11 +845,11 @@ public class BNGenerator {
             for (int i=0;i<nIterations;i++ )  {
                 random=rand.nextDouble();
                 /********************************************** is polytree******************************/
-                if (totalArcs==nNodes-1)   {    // this condition verify if graph is a polytree
+                if (totalArcs==getnNodes()-1)   {    // this condition verify if graph is a polytree
                     if ( random<=0.1)	{       // AR operation
                         boolean exist;
                         sampleArc();
-                        if (followMaxDegree(maxDegree-1))
+                        if (followMaxDegree(getMaxDegree()-1))
                             exist=existArc(randP,randS);
                         else exist=true;
                         if (exist==false)	{
@@ -804,7 +889,7 @@ public class BNGenerator {
                             addArc(randP,randS);
                             totalArcs++;
                             if (totalArcs<=auxTotal)
-                                if (followMaxDegree(maxDegree))
+                                if (followMaxDegree(getMaxDegree()))
                                     if(isAcyclic()) {
                                 int auxIW=inducedWidth;
                                 loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
@@ -821,8 +906,8 @@ public class BNGenerator {
                         } // end of if (conditionSatisfied)
                     } // end of else (A or R operation)
                     else {  // special operation to move for multiconnected
-                        int initialPolytreeP[][]=receiveMatrix(parentMatrix,nNodes,maxDegree+2);
-                        int initialPolytreeS[][]=receiveMatrix(sonMatrix,nNodes,maxDegree+2);
+                        int initialPolytreeP[][]=receiveMatrix(parentMatrix,getnNodes(),getMaxDegree()+2);
+                        int initialPolytreeS[][]=receiveMatrix(sonMatrix,getnNodes(),getMaxDegree()+2);
                         int auxIW=inducedWidth;
                         boolean passed=false;
                         boolean exist=false;
@@ -836,7 +921,7 @@ public class BNGenerator {
                                 addArc(randP,randS);
                                 totalArcs++;
                                 if (totalArcs<=auxTotal)
-                                    if (followMaxDegree(maxDegree))
+                                    if (followMaxDegree(getMaxDegree()))
                                         if(isAcyclic()) {
                                     conditionSatisfied=true;
                                         } // end of if
@@ -853,10 +938,10 @@ public class BNGenerator {
                         }
                         if (conditionSatisfied==false||exist==true)  {
                             statistics[0]++;
-                            parentMatrix=receiveMatrix(initialPolytreeP,nNodes,maxDegree+2);
-                            sonMatrix=receiveMatrix(initialPolytreeS,nNodes,maxDegree+2);
+                            parentMatrix=receiveMatrix(initialPolytreeP,getnNodes(),getMaxDegree()+2);
+                            sonMatrix=receiveMatrix(initialPolytreeS,getnNodes(),getMaxDegree()+2);
                             inducedWidth=auxIW;
-                            totalArcs=nNodes-1;
+                            totalArcs=getnNodes()-1;
                         }
                         if (passed==true&&conditionSatisfied==true&&exist==false&&random>0.1)		statistics[2]++;
                         statistics[4]++;
@@ -882,7 +967,7 @@ public class BNGenerator {
                         conditionSatisfied=false;
                         if (exist==false) { // if the arc does not exist, naturaly the arc is added and the remain graph is multiconnected
                             if (totalArcs<=auxTotal)
-                                if (followMaxDegree(maxDegree))
+                                if (followMaxDegree(getMaxDegree()))
                                     if(isAcyclic()) {
                                 loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
                                 inducedWidth=getInducedWidth();
@@ -896,7 +981,7 @@ public class BNGenerator {
                                 inducedWidth=getInducedWidth();
                                 conditionSatisfied=false;
                                 if (inducedWidth<=maxIW) {
-                                    if (totalArcs==nNodes-1)   {    // verify if graph is a polytree
+                                    if (totalArcs==getnNodes()-1)   {    // verify if graph is a polytree
                                         if (random<0.7)    conditionSatisfied=true;    // accept the polytree
                                         else inducedWidth=aux;
                                     }   // end of if(polytree)
@@ -917,8 +1002,8 @@ public class BNGenerator {
                         } // end of if (conditionSatisfied)
                     } // end of if (rate)
                     else  {   // special operation to move to polytree
-                        int initialMulticonnectedP[][]=receiveMatrix(parentMatrix,nNodes,maxDegree+2);
-                        int initialMulticonnectedS[][]=receiveMatrix(sonMatrix,nNodes,maxDegree+2);
+                        int initialMulticonnectedP[][]=receiveMatrix(parentMatrix,getnNodes(),getMaxDegree()+2);
+                        int initialMulticonnectedS[][]=receiveMatrix(sonMatrix,getnNodes(),getMaxDegree()+2);
                         int auxIW=inducedWidth;
                         boolean passed=false;
                         boolean conditionSatisfied=true;
@@ -946,14 +1031,14 @@ public class BNGenerator {
                                 conditionSatisfied=true;
                             } else conditionSatisfied=false;
                         }
-                        if (conditionSatisfied==false||exist==false||(totalArcs!=nNodes-1))  {
+                        if (conditionSatisfied==false||exist==false||(totalArcs!=getnNodes()-1))  {
                             statistics[1]++;
-                            parentMatrix=receiveMatrix(initialMulticonnectedP,nNodes,maxDegree+2);
-                            sonMatrix=receiveMatrix(initialMulticonnectedS,nNodes,maxDegree+2);
+                            parentMatrix=receiveMatrix(initialMulticonnectedP,getnNodes(),getMaxDegree()+2);
+                            sonMatrix=receiveMatrix(initialMulticonnectedS,getnNodes(),getMaxDegree()+2);
                             inducedWidth=auxIW;
                             totalArcs=auxTotalArcs;
                         }
-                        if (passed==true&&conditionSatisfied==true&&exist==true&&random>0.1&&(totalArcs==nNodes-1))	statistics[3]++;
+                        if (passed==true&&conditionSatisfied==true&&exist==true&&random>0.1&&(totalArcs==getnNodes()-1))	statistics[3]++;
                         statistics[5]++;
                     } // end of else (special operation)
                     
@@ -974,6 +1059,9 @@ public class BNGenerator {
             } else	{
                 if ((format.compareTo("xml") ==0))	{
                     saveBNXML(baseFileName,format,g,maxValues);
+                }
+                if ((format.compareTo("dag") ==0))	{
+                    saveDAG(baseFileName,format,g,maxValues, inducedWidth, getMaxDegree(), getMaxInDegree(), getMaxOutDegree(), getMaxArcs());
                 }
                 if ((format.compareTo("java") == 0)) {
                     saveBNJava(baseFileName,format,g,maxValues);
@@ -1033,7 +1121,7 @@ public class BNGenerator {
 
     void generateCifFromFile(int nGraphs, String networkName) throws Exception {
 		// set the number of point probabilities of the local credal set
-        int nTables=nPointProb; 
+        int nTables=getnPointProb(); 
 
 		LinkedList bayesnet;
         LoadFile lf;
@@ -1075,7 +1163,7 @@ public class BNGenerator {
         int nVar=getNetwork().numberVariables();
         boolean requisiteVariables[]= new boolean[nVar];
         //Bucket bucket[]= new Bucket[nVar];
-        order = inferFactory.newOrdering();
+        order = getInferFactory().newOrdering();
         for (int i=0;i<nVar;i++)    requisiteVariables[i]=true;
         
         bucketTree = order.generateOrdering(getNetwork(), requisiteVariables);
@@ -1150,14 +1238,14 @@ public class BNGenerator {
         //ejb.network = factory.newBayesNet();
         //ejb.network.setName(name);
         
-        CategoricalVariable variables[]= new CategoricalVariable[nNodes];
-        CategoricalProbability probabilities[]= new CategoricalProbability[nNodes];
+        CategoricalVariable variables[]= new CategoricalVariable[getnNodes()];
+        CategoricalProbability probabilities[]= new CategoricalProbability[getnNodes()];
         
         String node = "n";
         int aux;
         
         // Get kinship from parentMatrix and set variables and probabilities of network
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             //System.out.println("\n Node:"+j);
             //System.out.println("\n number of states:"+nStates[j]);
             String categories[] = new String[nStates[j]];
@@ -1167,7 +1255,7 @@ public class BNGenerator {
                     factory.newCategoricalVariable(node.concat(""+j), new String[] {"state0","state1"});
                     //factory.newCategoricalVariable(node.concat(""+j), categories);
         }
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             aux = parentMatrix[j][0]; // aux: is the (number of parents of node j) plus one
             if (aux==1)   { // node j does not have parents
                 probabilities[j] =
@@ -1206,7 +1294,7 @@ public class BNGenerator {
     
     public boolean verifyCoherency()  {
         boolean ok;
-        for (int i=0;i<nNodes;i++)	{
+        for (int i=0;i<getnNodes();i++)	{
             ok=false;
             for (int j=1;j<parentMatrix[i][0];j++)	{
                 for (int jj=1;jj<sonMatrix[parentMatrix[i][j]][0];jj++)	{
@@ -1242,9 +1330,9 @@ public class BNGenerator {
     }
     
     public boolean isConnected() {  // return true if the current graph is connected
-        boolean visited[] = new boolean[nNodes];
+        boolean visited[] = new boolean[getnNodes()];
         boolean resp=false;
-        int list[] = new int[nNodes];
+        int list[] = new int[getnNodes()];
         int index = 0;
         int lastIndex = 1;
         list[0] = 0;
@@ -1278,9 +1366,9 @@ public class BNGenerator {
     
     public boolean isAcyclic() {  // return true if the graph is still acyclic after last arc added
         //ATTENTION! This method works after adding an arc, not after removing an arc
-        boolean visited[] = new boolean[nNodes];
+        boolean visited[] = new boolean[getnNodes()];
         boolean noCycle = true;
-        int list[] = new int[nNodes+1];
+        int list[] = new int[getnNodes()+1];
         int index = 0;
         int lastIndex = 1;
         list[0] = randP;
@@ -1327,8 +1415,8 @@ public class BNGenerator {
     ///////////  Methods that implement operations /////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
     public void inicializeGraph(){		// initialize a simple ordered tree
-        for (int i=0;i<nNodes;i++ ) {
-            for (int j=1;j<maxDegree+1;j++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
+            for (int j=1;j<getMaxDegree()+1;j++ ) {
                 parentMatrix[i][j]=-5; //set first node
                 sonMatrix[i][j]=-5;
             }
@@ -1336,10 +1424,10 @@ public class BNGenerator {
         parentMatrix[0][0]=1; //set first node
         sonMatrix[0][0]=2;    //set first node
         sonMatrix[0][1]=1;    //set first node
-        parentMatrix[nNodes-1][0]=2;  //set last node
-        parentMatrix[nNodes-1][1]=nNodes-2;  //set last node
-        sonMatrix[nNodes-1][0]=1;     //set last node
-        for (int i=1;i<(nNodes-1);i++)  {  // set the other nodes
+        parentMatrix[getnNodes()-1][0]=2;  //set last node
+        parentMatrix[getnNodes()-1][1]=getnNodes()-2;  //set last node
+        sonMatrix[getnNodes()-1][0]=1;     //set last node
+        for (int i=1;i<(getnNodes()-1);i++)  {  // set the other nodes
             parentMatrix[i][0]=2;
             parentMatrix[i][1]=i-1;
             sonMatrix[i][0]=2;
@@ -1348,9 +1436,9 @@ public class BNGenerator {
     }
     
     private void sampleArc()	{  //  sample a uniform pair of arcs
-        int rand=randSampleArc.nextInt(nNodes*(nNodes-1));
-        randP=rand/(nNodes-1);
-        int rest = rand-randP*(nNodes-1);
+        int rand=randSampleArc.nextInt(getnNodes()*(getnNodes()-1));
+        randP=rand/(getnNodes()-1);
+        int rest = rand-randP*(getnNodes()-1);
         if (rest >= randP )	randS=rest+1;
         else randS=rest;
         
@@ -1467,9 +1555,9 @@ public class BNGenerator {
     }
     
     public int[] findArcToRemove(int queried, int son)	{
-        boolean visited[] = new boolean[nNodes];
+        boolean visited[] = new boolean[getnNodes()];
         boolean found=false;
-        int list[] = new int[nNodes];
+        int list[] = new int[getnNodes()];
         int removeArc[] = new int[2];
         
         for (int j=1; j<parentMatrix[son][0] && found==false; j++)	{ // search queried node between parents nodes
@@ -1553,7 +1641,7 @@ public class BNGenerator {
         outputFile.println("<!--");
         outputFile.println("\tBayesian network in XMLBIF v0.3 (BayesNet Interchange Format)");
         outputFile.println("\tProduced by JavaBayes (http://www.cs.cmu.edu/~javabayes/");
-        outputFile.println("\tNumber of nodes:" + nNodes);
+        outputFile.println("\tNumber of nodes:" + getnNodes());
         outputFile.println("\tOutput created " + (new Date()));
         outputFile.println("-->\n\n\n");
         outputFile.println("<BIF VERSION=\"0.3\">");
@@ -1565,7 +1653,7 @@ public class BNGenerator {
         outputFile2.println("");
         outputFile2.println("/*");
         outputFile2.println(" * "+correctedName+".java");
-        outputFile2.println(" * Number of nodes:" + nNodes);
+        outputFile2.println(" * Number of nodes:" + getnNodes());
         outputFile2.println(" * This network was created on " + (new Date()));
         outputFile2.println();
         outputFile2.println(" * @author : BNGenerator (Random and uniform DAG generator)");
@@ -1588,18 +1676,18 @@ public class BNGenerator {
         
         int max=2;
         double x,y;
-        int nDegree=maxDegree+1;
+        int nDegree=getMaxDegree()+1;
         int contaEmX[]= new int[nDegree];
-        int numberStates[] = new int[nNodes];
+        int numberStates[] = new int[getnNodes()];
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             outputFile.println("<!-- Variables -->");
             outputFile.println("<VARIABLE TYPE=\"nature\">");
             outputFile.println("    <NAME>node"+ j + "</NAME>");
             outputFile2.println("\tCategoricalVariable n"+j+" =");
             outputFile2.print("\t\tfactory.newCategoricalVariable(\"n"+j+"\", new String[] {");
             
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             for (int i=0;i<(states);i++) {
@@ -1619,7 +1707,7 @@ public class BNGenerator {
         } //end of for
         
         outputFile.println("<!-- Probability Distributions -->");
-        for (int i=0;i<nNodes;i++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
             int nParents=1;
             outputFile.println(" <DEFINITION>");
             outputFile.println("      <FOR>node"+i+"</FOR>");
@@ -1647,16 +1735,16 @@ public class BNGenerator {
         
         // create set of variables:
         outputFile2.println("network.setVariables( new CategoricalVariable[] {");
-        for (int i=0;i<nNodes;i++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
             outputFile2.print("n"+i);
-            if (i<(nNodes-1))  outputFile2.print(",");
+            if (i<(getnNodes()-1))  outputFile2.print(",");
         } // end of for
         outputFile2.println("});");
         // create set of probabilities:
         outputFile2.println("network.setProbabilities( new CategoricalProbability[] {");
-        for (int i=0;i<nNodes;i++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
             outputFile2.print("p"+i);
-            if (i<(nNodes-1))  outputFile2.print(",");
+            if (i<(getnNodes()-1))  outputFile2.print(",");
         } // end of for
         outputFile2.println("});");
         outputFile2.println("  } // end of public");
@@ -1682,7 +1770,7 @@ public class BNGenerator {
         outputFile2.println("");
         outputFile2.println("/*");
         outputFile2.println(" * "+correctedName+".java");
-        outputFile2.println(" * Number of nodes:" + nNodes);
+        outputFile2.println(" * Number of nodes:" + getnNodes());
         outputFile2.println(" * This network was created on " + (new Date()));
         outputFile2.println();
         outputFile2.println(" * @author : BNGenerator (Random and uniform DAG generator)");
@@ -1704,13 +1792,13 @@ public class BNGenerator {
         outputFile2.println();
         
         int max=2;
-        int numberStates[] = new int[nNodes];
+        int numberStates[] = new int[getnNodes()];
         
         // set variables
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             outputFile2.println("\tCategoricalVariable n"+j+" =");
             outputFile2.print("\t\tfactory.newCategoricalVariable(\"n"+j+"\", new String[] {");
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             //int states=nStates[j];
@@ -1724,7 +1812,7 @@ public class BNGenerator {
         } //end of for
         
         // set probabilities
-        for (int i=0;i<nNodes;i++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
             int nParents=1;
             outputFile2.println("\tCategoricalProbability p"+i+" =");
             outputFile2.println("\t\tfactory.newCategoricalProbability(n"+i+",");
@@ -1745,17 +1833,17 @@ public class BNGenerator {
         
         // create set of variables:
         outputFile2.println("network.setVariables( new CategoricalVariable[] {");
-        for (int i=0;i<nNodes;i++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
             outputFile2.print("n"+i);
-            if (i<(nNodes-1))  outputFile2.print(",");
+            if (i<(getnNodes()-1))  outputFile2.print(",");
         } // end of for
         outputFile2.println("});");
         
         // create set of probabilities:
         outputFile2.println("network.setProbabilities( new CategoricalProbability[] {");
-        for (int i=0;i<nNodes;i++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
             outputFile2.print("p"+i);
-            if (i<(nNodes-1))  outputFile2.print(",");
+            if (i<(getnNodes()-1))  outputFile2.print(",");
         } // end of for
         outputFile2.println("});");
         outputFile2.println("  } // end of public");
@@ -1763,6 +1851,36 @@ public class BNGenerator {
         
     } // end of class saveBNJava
     
+
+    public String toDag() { 
+        ArrayList<String> arcs = new ArrayList<>();
+        for (int i=0;i<getnNodes();i++ ) {
+            if (parentMatrix[i][0]!=1)  {
+                int aux=parentMatrix[i][0];
+                for (int j=1;j<aux;j++) {
+                    arcs.add("("+ parentMatrix[i][j]+","+i+")");
+                }
+            }  // end of if
+        }
+        return String.join(",", arcs);
+    }
+
+    private void saveDAG(String name,String format,int n, int maxValues, int inducedWidth, int maxDegree, int maxInDegree, int maxOutDegree, int maxArcs) throws Exception { // Save BN in XML format
+        String fileName = name.concat("" + (n+1) + "." + format);
+        ArrayList<String> arcs = new ArrayList<>();
+        for (int i=0;i<getnNodes();i++ ) {
+            if (parentMatrix[i][0]!=1)  {
+                int aux=parentMatrix[i][0];
+                for (int j=1;j<aux;j++) {
+                    arcs.add("("+ parentMatrix[i][j]+","+i+")");
+                }
+            }  // end of if
+        }
+        
+      //  cacheDAG(String.join(",", arcs));
+    } 
+    
+
     private void saveBNXML(String name,String format,int n, int maxValues) throws Exception { // Save BN in XML format
         String fileName = name.concat("" + (n+1) + "." + format);
         PrintStream outputFile = new PrintStream(new FileOutputStream(fileName), true);
@@ -1771,7 +1889,7 @@ public class BNGenerator {
         outputFile.println("<!--");
         outputFile.println("\tBayesian network in XMLBIF v0.3 (BayesNet Interchange Format)");
         outputFile.println("\tProduced by JavaBayes (http://www.cs.cmu.edu/~javabayes/");
-        outputFile.println("\tNumber of nodes:" + nNodes);
+        outputFile.println("\tNumber of nodes:" + getnNodes());
         outputFile.println("\tOutput created " + (new Date()));
         outputFile.println("-->\n\n\n");
         outputFile.println("<BIF VERSION=\"0.3\">");
@@ -1782,15 +1900,15 @@ public class BNGenerator {
         
         int max=2;
         double x,y;
-        int nDegree=maxDegree+1;
+        int nDegree=getMaxDegree()+1;
         int contaEmX[]= new int[nDegree];
-        int numberStates[] = new int[nNodes];
+        int numberStates[] = new int[getnNodes()];
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             outputFile.println("<!-- Variables -->");
             outputFile.println("<VARIABLE TYPE=\"nature\">");
             outputFile.println("    <NAME>node"+ j + "</NAME>");
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             //int states=nStates[j];
@@ -1811,7 +1929,7 @@ public class BNGenerator {
         } //end of for
         
         outputFile.println("<!-- Probability Distributions -->");
-        for (int i=0;i<nNodes;i++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
             int nParents=1;
             outputFile.println(" <DEFINITION>");
             outputFile.println("      <FOR>node"+i+"</FOR>");
@@ -1841,7 +1959,7 @@ public class BNGenerator {
         outputFile.println("<!--");
         outputFile.println("\tBayesian network in XMLBIF v0.3 (BayesNet Interchange Format)");
         outputFile.println("\tProduced by JavaBayes (http://www.cs.cmu.edu/~javabayes/");
-        outputFile.println("\tNumber of nodes:" + nNodes);
+        outputFile.println("\tNumber of nodes:" + getnNodes());
         outputFile.println("\tOutput created " + (new Date()));
         outputFile.println("-->\n\n\n");
         outputFile.println("<BIF VERSION=\"0.3\">");
@@ -1852,13 +1970,13 @@ public class BNGenerator {
         
 		int max=2;
         double x,y;
-        maxDegree=nStates.length;
-        int nDegree=maxDegree+1;
+        setMaxDegree(nStates.length);
+        int nDegree=getMaxDegree()+1;
         int contaEmX[]= new int[nDegree];
-        nNodes=nStates.length;
-        int numberStates[] = new int[nNodes];
+        setnNodes(nStates.length);
+        int numberStates[] = new int[getnNodes()];
 
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             outputFile.println("<!-- Variables -->");
             outputFile.println("<VARIABLE TYPE=\"nature\">");
             outputFile.println("    <NAME>node"+ j + "</NAME>");
@@ -1883,7 +2001,7 @@ public class BNGenerator {
         } //end of for
         
         outputFile.println("<!-- Probability Distributions -->");
-        for (int i=0;i<nNodes;i++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
             int nParents=1;
             outputFile.println(" <DEFINITION>");
             outputFile.println("      <FOR>node"+i+"</FOR>");
@@ -1916,19 +2034,19 @@ public class BNGenerator {
         String fileName1 = name.concat("_" + (n+1) + ".cif");
 
         // SET number of points;
-        int nTables=nPointProb;
+        int nTables=getnPointProb();
         
                 
         int max=2;
         double x,y;
-        int nDegree=maxDegree+1;
+        int nDegree=getMaxDegree()+1;
         int contaEmX[]= new int[nDegree];
-        int numberStates[] = new int[nNodes];
+        int numberStates[] = new int[getnNodes()];
         
         String correctedName=name.concat("" + (n+1) );
         
-        for (int j=0;j<nNodes;j++) {
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+        for (int j=0;j<getnNodes();j++) {
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
   
@@ -1940,7 +2058,7 @@ public class BNGenerator {
         //****************** INPUTING TABLES**************
         List<String> sb = new ArrayList<>();
 
-        for (int i=0; i<nNodes; i++)  {
+        for (int i=0; i<getnNodes(); i++)  {
             int nParents=1; // count number of parents
            
             for (int j=1; j<parentMatrix[i][0]; j++) {
@@ -1960,7 +2078,7 @@ public class BNGenerator {
      */
     public void saveCIF(String name,String format,int n, int maxValues) throws Exception {
         // SET number of points;
-        int nTables=nPointProb;
+        int nTables=getnPointProb();
         
         // to save in interval cif format
         String fileName1 = name.concat("_" + (n+1) + ".cif");
@@ -1968,14 +2086,14 @@ public class BNGenerator {
         
         int max=2;
         double x,y;
-        int nDegree=maxDegree+1;
+        int nDegree=getMaxDegree()+1;
         int contaEmX[]= new int[nDegree];
-        int numberStates[] = new int[nNodes];
+        int numberStates[] = new int[getnNodes()];
         
         // Saving in Interval Cif Format
         outputFile1.println("// \tCredal network in CIF(CredalNet Interchange Format)");
         outputFile1.println("// \tProduced by BNGenerator (http://www.pmr.poli.usp.br/ltd/Software/BNGenerator");
-        outputFile1.println("// \tNumber of nodes:" + nNodes);
+        outputFile1.println("// \tNumber of nodes:" + getnNodes());
         outputFile1.println("// \tOutput created " + (new Date()));
         //outputFile1.println("-->\n\n\n");
         String correctedName=name.concat("" + (n+1) );
@@ -1984,9 +2102,9 @@ public class BNGenerator {
             outputFile1.println("}");
         }
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             outputFile1.println("variable  \"node"+ j + "\"\t{");
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             //int states=nStates[j];
@@ -2010,7 +2128,7 @@ public class BNGenerator {
         
         //****************** INPUTING TABLES**************
         
-        for (int i=0; i<nNodes; i++)  {
+        for (int i=0; i<getnNodes(); i++)  {
             int nParents=1; // count number of parents
             ////////////////////////// inputing tables of Interval Cif
             outputFile1.print("probability ( \"node"+i+"\" ");
@@ -2026,7 +2144,7 @@ public class BNGenerator {
                 // create lower and upper tables
                 //float table[]=df.generateDistributionFunction(numberStates[i],nParents,"emFloat");
                 // added on 04 april 2006 (*)
-				float table[]=df.generateDistributionFunctionInterval(numberStates[i],nParents,"emFloat",lowerP,upperP);
+				float table[]=df.generateDistributionFunctionInterval(numberStates[i],nParents,"emFloat",getLowerP(),getUpperP());
 				//System.out.println("TABLE:"); //(*)
 				//for (int xx=0;xx<table.length ;xx++ )	System.out.println(""+table[xx]); //(*)
 				float transposed_table[]=transTable(table,numberStates[i],nParents);
@@ -2049,16 +2167,16 @@ public class BNGenerator {
         
         int max=2;
         double x,y;
-        maxDegree=nStates.length;
-        int nDegree=maxDegree+1;
+        setMaxDegree(nStates.length);
+        int nDegree=getMaxDegree()+1;
         int contaEmX[]= new int[nDegree];
-        nNodes=nStates.length;
-        int numberStates[] = new int[nNodes];
+        setnNodes(nStates.length);
+        int numberStates[] = new int[getnNodes()];
         
         // Saving in Interval Cif Format
         outputFile1.println("// \tCredal network in CIF(CredalNet Interchange Format)");
         outputFile1.println("// \tProduced by BNGenerator (http://www.pmr.poli.usp.br/ltd/Software/BNGenerator");
-        outputFile1.println("// \tNumber of nodes:" + nNodes);
+        outputFile1.println("// \tNumber of nodes:" + getnNodes());
         outputFile1.println("// \tOutput created " + (new Date()));
         //outputFile1.println("-->\n\n\n");
         String correctedName=name.concat("" + (n+1) );
@@ -2067,7 +2185,7 @@ public class BNGenerator {
             outputFile1.println("}");
         }
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             outputFile1.println("variable  \"node"+ j + "\"\t{");
             int countState=0; // count the number of states
             int states=nStates[j];
@@ -2092,7 +2210,7 @@ public class BNGenerator {
         
         //****************** INPUTING TABLES**************
         
-        for (int i=0; i<nNodes; i++)  {
+        for (int i=0; i<getnNodes(); i++)  {
             int nParents=1; // count number of parents
             ////////////////////////// inputing tables of Interval Cif
             outputFile1.print("probability ( \"node"+i+"\" ");
@@ -2149,14 +2267,14 @@ public class BNGenerator {
         
         int max=2;
         double x,y;
-        int nDegree=maxDegree+1;
+        int nDegree=getMaxDegree()+1;
         int contaEmX[]= new int[nDegree];
-        int numberStates[] = new int[nNodes];
+        int numberStates[] = new int[getnNodes()];
         
         // Saving in Interval Cif Format
         outputFile1.println("// \tCredal network in CIF(CredalNet Interchange Format)");
         outputFile1.println("// \tProduced by BNGenerator (http://www.pmr.poli.usp.br/ltd/Software/BNGenerator");
-        outputFile1.println("// \tNumber of nodes:" + nNodes);
+        outputFile1.println("// \tNumber of nodes:" + getnNodes());
         outputFile1.println("// \tOutput created " + (new Date()));
         //outputFile1.println("-->\n\n\n");
         correctedName=name.concat("" + (n+1) );
@@ -2165,13 +2283,13 @@ public class BNGenerator {
             outputFile1.println("}");
         }
         max=2;
-        nDegree=maxDegree+1;
+        nDegree=getMaxDegree()+1;
         int contaEmX_1[]= new int[nDegree];
-        int numberStates_1[] = new int[nNodes];
+        int numberStates_1[] = new int[getnNodes()];
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             outputFile1.println("variable  \"node"+ j + "\"\t{");
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             //int states=nStates[j];
@@ -2198,7 +2316,7 @@ public class BNGenerator {
         outputFileXML.println("<!--");
         outputFileXML.println("\tBayesian network in XMLBIF v0.3 (BayesNet Interchange Format)");
         outputFileXML.println("\tProduced by JavaBayes (http://www.cs.cmu.edu/~javabayes/");
-        outputFileXML.println("\tNumber of nodes:" + nNodes);
+        outputFileXML.println("\tNumber of nodes:" + getnNodes());
         outputFileXML.println("\tOutput created " + (new Date()));
         outputFileXML.println("-->\n\n\n");
         outputFileXML.println("<BIF VERSION=\"0.3\">");
@@ -2210,7 +2328,7 @@ public class BNGenerator {
         outputFileXML2.println("<!--");
         outputFileXML2.println("\tBayesian network in XMLBIF v0.3 (BayesNet Interchange Format)");
         outputFileXML2.println("\tProduced by JavaBayes (http://www.cs.cmu.edu/~javabayes/");
-        outputFileXML2.println("\tNumber of nodes:" + nNodes);
+        outputFileXML2.println("\tNumber of nodes:" + getnNodes());
         outputFileXML2.println("\tOutput created " + (new Date()));
         outputFileXML2.println("-->\n\n\n");
         outputFileXML2.println("<BIF VERSION=\"0.3\">");
@@ -2218,11 +2336,11 @@ public class BNGenerator {
         if (name != null)  outputFileXML2.println("<NAME>" + correctedName + "</NAME>");
         
         max=2;
-        nDegree=maxDegree+1;
+        nDegree=getMaxDegree()+1;
         int contaEmXXML[]= new int[nDegree];
-        int numberStatesXML[] = new int[nNodes];
+        int numberStatesXML[] = new int[getnNodes()];
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             // low
             outputFileXML.println("<!-- Variables -->");
             outputFileXML.println("<VARIABLE TYPE=\"nature\">");
@@ -2232,7 +2350,7 @@ public class BNGenerator {
             outputFileXML2.println("<VARIABLE TYPE=\"nature\">");
             outputFileXML2.println("    <NAME>node"+ j + "</NAME>");
             
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             //int states=nStates[j];
@@ -2261,7 +2379,7 @@ public class BNGenerator {
         
         //****************** INPUTING TABLES**************
         
-        for (int i=0; i<nNodes; i++)  {
+        for (int i=0; i<getnNodes(); i++)  {
             //CategoricalVariable var[]=probabilitiesLower[i].getVariables();
             int valuesLength=(int)Math.pow(2,parentMatrix[i][0]);
             int nTable=(int)Math.pow(2,(valuesLength/2));
@@ -2397,6 +2515,7 @@ public class BNGenerator {
         outputFileXML2.println("</BIF>");
         
     }
+
     
     /**
      * Save a binary credal network in the BIF InterchangeFormat for 
@@ -2423,7 +2542,7 @@ public class BNGenerator {
         // Saving in JavaBayes Format
         outputFile.println("// \tCredal network in CIF(CredalNet Interchange Format)");
         outputFile.println("// \tProduced by BNGenerator (http://www.pmr.poli.usp.br/ltd/Software/BNGenerator");
-        outputFile.println("// \tNumber of nodes:" + nNodes);
+        outputFile.println("// \tNumber of nodes:" + getnNodes());
         outputFile.println("// \tOutput created " + (new Date()));
         //outputFile.println("-->\n\n\n");
         String correctedName=name.concat("" + (n+1) );
@@ -2433,13 +2552,13 @@ public class BNGenerator {
         }
         int max=2;
         double x,y;
-        int nDegree=maxDegree+1;
+        int nDegree=getMaxDegree()+1;
         int contaEmX[]= new int[nDegree];
-        int numberStates[] = new int[nNodes];
+        int numberStates[] = new int[getnNodes()];
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             outputFile.println("variable  \"node"+ j + "\"\t{");
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             //int states=nStates[j];
@@ -2464,7 +2583,7 @@ public class BNGenerator {
         // Saving in Interval Cif Format
         outputFile1.println("// \tCredal network in CIF(CredalNet Interchange Format)");
         outputFile1.println("// \tProduced by BNGenerator (http://www.pmr.poli.usp.br/ltd/Software/BNGenerator");
-        outputFile1.println("// \tNumber of nodes:" + nNodes);
+        outputFile1.println("// \tNumber of nodes:" + getnNodes());
         outputFile1.println("// \tOutput created " + (new Date()));
         //outputFile1.println("-->\n\n\n");
         correctedName=name.concat("" + (n+1) );
@@ -2473,13 +2592,13 @@ public class BNGenerator {
             outputFile1.println("}");
         }
         max=2;
-        nDegree=maxDegree+1;
+        nDegree=getMaxDegree()+1;
         int contaEmX_1[]= new int[nDegree];
-        int numberStates_1[] = new int[nNodes];
+        int numberStates_1[] = new int[getnNodes()];
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             outputFile1.println("variable  \"node"+ j + "\"\t{");
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             //int states=nStates[j];
@@ -2506,7 +2625,7 @@ public class BNGenerator {
         outputFileXML.println("<!--");
         outputFileXML.println("\tBayesian network in XMLBIF v0.3 (BayesNet Interchange Format)");
         outputFileXML.println("\tProduced by JavaBayes (http://www.cs.cmu.edu/~javabayes/");
-        outputFileXML.println("\tNumber of nodes:" + nNodes);
+        outputFileXML.println("\tNumber of nodes:" + getnNodes());
         outputFileXML.println("\tOutput created " + (new Date()));
         outputFileXML.println("-->\n\n\n");
         outputFileXML.println("<BIF VERSION=\"0.3\">");
@@ -2518,7 +2637,7 @@ public class BNGenerator {
         outputFileXML2.println("<!--");
         outputFileXML2.println("\tBayesian network in XMLBIF v0.3 (BayesNet Interchange Format)");
         outputFileXML2.println("\tProduced by JavaBayes (http://www.cs.cmu.edu/~javabayes/");
-        outputFileXML2.println("\tNumber of nodes:" + nNodes);
+        outputFileXML2.println("\tNumber of nodes:" + getnNodes());
         outputFileXML2.println("\tOutput created " + (new Date()));
         outputFileXML2.println("-->\n\n\n");
         outputFileXML2.println("<BIF VERSION=\"0.3\">");
@@ -2526,11 +2645,11 @@ public class BNGenerator {
         if (name != null)  outputFileXML2.println("<NAME>" + correctedName + "</NAME>");
         
         max=2;
-        nDegree=maxDegree+1;
+        nDegree=getMaxDegree()+1;
         int contaEmXXML[]= new int[nDegree];
-        int numberStatesXML[] = new int[nNodes];
+        int numberStatesXML[] = new int[getnNodes()];
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             // low
             outputFileXML.println("<!-- Variables -->");
             outputFileXML.println("<VARIABLE TYPE=\"nature\">");
@@ -2540,7 +2659,7 @@ public class BNGenerator {
             outputFileXML2.println("<VARIABLE TYPE=\"nature\">");
             outputFileXML2.println("    <NAME>node"+ j + "</NAME>");
             
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             //int states=nStates[j];
@@ -2569,7 +2688,7 @@ public class BNGenerator {
         
         //****************** INPUTING TABLES**************
         
-        for (int i=0; i<nNodes; i++)  {
+        for (int i=0; i<getnNodes(); i++)  {
             //CategoricalVariable var[]=probabilitiesLower[i].getVariables();
             int valuesLength=(int)Math.pow(2,parentMatrix[i][0]);
             int nTable=(int)Math.pow(2,(valuesLength/2));
@@ -2728,7 +2847,7 @@ public class BNGenerator {
         outputFileXML.println("<!--");
         outputFileXML.println("\tBayesian network in XMLBIF v0.3 (BayesNet Interchange Format)");
         outputFileXML.println("\tProduced by JavaBayes (http://www.cs.cmu.edu/~javabayes/");
-        outputFileXML.println("\tNumber of nodes:" + nNodes);
+        outputFileXML.println("\tNumber of nodes:" + getnNodes());
         outputFileXML.println("\tOutput created " + (new Date()));
         outputFileXML.println("-->\n\n\n");
         outputFileXML.println("<BIF VERSION=\"0.3\">");
@@ -2738,7 +2857,7 @@ public class BNGenerator {
         outputFileXML2.println("<!--");
         outputFileXML2.println("\tBayesian network in XMLBIF v0.3 (BayesNet Interchange Format)");
         outputFileXML2.println("\tProduced by JavaBayes (http://www.cs.cmu.edu/~javabayes/");
-        outputFileXML2.println("\tNumber of nodes:" + nNodes);
+        outputFileXML2.println("\tNumber of nodes:" + getnNodes());
         outputFileXML2.println("\tOutput created " + (new Date()));
         outputFileXML2.println("-->\n\n\n");
         outputFileXML2.println("<BIF VERSION=\"0.3\">");
@@ -2750,11 +2869,11 @@ public class BNGenerator {
         
         int max=2;
         double x,y;
-        int nDegree=maxDegree+1;
+        int nDegree=getMaxDegree()+1;
         int contaEmXXML[]= new int[nDegree];
-        int numberStatesXML[] = new int[nNodes];
+        int numberStatesXML[] = new int[getnNodes()];
         
-        for (int j=0;j<nNodes;j++) {
+        for (int j=0;j<getnNodes();j++) {
             // low
             outputFileXML.println("<!-- Variables -->");
             outputFileXML.println("<VARIABLE TYPE=\"nature\">");
@@ -2764,7 +2883,7 @@ public class BNGenerator {
             outputFileXML2.println("<VARIABLE TYPE=\"nature\">");
             outputFileXML2.println("    <NAME>node"+ j + "</NAME>");
             
-            max = calculateNumberOfStates(maxValues,fixed_nValue);
+            max = calculateNumberOfStates(maxValues,isFixed_nValue());
             int countState=0; // count the number of states
             int states=Math.max(2,max);
             //int states=nStates[j];
@@ -2794,7 +2913,7 @@ public class BNGenerator {
         outputFileXML.println("<!-- Probability Distributions -->");
         // high
         outputFileXML2.println("<!-- Probability Distributions -->");
-        for (int i=0;i<nNodes;i++ ) {
+        for (int i=0;i<getnNodes();i++ ) {
             int nParents=1;
             // low
             outputFileXML.println(" <DEFINITION>");
@@ -3095,13 +3214,13 @@ public class BNGenerator {
     // If you want to use the following methods, contact the author.
     public int[][] orderMatrix(int[][] matrix)	{
         int orderedMatrix[][]= matrix;
-        for (int i=0;i<nNodes;i++)	{
-            boolean visited[] = new boolean[nNodes];
+        for (int i=0;i<getnNodes();i++)	{
+            boolean visited[] = new boolean[getnNodes()];
             for (int j=1;j<orderedMatrix[i][0];j++)	{
                 visited[orderedMatrix[i][j]]=true;
             }
             int cont=1;
-            for (int j=0;j<nNodes;j++)	{
+            for (int j=0;j<getnNodes();j++)	{
                 if (visited[j]==true)	{
                     orderedMatrix[i][cont]=j;
                     cont++;
@@ -3126,7 +3245,7 @@ public class BNGenerator {
             } else halt2=true;
         }
         if (halt==false)	{  // first time of actual type of graph
-            repository[lastPosition].table=receiveMatrix(orderedM,nNodes,maxDegree+2);
+            repository[lastPosition].table=receiveMatrix(orderedM,getnNodes(),getMaxDegree()+2);
             distribution[lastPosition]=1;
             iwOfEachGraphType[lastPosition]=iw;  //IW
             lastPosition++;
@@ -3144,7 +3263,7 @@ public class BNGenerator {
     }
     
     public boolean compareMatrix(int[][] matrix1,int[][] matrix2)	{ // return true if matrixs is the same
-        for (int i=0;(i<nNodes);i++ )	{
+        for (int i=0;(i<getnNodes());i++ )	{
             int last;
             //if (matrix1[i][0]==0) last = maxDegree+2;
             //else last = matrix1[i][0];
@@ -3162,15 +3281,15 @@ public class BNGenerator {
     }
     
     private void saveDistribution(String name,String format,int nG,int nI, String structure,int IW)	throws Exception {
-        String fileName = name.concat(structure).concat("_n"+nNodes).concat("_d"+maxDegree).concat("_iw"+IW).concat("_g"+nG).concat("_i"+nI).concat("." + format);
+        String fileName = name.concat(structure).concat("_n"+getnNodes()).concat("_d"+getMaxDegree()).concat("_iw"+IW).concat("_g"+nG).concat("_i"+nI).concat("." + format);
         PrintStream outputFile = new PrintStream(new FileOutputStream(fileName), true);
         outputFile.println("Distribution:");
         outputFile.println("Characteristics: ");
-        outputFile.println("\t"+nNodes+" nodes");
-        outputFile.println("\t"+maxDegree+" maxDegree");
-        outputFile.println("\t"+maxInDegree+" maxInDegree");
-        outputFile.println("\t"+maxOutDegree+" maxOutDegree");
-        outputFile.println("\t"+maxArcs+" maxArcs");
+        outputFile.println("\t"+getnNodes()+" nodes");
+        outputFile.println("\t"+getMaxDegree()+" maxDegree");
+        outputFile.println("\t"+getMaxInDegree()+" maxInDegree");
+        outputFile.println("\t"+getMaxOutDegree()+" maxOutDegree");
+        outputFile.println("\t"+getMaxArcs()+" maxArcs");
         outputFile.println("\t"+nG+" graphs generated");
         outputFile.println("\tStructure type:"+structure);
         outputFile.println("\t"+nI+" iteration between samples or until first sample");
@@ -3183,10 +3302,10 @@ public class BNGenerator {
     void averageQuiSquare(int nGra,int nIterati,int maxVal,String te,String fo,String baseFileNam,int maxInducedW) throws Exception{
         int nSet=10;
         double averageQuiSquare=0;
-        String fileName = "ComputingQuiSquare".concat("_n" +nNodes+"d"+maxDegree+"iw"+maxInducedW);;
+        String fileName = "ComputingQuiSquare".concat("_n" +getnNodes()+"d"+getMaxDegree()+"iw"+maxInducedW);;
         PrintStream outputFile = new PrintStream(new FileOutputStream(fileName), true);
-        outputFile.println(" * Number of nodes:" + nNodes);
-        outputFile.println(" * Number of maxDegree:" + maxDegree);
+        outputFile.println(" * Number of nodes:" + getnNodes());
+        outputFile.println(" * Number of maxDegree:" + getMaxDegree());
         outputFile.println(" * Number of maxIW:" + maxInducedW);
         outputFile.println(" **** Networks were created on " + (new Date()));
         outputFile.println(" **** Number of iteration between samples:" + nIterati);
@@ -3197,7 +3316,7 @@ public class BNGenerator {
             lastPosition=0;
             distribution = new int[numberStates];
             for (int j=0;j<numberStates;j++ )  repository[j] = new Matrix();	// for testing Uniformity
-            repository[0].inicializeTable(nNodes,maxDegree+2);				// for testing Uniformity
+            repository[0].inicializeTable(getnNodes(),getMaxDegree()+2);				// for testing Uniformity
             inicializeGraph(); // Inicialize a simple ordered tree as a BN structure
             generateMixedEJ(nGra,nIterati,maxVal,te,fo,baseFileNam,maxInducedW);
             computeQuiSquare(nGra);
@@ -3219,828 +3338,6 @@ public class BNGenerator {
     }
     
     
-    //////////////////////////////////////////////////////////////////////////
-    ////OTHER EXPERIMENTAL GENERATING METHODS ///////////////////////////////
-    /////////////////////////////////////////////////////////////////////////
-    
-/*
- 
-// This method generate multiconnected networks with more sofisticated method
-////////// METHOD WITH INVERTION OPERATION /////////////////////////////////
-void generateMultiConnected2(int nGraphs, int nIterations, int maxValues,
-                                        String testU, String format, String baseFileName)	throws Exception	{
-        int inducedWidth=1;
-        for (int g = 0; g < nGraphs; g++) {
-                //inicializeGraph();	// Inicialize a simple ordered tree as a BN structure
-                System.out.println("Generating multi-connected graph with new method:"+g);
-                int auxTotal = maxArcs;
-                int totalArcs=nNodes-1; // Simple tree has (nNodes-1)arcs
-                for (int i=0;i<nIterations;i++ )  {
-                  //System.out.println("***************************************Iteration:"+i);
-                  if (verifyCoherency()== true)	{
-                        boolean exist,conditionSatisfied; // auxiliary variables
-                        boolean inverted=false;
-                        boolean existInverseArc;
-                        float random=randMulti.nextFloat();
-                        sampleArc();
-                        exist=existArc(randP,randS);
-                        existInverseArc=existArc(randS,randP);
-                        //System.out.println("\t Sorted arc("+randP+","+randS+")");
-                        //System.out.println("\t Arc exists:"+exist);
-                        //System.out.println("\t InverseArc exists:"+existInverseArc);
-                        if (existInverseArc==false && exist==true)	{
-                                if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                        int aux1=randP;
-                                        randP=randS;
-                                        randS=aux1;
-                                        addArc(randP,randS);
-                                        inverted=true;
-                                    removeArc(randS,randP);
-                                    //System.out.println("\t Node inverted");
-                                }else	{
-                                        removeArc();
-                                        totalArcs--;
-                                        //System.out.println("\t Node removed");
-                                }
-                        } // end of if(false&&true)
- 
-                        if (existInverseArc==true && exist==false)	{
-                                if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                        addArc(randP,randS);
-                                        inverted=true;
-                                    removeArc(randS,randP);
-                                    //System.out.println("\t Actual node was inverted ");
-                                }else	{
-                                        int aux1=randP;
-                                        randP=randS;
-                                        randS=aux1;
-                                        removeArc();
-                                        totalArcs--;
-                                        //System.out.println("\t Actual node was removed");
-                                }
-                        } // end of if(true&&false)
- 
-                        if (existInverseArc==false && exist==false)	{
-                                if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                        int aux1=randP;
-                                        randP=randS;
-                                        randS=aux1;
-                                        addArc(randP,randS);
-                                        totalArcs++;
-                                        inverted=true;
-                                        //System.out.println("\t Node was inverted and added");
-                                }else	{
-                                        addArc(randP,randS);
-                                        totalArcs++;
-                                        //System.out.println("\t Node just added");
-                                }
-                        } // end of if(true&&false)
- 
-                        //printArcs();
-                        conditionSatisfied=false;
- 
- 
-                        //*****Condition verifyng
-                        if (inverted==true)	{
-                          if (totalArcs<=auxTotal)
-                                if (followMaxDegree(maxDegree))
-                                        if(isAcyclic())  {
-                                                conditionSatisfied=true;
-                                                //System.out.println("\t Structure(after invertion) is a DAG.");
-                                        }
-                        } // end of if(inverted)
- 
-                        else if (exist==false && existInverseArc==false) {
-                                   if (totalArcs<=auxTotal)
-                                        if (followMaxDegree(maxDegree))
-                                                if(isAcyclic())  {
-                                                        conditionSatisfied=true;
-                                                        //System.out.println("\t Structure is a DAG.");
-                                                }
-                        } // end of if(exist)
-                        else   // if the node has removed, it is necessary just verify if continue connected
-                                if (isConnected()) {
-                                        conditionSatisfied=true;
-                                        //System.out.println("\t Structure is connected.");
-                                }
- 
-                        //System.out.println("\t Condition satisfied:"+conditionSatisfied);
-                        if (conditionSatisfied==false)	{
-                                if (existInverseArc==false && exist==true)	{
-                                        if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                                int aux1=randP;
-                                                randP=randS;
-                                                randS=aux1;
-                                                addArc(randP,randS);
-                                                removeArc(randS,randP);
-                                        }else	{
-                                                addArc();
-                                                totalArcs++;
-                                        }
-                                } // end of if(false&&true)
- 
-                                if (existInverseArc==true && exist==false)	{
-                                        if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                                int aux1=randP;
-                                                randP=randS;
-                                                randS=aux1;
-                                                addArc(randP,randS);
-                                            removeArc(randS,randP);
-                                            //System.out.println("\t Node inverted and added ");
-                                        }else	{
-                                                addArc();
-                                                totalArcs++;
-                                                //System.out.println("\t Node just added");
-                                        }
-                                } // end of if(true&&false)
- 
-                                if (existInverseArc==false && exist==false)	{
-                                        removeArc(randP,randS);
-                                        totalArcs--;
-                                } // end of if(true&&false)
- 
-                      } // end of if (conditionSatisfied)
-            //printArcs();
-                  } // for coherency
-                  else {
-                    System.out.println("\t********  MATRIX�S NOT COHERENT!! ********** ");
-                    System.exit(0);
-                  } // end of else
-                //pause();
-                } // end of for(iteration)
- 
-                if ( (testU.compareTo("yes") == 0))	{
-                        testUniformity(inducedWidth);	// testUnif
-                }
-                else	{
-                                if ((format.compareTo("xml") ==0))	{
-                                saveBNXML(baseFileName,format,g,maxValues);
-                                }
-                                if ((format.compareTo("java") == 0)) {
-                                saveBNJava(baseFileName,format,g,maxValues);
-                                }
-                                if ((format.compareTo("xmljava") == 0)) {
-                                saveBNXMLJava(baseFileName,format,g,maxValues);
-                                }
-                }
-        } // end of for(graphs)
-} // end of generateMultiConnected2()
- 
-////////// METHOD WITH INVERTION OPERATION WITH INDUCED WIDTH CONSTRAINT /////////////////////////////////
-void generateMwithIW2(int nGraphs, int nIterations, int maxValues,
-                                        String testU, String format, String baseFileName, int maxIW)	throws Exception	{
-        int inducedWidth=1;
-        System.out.println("Maximum Induced-width is:"+maxIW);
-        int max=0;
-        for (int g = 0; g < nGraphs; g++) {
-                //inicializeGraph();	// Inicialize a simple ordered tree as a BN structure
-                //System.out.println("Generating multi-connected graph with new method (using IW):"+g);
-                int auxTotal = maxArcs;
-                int totalArcs=nNodes-1; // Simple tree has (nNodes-1)arcs
-                for (int i=0;i<nIterations;i++ )  {
-                  //System.out.println("***************************************Iteration:"+i);
-                  if (verifyCoherency()== true)	{
-                        boolean exist,conditionSatisfied; // auxiliary variables
-                        boolean inverted=false;
-                        boolean existInverseArc;
-                        float random=randMulti.nextFloat();
-                        sampleArc();
-                        exist=existArc(randP,randS);
-                        existInverseArc=existArc(randS,randP);
-                        //System.out.println("\t Sorted arc("+randP+","+randS+")");
-                        //System.out.println("\t Arc exists:"+exist);
-                        //System.out.println("\t InverseArc exists:"+existInverseArc);
-                        if (existInverseArc==false && exist==true)	{
-                                if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                        int aux1=randP;
-                                        randP=randS;
-                                        randS=aux1;
-                                        addArc(randP,randS);
-                                        inverted=true;
-                                    removeArc(randS,randP);
-                                    //System.out.println("\t Node inverted");
-                                }else	{
-                                        removeArc();
-                                        totalArcs--;
-                                        //System.out.println("\t Node removed");
-                                }
-                        } // end of if(false&&true)
- 
-                        if (existInverseArc==true && exist==false)	{
-                                if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                        addArc(randP,randS);
-                                        inverted=true;
-                                    removeArc(randS,randP);
-                                    //System.out.println("\t Actual node was inverted ");
-                                }else	{
-                                        int aux1=randP;
-                                        randP=randS;
-                                        randS=aux1;
-                                        removeArc();
-                                        totalArcs--;
-                                        //System.out.println("\t Actual node was removed");
-                                }
-                        } // end of if(true&&false)
- 
-                        if (existInverseArc==false && exist==false)	{
-                                if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                        int aux1=randP;
-                                        randP=randS;
-                                        randS=aux1;
-                                        addArc(randP,randS);
-                                        totalArcs++;
-                                        inverted=true;
-                                        //System.out.println("\t Node was inverted and added");
-                                }else	{
-                                        addArc(randP,randS);
-                                        totalArcs++;
-                                        //System.out.println("\t Node just added");
-                                }
-                        } // end of if(true&&false)
- 
-                        //printArcs();
-                        conditionSatisfied=false;
- 
- 
-                        //*****Condition verifyng
-                        if (inverted==true)	{
-                          if (totalArcs<=auxTotal)
-                                if (followMaxDegree(maxDegree))
-                                        if(isAcyclic())  {
-                                                loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                                                int aux=inducedWidth;
-                                                inducedWidth=getInducedWidth();
-                                                if (inducedWidth<=maxIW)   conditionSatisfied=true;
-                                                else inducedWidth=aux;
-                                                //conditionSatisfied=true;
-                                                //System.out.println("\t Structure(after invertion) is a DAG.");
-                                        }
-                        } // end of if(inverted)
- 
-                        else if (exist==false && existInverseArc==false) {
-                                   if (totalArcs<=auxTotal)
-                                        if (followMaxDegree(maxDegree))
-                                                if(isAcyclic())  {
-                                                    loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                                                    int aux=inducedWidth;
-                                                    inducedWidth=getInducedWidth();
-                                                    if (inducedWidth<=maxIW)   conditionSatisfied=true;
-                                                    else inducedWidth=aux;
-                                                    //conditionSatisfied=true;
-                                                    //System.out.println("\t Structure is a DAG.");
-                                                }
-                        } // end of if(exist)
-                        else   // if the node has removed, it is necessary just verify if continue connected
-                                if (isConnected()) {
-                                        loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                                        inducedWidth=getInducedWidth();
-                                        if (inducedWidth<=maxIW)   conditionSatisfied=true;
-                                        //else System.out.println("\t **** Removeu um arco e ainda seu IW aumentou!!");
-                                        //conditionSatisfied=true;
-                                        //System.out.println("\t Structure is connected.");
-                                }
- 
-                        //System.out.println("\t Condition satisfied:"+conditionSatisfied);
-                        if (conditionSatisfied==false)	{
-                                if (existInverseArc==false && exist==true)	{
-                                        if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                                int aux1=randP;
-                                                randP=randS;
-                                                randS=aux1;
-                                                addArc(randP,randS);
-                                                removeArc(randS,randP);
-                                        }else	{
-                                                addArc();
-                                                totalArcs++;
-                                        }
-                                } // end of if(false&&true)
- 
-                                if (existInverseArc==true && exist==false)	{
-                                        if ( random> 0.5)	{   /// the factor 0.5 is important to speed the convergence
-                                                int aux1=randP;
-                                                randP=randS;
-                                                randS=aux1;
-                                                addArc(randP,randS);
-                                            removeArc(randS,randP);
-                                            //System.out.println("\t Node inverted and added ");
-                                        }else	{
-                                                addArc();
-                                                totalArcs++;
-                                                //System.out.println("\t Node just added");
-                                        }
-                                } // end of if(true&&false)
- 
-                                if (existInverseArc==false && exist==false)	{
-                                        removeArc(randP,randS);
-                                        totalArcs--;
-                                } // end of if(true&&false)
- 
-                      } // end of if (conditionSatisfied)
-            //printArcs();
-                  } // for coherency
-                  else {
-                    System.out.println("\t********  MATRIX�S NOT COHERENT!! ********** ");
-                    System.exit(0);
-                  } // end of else
-                //pause();
-                } // end of for(iteration)
- 
-                if ( (testU.compareTo("yes") == 0))	{
-                    testInducedWidth(g,inducedWidth);
-                    //if (inducedWidth>max) max=inducedWidth;
-                    testUniformity(inducedWidth);   // testUnif
-                }
-                else	{
-                                if ((format.compareTo("xml") ==0))	{
-                                saveBNXML(baseFileName,format,g,maxValues);
-                                }
-                                if ((format.compareTo("java") == 0)) {
-                                saveBNJava(baseFileName,format,g,maxValues);
-                                }
-                                if ((format.compareTo("xmljava") == 0)) {
-                                saveBNXMLJava(baseFileName,format,g,maxValues);
-                                }
-                }
-        } // end of for(graphs)
-        System.out.println("\t Maximum induced-width: "+max); // IW
-} // end of generateTest2()
- 
-// This method is similar to void generateMulticonect, except that add the induced-width constraint
-void generateMwithIW(int nGraphs, int nIterations, int maxValues, String testU, String format, String baseFileName, int maxIW)throws Exception{
-        int inducedWidth=1;
-        System.out.println("Maximum Induced-width is:"+maxIW);
-        for (int g = 0; g < nGraphs; g++) {
-                //inicializeGraph();	// Inicialize a simple ordered tree as a BN structure (optional)
-                System.out.println("Generating multi-connected test graph:"+g);
-                int auxTotal = maxArcs;
-                int totalArcs=nNodes-1; // Simple tree has (nNodes-1)arcs
-                //inducedWidth=1; // induced-width must be initialized, if we initializeGraph() everytime.
-                for (int i=0;i<nIterations;i++ )  {
-                  //if (verifyCoherency()== true)	{
-                        boolean exist,conditionSatisfied; // auxiliary variables
-                        //boolean inverted=false;
-                        sampleArc();
-                        exist=existArc(randP,randS);
-                        if (exist==false)	{
-                                addArc(randP,randS);
-                                totalArcs++;
-                                //System.out.println("\t Node just added");
-                        }else	{ // arc exists
-                                removeArc();
-                                totalArcs--;
-                                ///System.out.println("\t Arc removed for verifying");
-                        } // end of else
-                        //printArcs();
- 
-                        conditionSatisfied=false;
-                        if (exist==false) {
-                                if (totalArcs<=auxTotal)
-                                        if (followMaxDegree(maxDegree))
-                                                if(isAcyclic()) {
-                                                    loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                                                    int aux=inducedWidth;
-                                                    inducedWidth=getInducedWidth();
-                                                    if (inducedWidth<=maxIW)   conditionSatisfied=true;
-                                                    else    inducedWidth=aux;
-                                                    //if (inducedWidth<(auxIW))   System.out.println("\t *************** Adicionou arco e IW diminuiu!.");
-                                                    //if (inducedWidth==(auxIW))   System.out.println("\t Adicionou arco e IW aumentou nada.");
-                                                    //if (inducedWidth==(auxIW+1))   System.out.println("\t Adicionou arco e IW aumentou 1.");
-                                                    //if (inducedWidth==(auxIW+2))   System.out.println("\t **** Adicionou arco e IW aumentou 2!");
-                                                }
-                        } // end of if(exist)
-                        else   // if the node has removed, it is necessary just verify if continue connected
-                                if (isConnected()==true)   {
-                                        int auxIW=inducedWidth;
-                                        loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                                        inducedWidth=getInducedWidth();
-                                        //System.out.println("\t Removeu um arco.");
-                                        //if (inducedWidth<=maxIW)   conditionSatisfied=true;
-                                        if (inducedWidth>auxIW)   System.out.println(" ******** Removeu um arco e ainda seu IW aumentou!!");
-                                        //if (inducedWidth==auxIW)   System.out.println(" Removeu um arco e o induced width permaneceu igual.");
-                                        //if (inducedWidth==(auxIW-1))   System.out.println(" Removeu-se arco e IW diminuiu 1.");
-                                        conditionSatisfied=true;
-                                        //System.out.println("\t Structure is connected.");
-                                }
-                        if (conditionSatisfied==false)	{
-                                if (exist)  {
-                                                addArc();
-                                                totalArcs++;
-                                            //System.out.println("\t Arc re-added");
-                                }else {
-                                        removeArc();
-                                        totalArcs--;
-                                        //System.out.println("\t Arc ad-removed");
-                                }
-                        } // end of if (conditionSatisfied)
- 
- 
-                      //System.out.println("\n Pausando, para verificar!");
-                          //printArcs();
-                  //} // for coherency
-                  //else {
-                  // System.out.println("\t********  MATRIX�S NOT COHERENT!! ********** ");
-                  //  System.exit(0);
-                  //} // end of else
-                //pause();
- 
- 
-                } // end of for(iteration)
- 
-                if ( (testU.compareTo("yes") == 0))	{
-                    testInducedWidth(g,inducedWidth);
-                    testUniformity(inducedWidth);	// testUnif
-                }
-                else	{
-                                if ((format.compareTo("xml") ==0))	{
-                                saveBNXML(baseFileName,format,g,maxValues);
-                        }
-                        if ((format.compareTo("java") == 0)) {
-                            saveBNJava(baseFileName,format,g,maxValues);
-                        }
-                        if ((format.compareTo("xmljava") == 0)) {
-                            saveBNXMLJava(baseFileName,format,g,maxValues);
-                        }
-                        if ((format.compareTo("loadEmB") == 0)) {
-                            loadToEmBayes("bnLink");
-                            //ejb.loadNetwork(st);
-                            ejb.mainEmBayes(ejb);
-                        }
-                }
- 
-         } // end of for(graphs)
- 
-} // end of generateTestStructure()
- 
-/////////// Generating method with mixing strategy (see article)
-void generateMixedE(int nGraphs, int nIterations, int maxValues, String testU, String format, String baseFileName, int maxIW)throws Exception{
-        int inducedWidth=1;
-        int totalArcs=nNodes-1; // Simple tree has (nNodes-1)arcs
-        int auxTotal = maxArcs;
-        double rate=0.5; // transition rate
-        double  random;
-        System.out.println("Maximum Induced-width is:"+maxIW);
-        for (int g = 0; g < nGraphs; g++) {
-            System.out.println("Generating multi-connected graph (with mixed strategy):"+g);
-            for (int i=0;i<nIterations;i++ )  {
-                //System.out.println("***************************************Iteration(mixed):"+i);
-                random=rand.nextDouble();
-                if (totalArcs==nNodes-1)   {    // this condition verify if graph is a polytree
-                    if ( random>=rate)	{       // AR operation
-                        boolean exist;
-                        sampleArc();
-                        if (followMaxDegree(maxDegree-1))
-                                exist=existArc(randP,randS);
-                        else exist=true;
-                        if (exist==false)	{
-                            int remove[]=findArcToRemove(randP,randS);
-                            if (randPolytree.nextFloat() > 0.5)	{   // the factor 0.5 is important for uniformity
-                                addArc(randS,randP); // note that arc was inverted!! randP and randS are atualized
-                                removeArc(remove[0],remove[1]);
-                                int auxIW=inducedWidth;
-                                loadToEmBayes("loadingBN"); // IW
-                                inducedWidth=getInducedWidth(); // IW
-                                if (inducedWidth>maxIW)  {      // new graph rejected
-                                    removeArc();
-                                    addArc(remove[0],remove[1]);    // add the arc that was removed
-                                    inducedWidth=auxIW;
-                                }
-                            }
-                            else	{
-                                addArc(randP,randS);
-                                removeArc(remove[0],remove[1]);
-                                int auxIW=inducedWidth;
-                                loadToEmBayes("loadingBN"); // IW
-                                inducedWidth=getInducedWidth(); // IW
-                                if (inducedWidth>maxIW)  {      // new graph rejected
-                                    removeArc();
-                                    addArc(remove[0],remove[1]);
-                                    inducedWidth=auxIW;
-                                }
-                            }
-                        } // end of if(exist)
-                    }    // end of if(random>=rate)
-                    else	{       // A or R operation
-                            boolean exist,conditionSatisfied; // auxiliary variables
-                            sampleArc();
-                            exist=existArc(randP,randS);
-                            conditionSatisfied=false;
-                            if (exist==false) {
-                                addArc(randP,randS);
-                                totalArcs++;
-                                if (totalArcs<=auxTotal)
-                                        if (followMaxDegree(maxDegree))
-                                                if(isAcyclic()) {
-                                                    int auxIW=inducedWidth;
-                                                    loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                                                    inducedWidth=getInducedWidth();
-                                                    if (inducedWidth<=maxIW)   conditionSatisfied=true;
-                                                    else    inducedWidth=auxIW;
-                                                } // end of if
-                            } // end of if(exist)
-                            if (exist==false)	{
-                                if (conditionSatisfied==false)   {
-                                    removeArc();
-                                    totalArcs--;
-                                }
-                            } // end of if (conditionSatisfied)
-                        } // end of else (A or R operation)
-                    }   // end of if(polytree)
-                    else    {       // actual graph is multiconnected, then use A or R operation
-                        boolean exist,conditionSatisfied; // auxiliary variables
-                        int aux=inducedWidth; // aux keep the initial induced-width of the multiconnected graph
-                        sampleArc();
-                        exist=existArc(randP,randS);
-                        if (exist==false)	{
-                                addArc(randP,randS);
-                                totalArcs++;
-                        }else	{ // arc exists
-                                removeArc();
-                                totalArcs--;
-                        } // end of else
-                        conditionSatisfied=false;
-                        if (exist==false) { // if the arc does not exist, naturaly the arc is added and the remain graph is multiconnected
-                                if (totalArcs<=auxTotal)
-                                        if (followMaxDegree(maxDegree))
-                                                if(isAcyclic()) {
-                                                    loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                                                    inducedWidth=getInducedWidth();
-                                                    if (inducedWidth<=maxIW)   conditionSatisfied=true;
-                                                    else    inducedWidth=aux;
-                                                } // end of if
-                        } // end of if(exist)
-                        else   {// if the node has removed, it is necessary just verify if continue connected and if it is multiconnected
-                                if (isConnected()==true)   {
-                                    loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                                    inducedWidth=getInducedWidth();
-                                    conditionSatisfied=false;
-                                    if (inducedWidth<=maxIW) {
-                                        if (totalArcs==nNodes-1)   {    // verify if graph is a polytree
-                                            if (random<rate)    conditionSatisfied=true;    // accept the polytree
-                                            else inducedWidth=aux;
-                                        }   // end of if(polytree)
-                                        else    conditionSatisfied=true;    // resultant graph is multiconnected => accept
-                                        //if (inducedWidth>aux)   // if this condition is satisfied, its a patologic case!!
-                                        //System.out.println(" ******** Removeu um arco e ainda seu IW aumentou!!");
-                                    }
-                                    else inducedWidth=aux;  // reject the graph
-                               }
-                        }
-                        if (conditionSatisfied==false)	{
-                                if (exist)  {
-                                                addArc();
-                                                totalArcs++;
-                                }else {
-                                        removeArc();
-                                        totalArcs--;
-                                }
-                        } // end of if (conditionSatisfied)
-                    }   //end of else
-                } // end of for(iteration)
- 
-                if ( (testU.compareTo("yes") == 0))	{
-                    testInducedWidth(g,inducedWidth);
-                    testUniformity(inducedWidth);	// testUnif
-                }
-                else	{
-                        if ((format.compareTo("xml") ==0))	{
-                                saveBNXML(baseFileName,format,g,maxValues);
-                        }
-                        if ((format.compareTo("java") == 0)) {
-                                saveBNJava(baseFileName,format,g,maxValues);
-                        }
-                        if ((format.compareTo("xmljava") == 0)) {
-                                saveBNXMLJava(baseFileName,format,g,maxValues);
-                        }
-                        if ((format.compareTo("loadEmB") == 0)) {
-                                loadToEmBayes("bnLink");
-                                ejb.mainEmBayes(ejb);
-                        }
-                }
- 
-         } // end of for(graphs)
-} // end of generateTest3()
- 
-void generateMixedER(int nGraphs, int nIterations, int maxValues, String testU, String format, String baseFileName, int maxIW)throws Exception{
-        int inducedWidth=1;
-        int totalArcs=nNodes-1; // Simple tree has (nNodes-1)arcs
-        int auxTotal = maxArcs;
-        double  random;
-        double rate=0.1;
-        double rate2=0.05;
-        System.out.println("Maximum Induced-width is:"+maxIW);
-        int statistics[]= new int[6];
-        for (int g = 0; g < nGraphs; g++) {
-            System.out.println("Generating multi-connected Test3 graph:"+g);
-            // ********************************************** Iteraction to obtain one graph *********************
-            for (int i=0;i<nIterations;i++ )  {
-                random=rand.nextDouble();
-                //********************************************** is polytree******************************
-                if (totalArcs==nNodes-1)   {    // this condition verify if graph is a polytree
-                    if ( random<=rate)	{       // AR operation
-                        boolean exist;
-                        sampleArc();
-                        if (followMaxDegree(maxDegree-1))
-                                exist=existArc(randP,randS);
-                        else exist=true;
-                        if (exist==false)	{
-                            int remove[]=findArcToRemove(randP,randS);
-                            if (randPolytree.nextFloat() > 0.5)	{   // the factor 0.5 is important for uniformity
-                                addArc(randS,randP); // note that arc was inverted!! randP and randS are atualized
-                                removeArc(remove[0],remove[1]);
-                                int auxIW=inducedWidth;
-                                loadToEmBayes("loadingBN"); // IW
-                                inducedWidth=getInducedWidth(); // IW
-                                if (inducedWidth>maxIW)  {      // new graph rejected
-                                    removeArc();
-                                    addArc(remove[0],remove[1]);    // add the arc that was removed
-                                    inducedWidth=auxIW;
-                                }
-                            }
-                            else	{
-                                addArc(randP,randS);
-                                removeArc(remove[0],remove[1]);
-                                int auxIW=inducedWidth;
-                                loadToEmBayes("loadingBN"); // IW
-                                inducedWidth=getInducedWidth(); // IW
-                                if (inducedWidth>maxIW)  {      // new graph rejected
-                                    removeArc();
-                                    addArc(remove[0],remove[1]);
-                                    inducedWidth=auxIW;
-                                }
-                            }
-                        } // end of if(exist)
-                    }    // end of if(random<rate)
-                    else {       // A or R operation
-                        boolean exist,conditionSatisfied; // auxiliary variables
-                        int initialPolytreeP[][]=receiveMatrix(parentMatrix,nNodes,maxDegree+2);
-                        int initialPolytreeS[][]=receiveMatrix(sonMatrix,nNodes,maxDegree+2);
-                        int auxIW=inducedWidth;
-                        random=0.0;
-                        int count=0;
-                        while(random<=rate2)  {
-                            count++;
-                            sampleArc();
-                            exist=existArc(randP,randS);
-                            if (exist==false)	{
-                                addArc(randP,randS);
-                                totalArcs++;
-                            }else	{ // arc exists
-                                removeArc();
-                                totalArcs--;
-                            } // end of else
- 
-                            conditionSatisfied=false;
-                            if (exist==false) {
-                                if (totalArcs<=auxTotal)
-                                        if (followMaxDegree(maxDegree))
-                                                if(isAcyclic()) {
-                                                    conditionSatisfied=true;
-                                                }
-                            } // end of if(exist)
-                            else   if (isConnected()==true)   { // if the node has removed, it is necessary just verify if continue connected
-                                        conditionSatisfied=true;
-                                }
-                            if (conditionSatisfied==false)	{
-                                if (exist)  {
-                                                addArc();
-                                                totalArcs++;
-                                }else {
-                                        removeArc();
-                                        totalArcs--;
-                                }
-                            } // end of if (conditionSatisfied==false)
-                            random=rand.nextDouble();
-                        }   // end of while
-                        if ( totalArcs!=(nNodes-1) )    {   // graph must be multiconnected
-                            loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                            inducedWidth=getInducedWidth();
-                            if (inducedWidth<=maxIW){
-                                if (count>2)    statistics[1]++;
-                                conditionSatisfied=true;
-                            }
-                            else conditionSatisfied=false;
-                        }
-                        else conditionSatisfied=false;
-                        if (conditionSatisfied==false)  {
-                            statistics[0]++;
-                            parentMatrix=receiveMatrix(initialPolytreeP,nNodes,maxDegree+2);
-                            sonMatrix=receiveMatrix(initialPolytreeS,nNodes,maxDegree+2);
-                            inducedWidth=auxIW;
-                            totalArcs=nNodes-1;
-                        }
-                    } // end of else (A or R operation)
- 
- 
-                 }   // end of if(polytree)
- 
-                //********************************************** is multiconnected  ************************
-                 else    {       // actual graph is multiconnected, then use A or R operation
-                    boolean exist,conditionSatisfied; // auxiliary variables
-                    int initialMulticonnectedP[][]=receiveMatrix(parentMatrix,nNodes,maxDegree+2);
-                    int initialMulticonnectedS[][]=receiveMatrix(sonMatrix,nNodes,maxDegree+2);
-                    int auxIW=inducedWidth;
-                    int auxTotalArcs=totalArcs;
-                    int count=0;
-                    random=0.0;
-                    while(random<=rate2)  {
-                        count++;
-                        sampleArc();
-                        exist=existArc(randP,randS);
-                        if (exist==false)	{
-                                addArc(randP,randS);
-                                totalArcs++;
-                        }else	{ // arc exists
-                                removeArc();
-                                totalArcs--;
-                        } // end of else
-                        conditionSatisfied=false;
-                        if (exist==false) { // if the arc does not exist, naturaly the arc is added and the remain graph is multiconnected
-                                if (totalArcs<=auxTotal)
-                                        if (followMaxDegree(maxDegree))
-                                                if(isAcyclic()) {
-                                                    conditionSatisfied=true;
-                                                } // end of if
-                        } // end of if(exist)
-                        else   {// if the node has removed, it is necessary just verify if continue connected and if it is multiconnected
-                                if (isConnected()==true)   {
-                                    conditionSatisfied=true;
-                                }
-                        }
-                        if (conditionSatisfied==false)	{
-                                if (exist)  {
-                                                addArc();
-                                                totalArcs++;
-                                }else {
-                                        removeArc();
-                                        totalArcs--;
-                                }
-                        } // end of if (conditionSatisfied)
-                        random=rand.nextDouble();
-                    }   //end of while (A or R) operation
-                        if ( (totalArcs!=(nNodes-1)) )   {  // graph is multiconnected, verifying IW
-                            loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                            inducedWidth=getInducedWidth();
-                            if  (inducedWidth<=maxIW){
-                                    if (count>2)    statistics[3]++;
-                                    conditionSatisfied=true;
-                                }
-                                else conditionSatisfied=false;
-                        }
-                        else {  // graph is polytree,
-                            random=rand.nextDouble();
-                            if (random>rate)  {  // polytree accepted, verifying IW
-                                loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                                inducedWidth=getInducedWidth();
-                                if  (inducedWidth<=maxIW)   {
-                                    if (count>2)    statistics[3]++;
-                                    conditionSatisfied=true;
-                                } else conditionSatisfied=false;
-                            }
-                            else conditionSatisfied=false;  // polytree rejected
-                        }
-                        if (conditionSatisfied==false)  {
-                            statistics[2]++;
-                            parentMatrix=receiveMatrix(initialMulticonnectedP,nNodes,maxDegree+2);
-                            sonMatrix=receiveMatrix(initialMulticonnectedS,nNodes,maxDegree+2);
-                            inducedWidth=auxIW;
-                            totalArcs=auxTotalArcs;
-                        }
-                    } // end of else (graph is multiconnected)
-                 } // end of for(iteration)
- 
-                if ( (testU.compareTo("yes") == 0))	{
-                    //loadToEmBayes("loadingBN"); // loadind network to EmBayes for computing induced-width
-                    //inducedWidth=getInducedWidth();
-                    //if (inducedWidth>maxIW) throw(new Exception("Error at IW verification!!!"));
-                    testInducedWidth(g,inducedWidth);
-                    testUniformity(inducedWidth);	// testUnif
-                }
-                else	{
-                        if ((format.compareTo("xml") ==0))	{
-                                saveBNXML(baseFileName,format,g,maxValues);
-                        }
-                        if ((format.compareTo("java") == 0)) {
-                                saveBNJava(baseFileName,format,g,maxValues);
-                        }
-                        if ((format.compareTo("xmljava") == 0)) {
-                                saveBNXMLJava(baseFileName,format,g,maxValues);
-                        }
-                        if ((format.compareTo("loadEmB") == 0)) {
-                                loadToEmBayes("bnLink");
-                                ejb.mainEmBayes(ejb);
-                        }
-                }
- 
-         } // end of for(graphs)
- 
-        System.out.println("1) Rejected Loop Operation (polytree):"+statistics[0]);
-        System.out.println("1) Accepted Loop Operation after two jump(polytree):"+statistics[1]);
-        System.out.println("2) Rejected Loop Operation (multiconnected):"+statistics[2]);
-        System.out.println("2) Accepted Loop Operation after two jump(multiconnected):"+statistics[3]);
-} // end of generateTest3()
- 
- */
-    
     /////////////////////////////////////////////////////////////////////////////////
     ///////////  Auxiliar optional methods for developers ////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
@@ -4061,7 +3358,7 @@ void generateMixedER(int nGraphs, int nIterations, int maxValues, String testU, 
         resp=isConnected();
         System.out.println("Resposta:"+resp);
         printArcs();
-        printMatrix(parentMatrix,nNodes,maxDegree+2);
+        printMatrix(parentMatrix,getnNodes(),getMaxDegree()+2);
         //printMatrix (sonMatrix,nNodes,maxDegree+2);
         //removeArc();
         //printMatrix (parentMatrix,nNodes,maxDegree+2);
@@ -4070,7 +3367,7 @@ void generateMixedER(int nGraphs, int nIterations, int maxValues, String testU, 
     
     private void printArcs()  {  // just print the arc�s
         System.out.println("Arcs:");
-        for (int i=0;i<nNodes;i++)  {
+        for (int i=0;i<getnNodes();i++)  {
             for (int j=1;j<sonMatrix[i][0];j++)
                 System.out.println("\t"+i+" ---> "+sonMatrix[i][j]);
         }
@@ -4082,6 +3379,18 @@ void generateMixedER(int nGraphs, int nIterations, int maxValues, String testU, 
             System.out.println();
         }
         System.out.println();
+    }
+
+    public void generate(String structure, int nGraphs, int nIterations, int maxValues, String format, String baseFileName, int maxInducedWidth) throws Exception {
+        if ( (structure.compareTo("singly") == 0))	{	//  polytree
+            generatePolytree(nGraphs,nIterations,maxValues,"no",format,baseFileName,maxInducedWidth);
+        } // end of if(structure=poly)
+        else if	((structure.compareTo("multi") == 0)&&(maxInducedWidth==-1)) {	// multi-connected graph is the default structure
+            generateMultiConnected(nGraphs,nIterations,maxValues,"no",format,baseFileName);
+        } // end of if(structure=multi)
+        else if ((structure.compareTo("multi") == 0)&&(maxInducedWidth!=-1))	{	// generate multi-connected with maxIW constraint
+            generateMixedEJ(nGraphs,nIterations,maxValues,"no",format,baseFileName,maxInducedWidth);
+        } // end of if(structure=pmmixed)
     }
     
     

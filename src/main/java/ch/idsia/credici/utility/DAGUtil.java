@@ -8,6 +8,9 @@ import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
+
+import br.usp.poli.generator.BNGenerator;
+
 import org.apache.commons.math3.distribution.PoissonDistribution;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
@@ -20,6 +23,7 @@ import org.jgrapht.traverse.TopologicalOrderIterator;
 
 import java.util.*;
 import java.util.function.BinaryOperator;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -66,7 +70,7 @@ public class DAGUtil {
     }
 
 
-    public static void main(String[] args) {
+    public static void main2(String[] args) {
         BayesianNetwork bnet = new BayesianNetwork();
         int y = bnet.addVariable(2);
         int x = bnet.addVariable(2);
@@ -321,13 +325,154 @@ public class DAGUtil {
         return dag;
     }
 
-    public static SparseDirectedAcyclicGraph randomFromBNGenerator() {
 
-        // Code invoking BNGenerator
 
-        String dag = "";
+    public static SparseDirectedAcyclicGraph fixNetwork(SparseDirectedAcyclicGraph in){
+        SparseDirectedAcyclicGraph out = in.copy();
+        Set<Integer> roots = new HashSet<>();
+
+        for (int variable : out.getVariables()) {
+            if (in.getParents(variable).length == 0) {
+                roots.add(variable);
+            }
+        }
+        
+        ArrayList<Integer> inNeed = new ArrayList<>();
+        for (int variable : out.getVariables()) {
+            // roots do not need a root parent
+            if(roots.contains(variable)) {
+                continue;
+            }
+
+            boolean needsRoot = true;
+            for (int parent : in.getParents(variable)) {
+                if (roots.contains(parent)) {
+                    needsRoot = false;
+                    break;
+                }
+            }
+
+            if(needsRoot) {
+                inNeed.add(variable);
+            }
+        }
+        
+        for(int variable: inNeed) {
+            int newRoot = out.addVariable();
+            out.addEdge(newRoot, variable);
+        }
+        return out;
+    }
+
+
+
+    /**
+     * Generate network using BNGenerator
+     * 
+     * @param numberNodes number of nodes in the network (must be at least 4)
+     * @param maxInducedWidth set to -1 for no bounds
+     * @return
+     */
+    public static SparseDirectedAcyclicGraph randomFromBNGenerator(int numberNodes, int maxInducedWidth) {
+
+        int nGraphs=1;
+        String structure="multi"; // default structure
+        String format="xml"; // default format
+        String baseFileName = "Graph"; // default file name
+        Integer line = null; // Default value should also be provided
+        int maxValues=2; //  Default is binary nodes.
+        boolean fixed_nVal = false;
+        int nIterations=0;
+    
+        int numberMaxDegree=3;
+        int numberMaxInDegree=3;
+        int numberMaxOutDegree=3;
+
+        boolean maxDegreeWasSet = false;
+        boolean maxInDegreeWasSet = false;
+        boolean maxOutDegreeWasSet = false;
+
+        boolean maxArcsWasSet = false;
+        int numberMaxArcs=6;
+
+
+        int nPoints=3; // default number of points used to generate credal sets
+		BNGenerator bn;
+        
+
+		float lowerP=0;
+        float upperP=1;
+
+  
+              
+        format = "dag";
+        
+        
+        // set default values, if it was not set
+        if (!maxDegreeWasSet)       numberMaxDegree = numberNodes-1;
+        if (!maxInDegreeWasSet)     numberMaxInDegree=numberMaxDegree;
+        if (!maxOutDegreeWasSet)    numberMaxOutDegree=numberMaxDegree;
+        if (!maxArcsWasSet)         numberMaxArcs = numberNodes*numberMaxDegree/2;	// Set a default maximum number of arcs (all combinations)
+        
+        // verify some incoherent data
+        if (maxArcsWasSet)  {
+            int auxNumber=numberNodes*numberMaxDegree/2;
+            if (numberMaxArcs > auxNumber)  numberMaxArcs = auxNumber;
+            if  (numberMaxArcs < (numberNodes-1) ) numberMaxArcs=numberNodes;
+        }
+
+        if (maxInDegreeWasSet || maxOutDegreeWasSet)  {
+            if (structure.compareTo("multi")==0) {
+                if (numberMaxOutDegree==1)  numberMaxOutDegree=2;
+                if (numberMaxInDegree==1)   numberMaxInDegree=2;
+            }
+        }
+        if (maxInDegreeWasSet && maxOutDegreeWasSet)  {
+            if ((numberMaxInDegree+numberMaxOutDegree)==2) numberMaxOutDegree=2;
+        }
+
+        // Set global variables
+        bn = new BNGenerator(numberNodes,numberMaxDegree);
+        bn.setnNodes(numberNodes);  // set nNodes
+        bn.setMaxDegree(numberMaxDegree);  // set maxDegree
+        bn.setMaxInDegree(numberMaxInDegree);  // set maximum number of incoming arcs
+        bn.setMaxOutDegree(numberMaxOutDegree);  // set maximum number of outgoing arcs
+        bn.setMaxArcs(numberMaxArcs);  // set maxArcs(a global variable)
+        bn.setDataFactory(embayes.data.impl.DataBasicFactory.getInstance());
+        bn.setInferFactory(embayes.infer.impl.InferBasicFactory.getInstance(bn.getDataFactory()));
+        bn.setFixed_nValue(fixed_nVal);
+		bn.setnPointProb(nPoints);
+		bn.setLowerP(lowerP);
+		bn.setUpperP(upperP);
+
+        // Determining the number of iterations for
+        // the chain to converge is a difficult task.
+        // This value follows the DagAlea (see Melancon;Bousque,2000) suggestion,
+        // and we verified that this number is satisfatory:
+        nIterations = 6*bn.getnNodes()*bn.getnNodes();
+        
+        bn.inicializeGraph(); // Inicialize a simple ordered tree as a BN structure
+        
+        //// Generating process ////
+        try {
+            bn.generate(structure, nGraphs,nIterations,maxValues,format,baseFileName,maxInducedWidth);
+        } catch (Exception e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+      
+        String dag = bn.toDag();
         return DAGUtil.build(dag);
     }
+
+
+    public static void main(String[] args) {
+       var a  = DAGUtil.randomFromBNGenerator(5, 3);
+       
+       fixNetwork(a);
+    }
+
+
     public static SparseDirectedAcyclicGraph random(int numNodes, int lambda, int maxIndegree) {
 
         PoissonDistribution poiss = new PoissonDistribution(lambda);

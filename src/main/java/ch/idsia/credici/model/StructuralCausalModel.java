@@ -278,15 +278,26 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	/**
 	 * Retruns an array with the IDs of children that are endogenous variables
-	 * @param v
+	 * @param vars
 	 * @return
 	 */
-	public int[] getEndogenousChildren(int v){
-		return ArraysUtil.intersection(
-				this.getEndogenousVars(),
-				this.getChildren(v)
-		);
+	public int[] getEndogenousChildren(int... vars){
+
+		if (vars.length==1)
+			return ArraysUtil.intersection(
+					this.getEndogenousVars(),
+					this.getChildren(vars[0])
+			);
+
+		return ArraysUtil.unique(Ints.concat(
+				IntStream.of(vars)
+						.mapToObj(v -> ArraysUtil.intersection(this.getEndogenousVars(), this.getChildren(v)))
+						.map(v -> IntStream.of(v).filter(x -> !ArraysUtil.contains(x, vars)).toArray())
+						.toArray(int[][]::new)));
+
 	}
+
+
 
 
 	/**
@@ -836,9 +847,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 					VariableElimination inf = new FactorVariableElimination(infModel.getVariables());
 					inf.setFactors(infModel.getFactors());
 
-					System.out.println(left);
-					if (left == 0)
-						System.out.println();
 					BayesianFactor f = null;
 					f = (BayesianFactor) inf.conditionalQuery(left, right);
 
@@ -881,7 +889,76 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 
+	/// Based on Tian&Pearl 2003
 
+	public List<HashMap> getCFactorsSplittedDomains(int...exoVars){
+		if(this.exoConnectComponents().stream().filter(c -> ArraysUtil.equals(exoVars, c, true, true)).count() != 1)
+			throw new IllegalArgumentException("Wrong exogenous variables.");
+
+		int[] chU = DAGUtil.getTopologicalOrder(this.getNetwork(), this.getEndogenousChildren(exoVars));
+
+		List domains = new ArrayList();
+
+		for(int k = 0; k<chU.length; k++) {
+			HashMap dom = new HashMap();
+			int x = chU[k];
+			int[] previous = IntStream.range(0, k).map(i -> chU[i]).toArray();
+			int[] right = ArraysUtil.unionSet(previous, this.getEndegenousParents(ArraysUtil.append(previous, x)));
+			dom.put("left", x);
+			dom.put("right", right);
+			//System.out.println(x+"|"+ Arrays.toString(right));
+			domains.add(dom);
+		}
+		return domains;
+	}
+
+	public List<BayesianFactor> getCFactorsSplitted(int... exoVars) {
+
+		List factors = new ArrayList();
+
+		for(HashMap dom : this.getCFactorsSplittedDomains(exoVars)){
+			int left = (int) dom.get("left");
+			int[] right = (int[]) dom.get("right");
+			StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
+			VariableElimination inf = new FactorVariableElimination(infModel.getVariables());
+			inf.setFactors(infModel.getFactors());
+
+			BayesianFactor f = null;
+			f = (BayesianFactor) inf.conditionalQuery(left, right);
+			factors.add(f);
+		}
+		return factors;
+	}
+
+
+	public TIntObjectMap<BayesianFactor> getCFactorsSplittedMap() {
+
+		TIntObjectMap factors = new TIntObjectHashMap();
+
+		for(HashMap dom : this.getAllCFactorsSplittedDomains()){
+			int left = (int) dom.get("left");
+			int[] right = (int[]) dom.get("right");
+			StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
+			VariableElimination inf = new FactorVariableElimination(infModel.getVariables());
+			inf.setFactors(infModel.getFactors());
+
+			BayesianFactor f = null;
+			f = (BayesianFactor) inf.conditionalQuery(left, right);
+			factors.put(left,f);
+		}
+		return factors;
+	}
+
+	public BayesianFactor getCFactor(int...exoVars){
+		return BayesianFactor.combineAll(this.getCFactorsSplitted(exoVars));
+	}
+
+	public List<HashMap> getAllCFactorsSplittedDomains() {
+		return this.exoConnectComponents().stream().map(c -> this.getCFactorsSplittedDomains(c)).flatMap(List::stream).collect(Collectors.toList());
+	}
+	public BayesianFactor[] getQDecomposition() {
+		return Arrays.stream(this.exoConnectComponents().stream().map(c -> this.getCFactor(c)).toArray()).toArray(BayesianFactor[]::new);
+	}
 
 	public TIntIntMap[] samples(int N, int... vars) {
 		return IntStream.range(0, N).mapToObj(i -> sample(vars)).toArray(TIntIntMap[]::new);
@@ -889,6 +966,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public TIntIntMap[] samples(TIntIntMap[] observations, int... vars) {
 		return Stream.of(observations).map(obs -> this.sample(obs, vars)).toArray(TIntIntMap[]::new);
 	}
+
+
 
 
 	public TIntIntMap[] samples(int N, TIntIntMap obs, int... vars) {

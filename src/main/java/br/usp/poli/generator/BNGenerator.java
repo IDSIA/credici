@@ -65,6 +65,7 @@ import java.io.DataInputStream;
 import java.io.File;
 import java.util.Vector;
 
+import ch.idsia.crema.utility.RandomUtil;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
@@ -107,7 +108,8 @@ public class BNGenerator {
     private int[][] parentMatrix;
     private int[][] sonMatrix;
     private int[] nStates;
-    private Random random = new Random();
+    //private Random random = new Random();
+    private Random random = RandomUtil.getRandom();
     int seed= (int)(100000*random.nextFloat());
     private MersenneTwister rand= new MersenneTwister(seed+1);
     private MersenneTwister randSampleArc= new MersenneTwister(seed+2);

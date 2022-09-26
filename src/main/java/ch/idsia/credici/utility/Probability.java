@@ -1,12 +1,28 @@
 package ch.idsia.credici.utility;
 
+import ch.idsia.credici.IO;
+import ch.idsia.credici.learning.ve.VE;
+import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.crema.factor.Factor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.inference.ve.FactorVariableElimination;
+import ch.idsia.crema.inference.ve.VariableElimination;
+import ch.idsia.crema.inference.ve.order.MinFillOrdering;
+import ch.idsia.crema.model.GraphicalModel;
 import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.preprocess.CutObserved;
+import ch.idsia.crema.preprocess.RemoveBarren;
+import ch.idsia.crema.user.core.Variable;
+
 import com.google.common.primitives.Doubles;
+import com.opencsv.exceptions.CsvException;
+
 import gnu.trove.map.TIntIntMap;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
@@ -203,6 +219,47 @@ Probability.vertexInside(t.get(31).getFactor(4), (VertexFactor) this.trueCredalM
 	 */
 
 
+	public static <F extends GraphicalModel> double LL(F model, TIntIntMap[] data) throws InterruptedException {
+		
+		MinFillOrdering mfo = new MinFillOrdering();
+		int[] order = mfo.apply(model);
+		double ll = 0;
+		for (TIntIntMap obs : data) {
+			CutObserved co = new CutObserved();
+			F net = co.execute(model, obs);
+			
+			RemoveBarren rm = new RemoveBarren();
+			net = rm.execute(net, obs.keys(), obs);
+
+			VE<BayesianFactor> ve = new VE<>(order);
+			ve.setEvidence(obs);
+			ve.setFactors(net.getFactors());
+			ve.setNormalize(false); // we are interested in P(e)
+			
+			BayesianFactor bf = ve.apply(net, obs.keys(), obs);
+			ll += Math.log(bf.getData()[0]);
+		}
+		return ll;
+	}
 
 
+	public static void main(String[] args) {
+		try {
+			StructuralCausalModel scm;
+			scm = (StructuralCausalModel) IO.readUAI("/Users/dhuber/Development/credici/papers/pgm22/models/synthetic/1000/set4/rand13_mk1_maxDist2_nEndo6_k075_5.uai");
+			//BayesianNetwork bn = scm.toBnet();
+			TIntIntMap[] data = DataUtil.fromCSV("/Users/dhuber/Development/credici/papers/pgm22/models/synthetic/1000/set4/rand13_mk1_maxDist2_nEndo6_k075_5.csv");
+			double ll = LL(scm,data);
+			System.out.println(ll);
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (CsvException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 }

@@ -9,6 +9,7 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.checkerframework.checker.units.qual.A;
 import org.checkerframework.checker.units.qual.C;
 
@@ -263,5 +264,10 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
             e.printStackTrace();
         }
         
+    }
+
+
+    public void setEvidence(TIntIntMap obs) {
+        throw new NotImplementedException("");
     }
 }

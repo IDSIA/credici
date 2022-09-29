@@ -13,6 +13,7 @@ import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.util.*;
@@ -290,6 +291,16 @@ public class FactorUtil {
 			}
 		}
 		return newFactor;
+	}
+
+	public static HashMap<Set<Integer>, BayesianFactor> intMapToHashMap(TIntObjectMap map){
+		HashMap out = new HashMap();
+		for(int v: map.keys()){
+			Set<Integer> s = new HashSet<>();
+			s.add(Integer.valueOf(v));
+			out.put(s, map.get(v));
+		}
+		return out;
 	}
 
 }

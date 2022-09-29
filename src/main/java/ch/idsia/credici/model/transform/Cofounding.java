@@ -2,18 +2,51 @@ package ch.idsia.credici.model.transform;
 
 import ch.idsia.credici.factor.EquationOps;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.tools.CausalGraphTools;
 import ch.idsia.credici.utility.DomainUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.hash.TIntIntHashMap;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.IntStream;
 
 public class Cofounding {
+
+    public static SparseDirectedAcyclicGraph splitExoCofounders(SparseDirectedAcyclicGraph dag) {
+        return splitExoCofounders(dag, new ArrayList<>());
+    }
+    public static SparseDirectedAcyclicGraph splitExoCofounders(SparseDirectedAcyclicGraph dag, List<int[]> splittedToFill){
+
+        SparseDirectedAcyclicGraph outDag = dag.copy();
+        int v = Arrays.stream(outDag.getVariables()).max().getAsInt() + 1;
+
+        for (int u: CausalGraphTools.getExogenous(outDag)){
+            int[] chU = CausalGraphTools.getEndogenousChildren(outDag, u);
+            if(chU.length>1){
+                int[] splitted = new int[chU.length];
+                splitted[0] = u;
+                for(int i=1; i< chU.length; i++){
+                    outDag.addVariable(v);
+                    outDag.removeLink(u, chU[i]);
+                    outDag.addLink(v, chU[i]);
+                    splitted[i] = v;
+                    v++;
+                }
+                splittedToFill.add(splitted);
+            }
+
+        }
+        return  outDag;
+
+    }
+
 
     public static StructuralCausalModel mergeExoParents(StructuralCausalModel model, int[][] pairsX){
 
@@ -23,9 +56,30 @@ public class Cofounding {
                 throw new IllegalArgumentException("Pair with exogenous variable: "+Arrays.toString(p));
             int u = model.getExogenousParents(p[0])[0];
             int v = model.getExogenousParents(p[1])[0];
-            model = Cofounding.mergeExogenous(model, u, v);
+            model = Cofounding.mergeOperation(model, u, v);
         }
 
+        // Rename the variables so that all the variables are consecutive
+        return fixVariableIDs(model);
+    }
+
+
+    public static StructuralCausalModel mergeExoVars(StructuralCausalModel model, int[][] pairsU){
+
+        // Merge the cofounded endo vars
+        for (int[] p : pairsU) {
+            if(model.isEndogenous(p[0]) || model.isEndogenous(p[1]))
+                throw new IllegalArgumentException("Pair with endogenous variable: "+Arrays.toString(p));
+            model = Cofounding.mergeOperation(model, p[0], p[1]);
+        }
+
+        // Rename the variables so that all the variables are consecutive
+        return fixVariableIDs(model);
+    }
+
+
+
+    private static StructuralCausalModel fixVariableIDs(StructuralCausalModel model) {
         TIntIntHashMap map = new TIntIntHashMap();
         int i = 0;
         for (int v = 0; v <= Arrays.stream(model.getVariables()).max().getAsInt(); v++) {
@@ -52,12 +106,11 @@ public class Cofounding {
                 newModel.setFactor(ch, f.renameDomain(newVars));
             }
         }
-
         return newModel;
     }
 
 
-    public static StructuralCausalModel mergeExogenous(StructuralCausalModel model, int exoVar1, int exoVar2){
+    private static StructuralCausalModel mergeOperation(StructuralCausalModel model, int exoVar1, int exoVar2){
         if(!(model.isExogenous(exoVar1) && model.isExogenous(exoVar2) && exoVar1 != exoVar2 &&
                 model.getChildren(exoVar1).length == 1 && model.getChildren(exoVar2).length==1))
             throw new IllegalArgumentException("Merge is not applicable to this model");
@@ -84,8 +137,8 @@ public class Cofounding {
         int sizeT = domU.getCombinations() * domV.getCombinations();
 
         // Initialize new SEs
-        BayesianFactor f1 = new BayesianFactor(Strides.as(T,sizeT).concat(fu.getDomain().remove(exoVar1)));
-        BayesianFactor f2 = new BayesianFactor(Strides.as(T,sizeT).concat(fv.getDomain().remove(exoVar2)));
+        BayesianFactor f1 = new BayesianFactor(Strides.as(T,sizeT).concat(fu.getDomain().sort().remove(exoVar1)));
+        BayesianFactor f2 = new BayesianFactor(Strides.as(T,sizeT).concat(fv.getDomain().sort().remove(exoVar2)));
 
 
         int i = 0;

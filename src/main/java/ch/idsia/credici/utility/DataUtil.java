@@ -14,7 +14,9 @@ import com.opencsv.CSVWriter;
 import com.opencsv.CSVWriterBuilder;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -133,6 +135,22 @@ public class DataUtil {
 		}
 
 	 	return empirical;
+	}
+
+
+	public static TIntObjectMap<BayesianFactor> getCFactorsSplittedMap(StructuralCausalModel model, TIntIntMap[] data ){
+		TIntObjectMap<BayesianFactor> cfactors = new TIntObjectHashMap<>();
+
+		for (HashMap dom : model.getAllCFactorsSplittedDomains()) {
+			int left = (int) dom.get("left");
+			int[] right = (int[]) dom.get("right");
+
+			Strides leftDom = model.getDomain((int) dom.get("left"));
+			Strides rightDom = model.getDomain((int[]) dom.get("right"));
+			BayesianFactor f = DataUtil.getCondProb(data, leftDom, rightDom);
+			cfactors.put(left, f);
+		}
+		return cfactors;
 	}
 
 	public static void toCSV(String filename, TIntIntMap... data) throws IOException {

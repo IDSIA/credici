@@ -22,9 +22,11 @@ import java.util.stream.IntStream;
 
 public class EquationOps {
 	public static void setValue(BayesianFactor f, TIntIntHashMap exoPaValues, TIntIntHashMap endoPaValues, int var, int value){
-		//System.out.println("exoPaValues: "+exoPaValues);
-		//System.out.println("endoPaValues: "+endoPaValues);
-
+	/*	System.out.println("exoPaValues: "+exoPaValues);
+		System.out.println("endoPaValues: "+endoPaValues);
+		System.out.println("Set "+var+"="+value);
+		System.out.println(f.getDomain());
+*/
 		TIntIntHashMap conf = new TIntIntHashMap();
 
 		for(int y : endoPaValues.keys())

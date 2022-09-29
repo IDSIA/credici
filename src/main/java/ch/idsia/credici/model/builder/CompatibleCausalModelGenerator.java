@@ -2,13 +2,18 @@ package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.model.tools.CausalGraphTools;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.tools.CausalInfo;
+import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
+import org.apache.commons.lang3.NotImplementedException;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class CompatibleCausalModelGenerator {
@@ -34,19 +39,27 @@ public class CompatibleCausalModelGenerator {
 
     private int maxModelResamples = Integer.MAX_VALUE;
 
+    private int maxCofoundedVars = 2;
+
+    private double minCompatibilityDegree = 0.9;
+
     // Global variables
     private StructuralCausalModel model = null;
 
-    TIntIntMap data = null;
+    TIntIntMap[] data = null;
+
+    private List<int[]> mergeExoPairs = new ArrayList<>();
 
     private Logger logger = Logger.getGlobal();
+
+    private int numDecimals = 5;
 
     // Add getters and setters here
     public StructuralCausalModel getModel() {
         return model;
     }
 
-    public TIntIntMap getData() {
+    public TIntIntMap[] getData() {
         return data;
     }
 
@@ -90,6 +103,16 @@ public class CompatibleCausalModelGenerator {
         return this;
     }
 
+    public CompatibleCausalModelGenerator setMaxCofoundedVars(int maxCofoundedVars) {
+        this.maxCofoundedVars = maxCofoundedVars;
+        return this;
+    }
+
+    public CompatibleCausalModelGenerator setMinCompatibilityDegree(double minCompatibilityDegree) {
+        this.minCompatibilityDegree = minCompatibilityDegree;
+        return this;
+    }
+
     // Generation loop
     public void run(){
         boolean compatibleFound = false;
@@ -103,7 +126,11 @@ public class CompatibleCausalModelGenerator {
                 for (int i = 0; i < maxDataResamples; i++) {
                     sampleData();
                     compatibleFound = checkCompatibility();
-                    if (compatibleFound) break modelLoop;
+
+                    if (compatibleFound) {
+                        logger.info("Found compatible model and data");
+                        break modelLoop;
+                    }
                 }
             }
         }
@@ -121,12 +148,14 @@ public class CompatibleCausalModelGenerator {
      * */
     private SparseDirectedAcyclicGraph generateDAG(){
 
-        // todo: maybe we could give the option to specify the markovianity here or not
         SparseDirectedAcyclicGraph dag = null;
         boolean repeat;
         int markObtained;
 
         do {
+
+            repeat = false;
+
             if (DAGfromBNG) {
                 dag = DAGUtil.randomFromBNGenerator(numNodes, maxIndegree); // note: you might use some of the parameters in the alternative generator
             } else {
@@ -141,20 +170,35 @@ public class CompatibleCausalModelGenerator {
             }
             markObtained = CausalGraphTools.getMarkovianity(dag);
 
+            if(markObtained>1)
+                throw new NotImplementedException("Code not implemented for markovianity "+markObtained);
+
             if(markovianity >=0 && markovianity != markObtained) {
                 logger.debug("Sampled DAG: " + dag);
                 logger.debug("Markovianity obtained is "+markObtained+"while desired is "+markovianity+". Resampling DAG.");
                 repeat = true;
-            }else{
-                repeat = false;
+            }
+
+            SparseDirectedAcyclicGraph finalDag = dag;
+            int maxCof = Arrays.stream(CausalGraphTools.getExogenous(dag)).map(u -> finalDag.getChildren(u).length).max().getAsInt();
+            if(maxCof>maxCofoundedVars){
+                logger.debug("Maximum cofounded variables is "+maxCof+" while it should be "+maxCofoundedVars);
+                repeat = true;
             }
 
 
         }while(repeat);
 
+        if(markovianity != 0){
+            logger.debug("Splitting dag DAG: "+dag);
+            mergeExoPairs = new ArrayList<>();
+            dag = Cofounding.splitExoCofounders(dag, mergeExoPairs);
+            logger.info("Exo vars to merge: "+mergeExoPairs.stream().map(s -> Arrays.toString((int[]) s)).collect(Collectors.toList()));
+        }
+
+
         logger.info("Sampled DAG: " + dag);
         logger.info("Markovianity: "+markObtained);
-
 
 
         return dag;
@@ -165,13 +209,35 @@ public class CompatibleCausalModelGenerator {
     private void initializeModel(SparseDirectedAcyclicGraph causalDAG) {
         //todo: set this.model
         logger.info("Initializing SCM ");
-        logger.info("Exo CC: "+ CausalGraphTools.exoConnectComponents(causalDAG).stream().map(c -> Arrays.toString(c)).collect(Collectors.joining("|")));
-        logger.info("Endo CC: "+CausalGraphTools.endoConnectComponents(causalDAG).stream().map(c -> Arrays.toString(c)).collect(Collectors.joining("|")));
+
+        SparseDirectedAcyclicGraph endoDAG = DAGUtil.getSubDAG(causalDAG, CausalGraphTools.getEndogenous(causalDAG));
+
+        //
+        model = CausalBuilder.of(endoDAG, 2)
+                .setCausalDAG(causalDAG)
+                .setEmptyFactors(false)
+                .build();
+
+        if(mergeExoPairs.size()>0)
+            model = Cofounding.mergeExoVars(model, mergeExoPairs.toArray(int[][]::new));
+
+        logger.info("Initialized SCM structure");
+        logger.info("Exo CC: "+ model.exoConnectComponents().stream().map(c -> Arrays.toString(c)).collect(Collectors.joining("|")));
+        logger.info("Endo CC: "+model.endoConnectComponents().stream().map(c -> Arrays.toString(c)).collect(Collectors.joining("|")));
+
+
+
+
+
 
     }
 
     /*Step 7*/
     private void sampleExoFactors(){
+        logger.info("Sampling exogenous factors");
+        model.fillExogenousWithRandomFactors(5);
+
+        logger.debug("Sampled SCM:"+model);
 
     }
 
@@ -181,33 +247,50 @@ public class CompatibleCausalModelGenerator {
         // todo check compatibility between this.data and this.model
         logger.info("Checking compatibility ");
 
+        // Check compatibility degree
+        double ratio = model.ratioLogLikelihood(data);
+        logger.info("Compatibility degree (LL ratio): "+ratio);
+
+        if(Double.isNaN(ratio) || ratio<minCompatibilityDegree)
+            return false;
+
+        // Solve exactly
+        if(!CausalGraphTools.isNonQuasiMarkovian(model.getNetwork()))
+            return model.isCompatible(data, numDecimals);
         return true; // change
     }
 
     /** Steps 9 to 11 */
     private void sampleData() {
         // todo set this.data with size of this.datasize
-        logger.info("sampling data");
+        logger.info("sampling "+datasize+" instances");
+        data = model.samples(datasize, model.getEndogenousVars());
     }
 
     public static void main(String[] args) {
         int s = 2;
+        Logger.setGlobal(new Logger().setLabel("model_gen").setToStdOutput(true).setLevel(Logger.Level.DEBUG));
 
-            RandomUtil.setRandomSeed(s);
 
-            // Set the logging
-            Logger.setGlobal(new Logger().setLabel("model_gen").setToStdOutput(true).setLevel(Logger.Level.DEBUG));
+        for( s = 0; s<100; s++) {
+            try {
+                RandomUtil.setRandomSeed(s);
 
-            CompatibleCausalModelGenerator gen = new CompatibleCausalModelGenerator()
-                    .setMaxIndegree(2)
-                    //.setLambda(2)
-                    .setMarkovianity(1)
-                    .setNumNodes(10);
+                // Set the logging
 
-            gen.run();
-            StructuralCausalModel m = gen.getModel();
-            TIntIntMap data = gen.getData();
+                System.out.println("----");
+                CompatibleCausalModelGenerator gen = new CompatibleCausalModelGenerator()
+                        .setMaxIndegree(3)
+                        .setMaxCofoundedVars(2)
+                        .setMinCompatibilityDegree(0.9)
+                        .setNumNodes(7);
+                gen.run();
+                StructuralCausalModel m = gen.getModel();
+            }catch (Exception e){
+                Logger.getGlobal().info(e.getMessage());
+                e.printStackTrace();
+            }
 
+        }
     }
-
 }

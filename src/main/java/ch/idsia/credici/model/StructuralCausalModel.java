@@ -8,6 +8,7 @@ import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
@@ -1288,6 +1289,11 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		}
 
 		return newModel;
+	}
+
+
+	public double ratioLogLikelihood(TIntIntMap[] data){
+		return Probability.ratioLogLikelihood(this.getCFactorsSplittedMap(), DataUtil.getCFactorsSplittedMap(this, data),  1);
 	}
 
 

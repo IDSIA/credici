@@ -12,6 +12,7 @@ import ch.javasoft.util.ints.IntHashMap;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -78,6 +79,25 @@ public class EquationBuilder {
         return this.fromVector(var, ArraysUtil.flattenInts(assignments));
     }
 
+    public HashMap<Integer, BayesianFactor> conservative(int... exoVars) {
+        if(model.exoConnectComponents().stream().filter(c -> ArraysUtil.equals(exoVars, c, true, true)).count() != 1)
+            throw new IllegalArgumentException("Wrong exogenous variables.");
+
+        int[] chU = model.getEndogenousChildren(exoVars);
+        HashMap<Integer, BayesianFactor> eqs = null;
+        if(chU.length==1 && exoVars.length==1){
+            eqs = new HashMap<Integer, BayesianFactor>();
+            eqs.put(chU[0], EquationBuilder.of(model).withAllAssignments(chU[0]));
+        }if(chU.length>1 && exoVars.length==1){
+            eqs = (HashMap) EquationBuilder.of(model).withAllAssignmentsQM(exoVars[0]);
+        }else{
+            throw new NotImplementedException("Not implemented conservative specification for non-quaisi markovian");
+        }
+
+        return eqs;
+    }
+
+
     public BayesianFactor withAllAssignments(int var){
 
         int[] U = model.getExogenousParents(var);
@@ -139,7 +159,7 @@ public class EquationBuilder {
                     ObservationBuilder endoPaValues = ObservationBuilder.observe(endoPaDom.getVariables(), endoPaDom.statesOf(idx));
                     ObservationBuilder exoPaValues = ObservationBuilder.observe(exoVar, i);
                     EquationOps.setValue(f, exoPaValues, endoPaValues, v, (int)s.get(j));
-                    System.out.println("f"+v+"("+exoVar+"_"+i+","+endoPaValues+") = "+v+"_"+(int)s.get(j));
+                    //System.out.println("f"+v+"("+exoVar+"_"+i+","+endoPaValues+") = "+v+"_"+(int)s.get(j));
                     j++;
 
                 }

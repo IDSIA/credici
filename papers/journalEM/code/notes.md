@@ -1,1 +1,9 @@
-/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java
+At cluster:
+
+sbatch --export=init_seed=0,dagsize=5 -n 20 generatemodels.sbs
+sbatch --export=init_seed=0,dagsize=6 -n 20 generatemodels.sbs
+sbatch --export=init_seed=0,dagsize=6 -n 20 generatemodels.sbs
+sbatch --export=init_seed=0,dagsize=6 -n 20 generatemodels.sbs
+sbatch --export=init_seed=0,dagsize=6 -n 20 generatemodels.sbs
+sbatch --export=init_seed=0,dagsize=6 -n 20 generatemodels.sbs
+

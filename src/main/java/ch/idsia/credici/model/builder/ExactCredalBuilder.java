@@ -110,7 +110,7 @@ public class ExactCredalBuilder extends CredalBuilder {
         return this;
     }
 
-    public ExactCredalBuilder build(){
+    public ExactCredalBuilder build(int... exoVars){
         initModel();
 
         // Set the credal sets for the endogenous variables X (structural eqs.)
@@ -118,8 +118,11 @@ public class ExactCredalBuilder extends CredalBuilder {
             buildEndoFactor(x);
         }
 
+        if (exoVars.length==0)
+            exoVars = causalmodel.getExogenousVars();
+
         // Get the credal sets for the exogenous variables U
-        for(int u: causalmodel.getExogenousVars()) {
+        for(int u: exoVars) {
             try {
                 buildExoFactor(u);
             }catch (NoFeasibleSolutionException e){

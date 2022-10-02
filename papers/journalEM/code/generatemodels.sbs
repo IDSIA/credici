@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --time=3-00:00:00
+#SBATCH -o /mnt/beegfs/rcabanas/dev/credici/papers/journalEM/logs/%x.%j.out
+
+
+
+echo ${initseed}
+echo ${dagsize}
+
+for i in $(seq 0 ${SLURM_NTASKS}); do
+  s=$[init_seed+i]
+  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u generatemodels.py $dagsize $s 2> /dev/null &
+done
+
+
+
+wait
+
+
+
+## usage: sbatch --export=init_seed=0,dagsize=6 -n 20 generatemodels.sbs

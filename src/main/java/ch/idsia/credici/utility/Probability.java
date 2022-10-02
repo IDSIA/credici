@@ -21,6 +21,7 @@ import com.google.common.primitives.Doubles;
 import com.opencsv.exceptions.CsvException;
 
 import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TIntObjectMap;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -81,6 +82,16 @@ public class Probability {
 	}
 
 
+	public static double likelihood(TIntObjectMap<BayesianFactor> prob,
+									TIntObjectMap<BayesianFactor> emp, int counts) {
+		return likelihood(FactorUtil.intMapToHashMap(prob), FactorUtil.intMapToHashMap(emp), counts);
+
+	}
+
+
+
+
+
 	public static double logLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
 										 HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
 		double l = 0.0;
@@ -90,6 +101,14 @@ public class Probability {
 		return l;
 	}
 
+	public static double logLikelihood(TIntObjectMap<BayesianFactor> prob,
+									TIntObjectMap<BayesianFactor> emp, int counts) {
+		return logLikelihood(FactorUtil.intMapToHashMap(prob), FactorUtil.intMapToHashMap(emp), counts);
+
+	}
+
+
+
 	public static double logLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
 									   TIntIntMap[] data) {
 		double l = 0.0;
@@ -97,6 +116,12 @@ public class Probability {
 			l += Probability.logLikelihood((BayesianFactor) prob.get(k), data);
 
 		return l;
+	}
+
+	public static double logLikelihood(TIntObjectMap<BayesianFactor> prob,
+									   TIntIntMap[] data) {
+		return logLikelihood(FactorUtil.intMapToHashMap(prob), data);
+
 	}
 
 	public static double ratioLikelihood(BayesianFactor prob, BayesianFactor emp, int counts) {
@@ -108,6 +133,13 @@ public class Probability {
 		return likelihood(prob, emp, counts)/likelihood(emp, emp, counts);
 	}
 
+	public static double ratioLikelihood(TIntObjectMap<BayesianFactor> prob,
+									   TIntObjectMap<BayesianFactor> emp, int counts) {
+		return ratioLikelihood(FactorUtil.intMapToHashMap(prob), FactorUtil.intMapToHashMap(emp), counts);
+
+	}
+
+
 	public static double ratioLogLikelihood(BayesianFactor prob, BayesianFactor emp, int counts) {
 		return logLikelihood(emp, emp, counts)/logLikelihood(prob, emp, counts);
 	}
@@ -117,6 +149,11 @@ public class Probability {
 		return logLikelihood(emp, emp, counts)/logLikelihood(prob, emp, counts);
 	}
 
+	public static double ratioLogLikelihood(TIntObjectMap<BayesianFactor> prob,
+									   TIntObjectMap<BayesianFactor> emp, int counts) {
+		return ratioLogLikelihood(FactorUtil.intMapToHashMap(prob), FactorUtil.intMapToHashMap(emp), counts);
+
+	}
 
 	private static boolean compareDomains(Strides dom1, Strides dom2){
 		return Arrays.equals(dom1.getVariables(), dom2.getVariables()) &&
@@ -241,6 +278,9 @@ Probability.vertexInside(t.get(31).getFactor(4), (VertexFactor) this.trueCredalM
 		}
 		return ll;
 	}
+
+
+
 
 
 	public static void main(String[] args) {

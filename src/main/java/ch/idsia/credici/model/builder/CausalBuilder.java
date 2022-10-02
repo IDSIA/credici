@@ -41,6 +41,9 @@ public class CausalBuilder {
 
     private boolean fillRandomEquations = false;
 
+    private boolean emptyFactors = false;
+
+
 
 
 
@@ -177,6 +180,9 @@ public class CausalBuilder {
 
     private void fillFactors(){
 
+        if(emptyFactors)
+            return;
+
         if(num_decimals > 0) {
             model.fillExogenousWithRandomFactors(num_decimals);
         }
@@ -281,7 +287,10 @@ public class CausalBuilder {
         return this;
     }
 
-
+    public CausalBuilder setEmptyFactors(boolean emptyFactors) {
+        this.emptyFactors = emptyFactors;
+        return this;
+    }
 
     private void assertDAGsConsistency(){
         // check that causalDag and empirical one are consistent

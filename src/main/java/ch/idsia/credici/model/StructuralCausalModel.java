@@ -923,7 +923,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
 			VariableElimination inf = new FactorVariableElimination(infModel.getVariables());
 			inf.setFactors(infModel.getFactors());
-
 			BayesianFactor f = null;
 			f = (BayesianFactor) inf.conditionalQuery(left, right);
 			factors.add(f);
@@ -944,6 +943,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			inf.setFactors(infModel.getFactors());
 
 			BayesianFactor f = null;
+			//System.out.println(left+"|"+Arrays.toString(right));
+			//System.out.println(infModel.getDomain(Ints.concat(new int[]{left}, right)).getCombinations());
+
 			f = (BayesianFactor) inf.conditionalQuery(left, right);
 			factors.put(left,f);
 		}
@@ -1197,6 +1199,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return this.getUncompatibleNodes(data, fixDecimals).size()==0;
 	}
 
+	public boolean isCompatible(TIntIntMap[] data, int[] exoVars, int fixDecimals) {
+		return this.getUncompatibleNodes(data, exoVars, fixDecimals).size()==0;
+	}
 	public List<Integer> getUncompatibleNodes(TIntIntMap[] data, int fixDecimals){
 		HashMap empMap = DataUtil.getEmpiricalMap(this, data);
 
@@ -1211,6 +1216,23 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 						.build();
 
 		return builder.getUnfeasibleNodes();
+	}
+
+
+	public List<Integer> getUncompatibleNodes(TIntIntMap[] data, int[] exoVars, int fixDecimals){
+		HashMap empMap = DataUtil.getEmpiricalMap(this, data);
+
+		if(fixDecimals>0)
+			empMap = FactorUtil.fixEmpiricalMap(empMap, fixDecimals);
+
+		ExactCredalBuilder builder =
+				ExactCredalBuilder.of(this)
+						.setEmpirical(empMap.values())
+						.setToVertex()
+						.setRaiseNoFeasible(false)
+						.build(exoVars);
+
+		return builder.getUnfeasibleNodes().stream().filter(u -> ArraysUtil.contains(u, exoVars)).collect(Collectors.toList());
 	}
 
 	public List<int[]> endoConnectComponents(){

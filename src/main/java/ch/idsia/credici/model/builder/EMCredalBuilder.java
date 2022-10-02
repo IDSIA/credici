@@ -19,6 +19,7 @@ import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -62,6 +63,8 @@ public class EMCredalBuilder extends CredalBuilder{
 	private boolean weightedEM = true;
 
 	private int[] trainableVars = null;
+
+
 
 	public enum SelectionPolicy {
 		LAST,	// Selects the last point in the trajectory.
@@ -118,7 +121,9 @@ public class EMCredalBuilder extends CredalBuilder{
 
 
 	@Override
-	public EMCredalBuilder build() throws InterruptedException {
+	public EMCredalBuilder build(int... exoVars) throws InterruptedException {
+		if(exoVars.length>0)
+			throw new NotImplementedException("Not implemented EMbuilder for a subsection of exogenous variables");
 		buildTrajectories();
 		selectPoints();
 		mergePoints();

@@ -2,9 +2,11 @@ package ch.idsia.credici.model.builder;
 
 import ch.idsia.credici.model.tools.CausalGraphTools;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.tools.CausalInfo;
+import ch.idsia.credici.model.tools.StatisticsModel;
 import ch.idsia.credici.model.transform.Cofounding;
+import ch.idsia.credici.model.transform.ExogenousReduction;
 import ch.idsia.credici.utility.DAGUtil;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.RandomUtil;
@@ -43,6 +45,13 @@ public class CompatibleCausalModelGenerator {
 
     private double minCompatibilityDegree = 0.9;
 
+    /** if 0 it remains the same, if 1.0, the same amount is added*/
+    private double dataIncrementFactor = 0.5;
+
+
+    private double reductionK = 1.0;
+
+
     // Global variables
     private StructuralCausalModel model = null;
 
@@ -52,7 +61,9 @@ public class CompatibleCausalModelGenerator {
 
     private Logger logger = Logger.getGlobal();
 
-    private int numDecimals = 5;
+    private double ratio = 0.0;
+
+    private StatisticsModel stats = null;
 
     // Add getters and setters here
     public StructuralCausalModel getModel() {
@@ -61,6 +72,10 @@ public class CompatibleCausalModelGenerator {
 
     public TIntIntMap[] getData() {
         return data;
+    }
+
+    public StatisticsModel getStatistics(){
+        return this.stats;
     }
 
     public CompatibleCausalModelGenerator setLambda(int lambda) {
@@ -113,23 +128,37 @@ public class CompatibleCausalModelGenerator {
         return this;
     }
 
+    public CompatibleCausalModelGenerator setDataIncrementFactor(double dataIncrementFactor) {
+        this.dataIncrementFactor = dataIncrementFactor;
+        return this;
+    }
+
     // Generation loop
     public void run(){
-        boolean compatibleFound = false;
+        Boolean compatibleFound = false;
 
         modelLoop:
         for(int j=0; j<maxModelResamples; j++) {
             SparseDirectedAcyclicGraph causalDAG = generateDAG();
             initializeModel(causalDAG);
+            removeRedundancies();
+
+
+            factorLoop:
             for (int k = 0; k < maxExoFactorsResamples; k++) {
                 sampleExoFactors();
                 for (int i = 0; i < maxDataResamples; i++) {
-                    sampleData();
+                    sampleData(i);
                     compatibleFound = checkCompatibility();
 
-                    if (compatibleFound) {
+                    if(compatibleFound==null)
+                        break factorLoop;
+
+                    if (compatibleFound.booleanValue()) {
                         logger.info("Found compatible model and data");
                         break modelLoop;
+                    } else{
+                        logger.debug("Model is not compatible.");
                     }
                 }
             }
@@ -137,6 +166,13 @@ public class CompatibleCausalModelGenerator {
         if(!compatibleFound)
             throw new IllegalStateException("Compatibility not found for current parameters");
 
+        // Reduce
+        reduceModel();
+
+        // Print statistics of the model
+
+        stats = StatisticsModel.of(model,data);
+        stats.logStatistics(logger);
 
         // todo: add here additional operations, e.g. store to disk, calculate query (this proably should not be placed in this class)...
 
@@ -157,7 +193,7 @@ public class CompatibleCausalModelGenerator {
             repeat = false;
 
             if (DAGfromBNG) {
-                dag = DAGUtil.randomFromBNGenerator(numNodes, maxIndegree); // note: you might use some of the parameters in the alternative generator
+                dag = DAGUtil.randomFromBNGenerator(numNodes, maxIndegree);
             } else {
                 dag = DAGUtil.random(numNodes, lambda, maxIndegree);
             }
@@ -170,8 +206,6 @@ public class CompatibleCausalModelGenerator {
             }
             markObtained = CausalGraphTools.getMarkovianity(dag);
 
-            if(markObtained>1)
-                throw new NotImplementedException("Code not implemented for markovianity "+markObtained);
 
             if(markovianity >=0 && markovianity != markObtained) {
                 logger.debug("Sampled DAG: " + dag);
@@ -189,12 +223,16 @@ public class CompatibleCausalModelGenerator {
 
         }while(repeat);
 
+        if(markovianity>1)
+            throw new NotImplementedException("Code not implemented for markovianity "+markovianity);
+
         if(markovianity != 0){
             logger.debug("Splitting dag DAG: "+dag);
             mergeExoPairs = new ArrayList<>();
             dag = Cofounding.splitExoCofounders(dag, mergeExoPairs);
             logger.info("Exo vars to merge: "+mergeExoPairs.stream().map(s -> Arrays.toString((int[]) s)).collect(Collectors.toList()));
         }
+
 
 
         logger.info("Sampled DAG: " + dag);
@@ -221,16 +259,17 @@ public class CompatibleCausalModelGenerator {
         if(mergeExoPairs.size()>0)
             model = Cofounding.mergeExoVars(model, mergeExoPairs.toArray(int[][]::new));
 
+        // This factors will later be resampled, just for avoiding problems with null objects.
+        model.fillExogenousWithRandomFactors(2);
+
         logger.info("Initialized SCM structure");
         logger.info("Exo CC: "+ model.exoConnectComponents().stream().map(c -> Arrays.toString(c)).collect(Collectors.joining("|")));
         logger.info("Endo CC: "+model.endoConnectComponents().stream().map(c -> Arrays.toString(c)).collect(Collectors.joining("|")));
 
 
-
-
-
-
     }
+
+
 
     /*Step 7*/
     private void sampleExoFactors(){
@@ -241,34 +280,82 @@ public class CompatibleCausalModelGenerator {
 
     }
 
+    private void removeRedundancies(){
+
+        double cardBefore, cardAfter;
+        cardBefore=StatisticsModel.of(model).avgExoCardinality();
+        ExogenousReduction reducer = new ExogenousReduction(this.model).removeRedundant();
+        model = reducer.getModel();
+        cardAfter = StatisticsModel.of(model).avgExoCardinality();
+
+        if(cardBefore!=cardAfter)
+            logger.info("Redundancies found. Average exo-cardinality from "+cardBefore+" to "+cardAfter);
+        else
+            logger.info("Redundancies not found");
+
+    }
+
 
     /** Step 8 */
-    private boolean checkCompatibility(){
-        // todo check compatibility between this.data and this.model
-        logger.info("Checking compatibility ");
+    private Boolean checkCompatibility(){
+        try {
+            // todo check compatibility between this.data and this.model
+            logger.info("Checking compatibility ");
 
-        // Check compatibility degree
-        double ratio = model.ratioLogLikelihood(data);
-        logger.info("Compatibility degree (LL ratio): "+ratio);
+            // Check compatibility degree
+            ratio = model.ratioLogLikelihood(data);
+            logger.info("Compatibility degree (LL ratio): " + ratio);
 
-        if(Double.isNaN(ratio) || ratio<minCompatibilityDegree)
-            return false;
+            if (Double.isNaN(ratio) || ratio < minCompatibilityDegree)
+                return false;
 
-        // Solve exactly
-        if(!CausalGraphTools.isNonQuasiMarkovian(model.getNetwork()))
-            return model.isCompatible(data, numDecimals);
-        return true; // change
+            // Solve exactly
+            if (!CausalGraphTools.isNonQuasiMarkovian(model.getNetwork())) {
+                int[] cofoundingVars = Arrays.stream(model.getExogenousVars())
+                        .filter(u->model.getEndogenousChildren(u).length>1).toArray();
+                return model.isCompatible(data, cofoundingVars, FactorUtil.DEFAULT_DECIMALS);
+            }
+        }catch (Exception e){
+            logger.debug("Exception when checking compatibility: "+e.getMessage());
+            return null;
+        }catch (Error e){
+            logger.debug("Error when checking compatibility: "+e.getMessage());
+            return null;
+        }
+
+        return true;
+
     }
 
     /** Steps 9 to 11 */
-    private void sampleData() {
+    private void sampleData(double k) {
         // todo set this.data with size of this.datasize
-        logger.info("sampling "+datasize+" instances");
-        data = model.samples(datasize, model.getEndogenousVars());
+        int finalSize = (int)(datasize*(1 + k* dataIncrementFactor));
+        logger.info("sampling "+finalSize+" instances");
+        data = model.samples(finalSize, model.getEndogenousVars());
     }
 
+
+
+    private void reduceModel(){
+        double cardBefore, cardAfter;
+        cardBefore=StatisticsModel.of(model).avgExoCardinality();
+        ExogenousReduction reducer = new ExogenousReduction(this.model,  data).removeWithZeroUpper();
+        if(reductionK!=1.0) reducer.removeWithZeroLower(reductionK);
+        model = reducer.getModel();
+        cardAfter = StatisticsModel.of(model).avgExoCardinality();
+
+        if(cardBefore!=cardAfter)
+            logger.info("Reduced model. Average exo-cardinality from "+cardBefore+" to "+cardAfter);
+        else
+            logger.info("Model not reduced");
+
+    }
+
+
+
     public static void main(String[] args) {
-        int s = 2;
+        int s = 3;
         Logger.setGlobal(new Logger().setLabel("model_gen").setToStdOutput(true).setLevel(Logger.Level.DEBUG));
 
 
@@ -278,12 +365,17 @@ public class CompatibleCausalModelGenerator {
 
                 // Set the logging
 
-                System.out.println("----");
+                System.out.println("----" + s);
                 CompatibleCausalModelGenerator gen = new CompatibleCausalModelGenerator()
                         .setMaxIndegree(3)
+                        .setMaxDataResamples(20)
                         .setMaxCofoundedVars(2)
-                        .setMinCompatibilityDegree(0.9)
-                        .setNumNodes(7);
+                        .setMinCompatibilityDegree(0.975)
+                        .setDatasize(1000)
+                        .setDataIncrementFactor(0.5)
+                        .setNumNodes(8)
+                        .setMarkovianity(1);
+
                 gen.run();
                 StructuralCausalModel m = gen.getModel();
             }catch (Exception e){

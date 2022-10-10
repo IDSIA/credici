@@ -10,9 +10,9 @@ import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.InvokerWithTimeout;
-import com.opencsv.CSVWriter;
-import com.opencsv.CSVWriterBuilder;
+import com.opencsv.*;
 import com.opencsv.exceptions.CsvException;
+import com.opencsv.exceptions.CsvValidationException;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -20,6 +20,8 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
@@ -153,6 +155,20 @@ public class DataUtil {
 		return cfactors;
 	}
 
+	public static TIntObjectMap<BayesianFactor> getCFactorsSplittedMap(StructuralCausalModel model, TIntIntMap[] data, int... exoVars){
+		TIntObjectMap<BayesianFactor> cfactors = new TIntObjectHashMap<>();
+
+		for (HashMap dom : model.getCFactorsSplittedDomains(exoVars)) {
+			int left = (int) dom.get("left");
+			Strides leftDom = model.getDomain((int) dom.get("left"));
+			Strides rightDom = model.getDomain((int[]) dom.get("right"));
+			BayesianFactor f = DataUtil.getCondProb(data, leftDom, rightDom);
+			cfactors.put(left, f);
+		}
+		return cfactors;
+	}
+
+
 	public static void toCSV(String filename, TIntIntMap... data) throws IOException {
 
 		int[] dataVars = data[0].keys();
@@ -183,6 +199,26 @@ public class DataUtil {
 	public static TIntIntMap[] fromCSV(String filename) throws IOException, CsvException {
 		ReaderCSV reader = new ReaderCSV(filename).read();
 		return ObservationBuilder.observe(reader.getVarNames(), reader.getData());
+	}
+
+	public static List<HashMap<String, String>> fromCSVtoStrMap(String filename) throws IOException, CsvException {
+
+		CSVReader reader = new CSVReaderBuilder(new FileReader(filename))
+				.withCSVParser(new CSVParserBuilder().withSeparator(',').build())
+				.build();
+
+		String[] varnames = reader.readNext();
+		List data = new ArrayList();
+
+		for(String[] values : reader.readAll()){
+			HashMap line = new HashMap();
+			for(int i=0; i< varnames.length; i++){
+				line.put(varnames[i], values[i]);
+			}
+
+			data.add(line);
+		}
+		return data;
 	}
 
 	public static boolean instanceEquals(TIntIntMap s1, TIntIntMap s2){

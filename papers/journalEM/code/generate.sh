@@ -1,5 +1,5 @@
 #!/bin/bash
 
-for i in $(seq 5 11); do
-  sbatch --export=init_seed=40,dagsize=${i} -n 60 generatemodels.sbs
+for i in $(seq 12 15); do
+  sbatch --export=init_seed=0,dagsize=${i} -n 100 generatemodels.sbs
 done

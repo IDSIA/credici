@@ -2,6 +2,10 @@ package ch.idsia.credici.inference;
 
 import java.util.Collection;
 
+import ch.idsia.credici.model.tools.CausalInfo;
+import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import jdk.jshell.spi.ExecutionControl;
 import org.apache.commons.lang3.ArrayUtils;
 
 import ch.idsia.credici.inference.approxlp.ApproxLP1;
@@ -112,6 +116,23 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
 
         return result;
 
+
+    }
+
+    public IntervalFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
+        SparseModel reality = (SparseModel) this.getModel();
+        SparseModel doTrue = (SparseModel)this.causalQuery().setIntervention(cause, trueState).getInferenceModel(false);
+        SparseModel doFalse = (SparseModel)this.causalQuery().setIntervention(cause, falseState).getInferenceModel(false);
+
+        SparseModel pns_model = (SparseModel) CausalOps.merge(reality, doTrue, doFalse);
+
+        WorldMapping map = WorldMapping.getMap(pns_model);
+        int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
+        for(int x:CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
+
+        CausalInference infInternal =  new CredalCausalVE(pns_model);
+        VertexFactor prob = (VertexFactor) infInternal.causalQuery().setTarget(target).run();
+        return (IntervalFactor) FactorUtil.filter(FactorUtil.filter(prob, target[0], trueState), target[1], falseState);
 
     }
 

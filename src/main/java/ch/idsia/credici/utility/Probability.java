@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Set;
+import java.util.stream.IntStream;
 
 public class Probability {
 
@@ -155,6 +156,20 @@ public class Probability {
 
 	}
 
+	public static double maxLogLikelihood(HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
+		return logLikelihood(emp, emp, counts);
+	}
+
+	public static double maxLogLikelihood(TIntObjectMap<BayesianFactor> emp, int counts) {
+		return maxLogLikelihood(FactorUtil.intMapToHashMap(emp), counts);
+	}
+	public static double maxLogLikelihood(StructuralCausalModel model, TIntIntMap[] data){
+		TIntObjectMap<BayesianFactor> emp = DataUtil.getCFactorsSplittedMap(model, data);
+		return Probability.maxLogLikelihood(emp, data.length);
+	}
+
+
+
 	private static boolean compareDomains(Strides dom1, Strides dom2){
 		return Arrays.equals(dom1.getVariables(), dom2.getVariables()) &&
 					Arrays.equals(dom1.getSizes(), dom2.getSizes());
@@ -196,8 +211,13 @@ public class Probability {
 		return distance;
 	}
 
+	public static double manhattanDist(double[] p, double[] q) {
+		if(p.length != q.length) throw new IllegalArgumentException("Arrays of different sizes.");
+		return IntStream.range(0, p.length).mapToDouble(i -> Math.abs(p[i] - q[i])).sum();
+	}
 
-	public static double KLsymmetrized(BayesianFactor p, BayesianFactor q, boolean... zeroSafe){
+
+		public static double KLsymmetrized(BayesianFactor p, BayesianFactor q, boolean... zeroSafe){
 		return KLsymmetrized(p.getData(), q.getData(), zeroSafe);
 	}
 
@@ -224,7 +244,9 @@ public class Probability {
 		return l;
 	}
 
-
+	public static double manhattanDist(BayesianFactor p, BayesianFactor q){
+		return manhattanDist(p.getData(), q.getData());
+	}
 
 
 	public static boolean vertexInside(BayesianFactor f, VertexFactor vf){

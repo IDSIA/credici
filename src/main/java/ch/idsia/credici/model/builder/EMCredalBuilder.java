@@ -64,6 +64,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	private int[] trainableVars = null;
 
+	private double threshold = 0.0;
+	private FrequentistCausalEM.StopCriteria stopCriteria = FrequentistCausalEM.StopCriteria.KL;
 
 
 	public enum SelectionPolicy {
@@ -215,6 +217,11 @@ public class EMCredalBuilder extends CredalBuilder{
 			);*/
 		}
 
+	}
+
+	public EMCredalBuilder setThreshold(double threshold) {
+		this.threshold = threshold;
+		return this;
 	}
 
 	private StructuralCausalModel getFirstInside(List<StructuralCausalModel> t){
@@ -385,13 +392,20 @@ public class EMCredalBuilder extends CredalBuilder{
 		ExpectationMaximization em = null;
 		Collection stepArgs = null;
 		if(this.data==null) {
-			em = new BayesianCausalEM(startingModel).setRegularization(0.0);
+			em = new BayesianCausalEM(startingModel).setKlthreshold(threshold).setRegularization(0.0);
 			stepArgs = (Collection) endogJointProbs.values();
 		}else if(weightedEM) {
-			em = new WeightedCausalEM(startingModel).setRegularization(0.0).usePosteriorCache(true);
+			em = new WeightedCausalEM(startingModel).setRegularization(0.0)
+					.setStopCriteria(stopCriteria)
+					.setThreshold(threshold)
+					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
 		}else{
-			em = new FrequentistCausalEM(startingModel).setRegularization(0.0).usePosteriorCache(true);
+			em = new FrequentistCausalEM(startingModel)
+					.setStopCriteria(stopCriteria)
+					.setThreshold(threshold)
+					.setRegularization(0.0)
+					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
 		}
 
@@ -454,6 +468,12 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public  EMCredalBuilder setTrainableVars(int[] trainableVars) {
 		this.trainableVars = trainableVars;
+		return this;
+	}
+
+
+	public EMCredalBuilder setStopCriteria(FrequentistCausalEM.StopCriteria stopCriteria) {
+		this.stopCriteria = stopCriteria;
 		return this;
 	}
 

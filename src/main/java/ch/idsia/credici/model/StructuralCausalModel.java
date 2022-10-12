@@ -943,9 +943,24 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			inf.setFactors(infModel.getFactors());
 
 			BayesianFactor f = null;
-			//System.out.println(left+"|"+Arrays.toString(right));
-			//System.out.println(infModel.getDomain(Ints.concat(new int[]{left}, right)).getCombinations());
+			f = (BayesianFactor) inf.conditionalQuery(left, right);
+			factors.put(left,f);
+		}
+		return factors;
+	}
 
+	public TIntObjectMap<BayesianFactor> getCFactorsSplittedMap(int... exoVars) {
+
+		TIntObjectMap factors = new TIntObjectHashMap();
+
+		for(HashMap dom : this.getCFactorsSplittedDomains(exoVars)){
+			int left = (int) dom.get("left");
+			int[] right = (int[]) dom.get("right");
+			StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
+			VariableElimination inf = new FactorVariableElimination(infModel.getVariables());
+			inf.setFactors(infModel.getFactors());
+
+			BayesianFactor f = null;
 			f = (BayesianFactor) inf.conditionalQuery(left, right);
 			factors.put(left,f);
 		}
@@ -1291,8 +1306,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	public StructuralCausalModel dropExoState(int exoVar, int... toRemove){
 
-		//System.out.println("Dropping from "+exoVar+": "+Arrays.toString(toRemove));
-
 		if(!this.isExogenous(exoVar))
 			throw new IllegalArgumentException("Non exogenous variable");
 
@@ -1313,10 +1326,17 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return newModel;
 	}
 
-
 	public double ratioLogLikelihood(TIntIntMap[] data){
 		return Probability.ratioLogLikelihood(this.getCFactorsSplittedMap(), DataUtil.getCFactorsSplittedMap(this, data),  1);
 	}
 
+	public double ratioLogLikelihood(TIntIntMap[] data, int... exoVars){
+		return Probability.ratioLogLikelihood(this.getCFactorsSplittedMap(exoVars), DataUtil.getCFactorsSplittedMap(this, data, exoVars),  1);
+	}
+
+	public double logLikelihood(TIntIntMap[] data){
+		return Probability.logLikelihood(this.getCFactorsSplittedMap(),
+				DataUtil.getCFactorsSplittedMap(this, data), data.length);
+	}
 
 }

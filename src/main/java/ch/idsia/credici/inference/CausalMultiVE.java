@@ -93,6 +93,10 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 		return new VertexFactor(Strides.empty(), Strides.empty(), vals);
 	}
 
+	public double[] getIndividualPNS(int cause, int effect) {
+		return getIndividualPNS(cause, effect,0,1);
+	}
+
 	public double[] getIndividualPNS(int cause, int effect, int trueState, int falseState){
 		return this.getInferenceList()
 				.stream()

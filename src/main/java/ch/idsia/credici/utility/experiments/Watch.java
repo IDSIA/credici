@@ -54,6 +54,10 @@ public class Watch {
 		System.out.println("Ellapsed time: "+watch.getTime()+".ms");
 	}
 
+	public static long getTime(){
+		return watch.getTime();
+	}
+
 	public static StopWatch getWatch() {
 		return watch;
 	}

@@ -4,7 +4,6 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;
-import ch.idsia.credici.utility.Probability;
 import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.JoinInference;
@@ -24,10 +23,8 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.time.StopWatch;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 
@@ -42,6 +39,20 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     private boolean usePosteriorCache = true;
 
     private int inferenceVariation = 2;
+
+    TIntObjectHashMap replacedFactors = null;
+
+    StopCriteria stopCriteria = StopCriteria.KL;
+
+    protected double klthreshold = Double.NaN;
+
+    private double threshold = 0.0;
+
+    public enum StopCriteria {
+        KL,
+        L1,
+        LLratio
+    }
 
 
     public FrequentistCausalEM(StructuralCausalModel model,
@@ -118,26 +129,51 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         return counts;
     }
 
+
     void maximization(TIntObjectMap<BayesianFactor> counts){
 
+        replacedFactors = new TIntObjectHashMap();
         updated = false;
         for (int var : trainableVars) {
             BayesianFactor countVar = counts.get(var);
-
             if(regularization>0.0) {
                 BayesianFactor reg = posteriorModel.getFactor(var).scalarMultiply(regularization);
                 countVar = countVar.addition(reg);
             }
             BayesianFactor f = countVar.divide(countVar.marginalize(var));
-            if(Probability.KLsymmetrized(f, posteriorModel.getFactor(var), true) > klthreshold) {
-                posteriorModel.setFactor(var, f);
-                updated = true;
-            }
-           // updated=true;
 
+            // Store the previous factor and set the new one
+            replacedFactors.put(var, posteriorModel.getFactor(var));
+            posteriorModel.setFactor(var, f);
         }
+        // Determine which trainable variables should not be trained anymore
+        if(stopAtConvergence)
+            for (int[] exoCC : getTrainableExoCC())
+                if (hasConverged(exoCC)) trainableVars = ArraysUtil.difference(trainableVars, exoCC);
+
+
+    }
+    private List<int[]> getTrainableExoCC(){
+        return ((StructuralCausalModel)posteriorModel)
+                .exoConnectComponents()
+                .stream()
+                .filter(c -> Arrays.stream(c).allMatch(u -> ArraysUtil.contains(u, trainableVars)))
+                .collect(Collectors.toList());
     }
 
+    private boolean hasConverged(int... exoCC) {
+        if(stopCriteria == StopCriteria.KL) {
+            return TrajectoryAnalyser.hasConvergedKL((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
+        }else if(stopCriteria == StopCriteria.L1) {
+                return TrajectoryAnalyser.hasConvergedL1((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
+        }else if(stopCriteria == StopCriteria.LLratio){
+            return TrajectoryAnalyser.hasConvergedLLratio((StructuralCausalModel) posteriorModel, data, threshold, exoCC);
+
+        }else{
+            throw new IllegalArgumentException("Wrong stopping Criteria");
+        }
+
+    }
 
     public FrequentistCausalEM setRegularization(double regularization) {
         this.regularization = regularization;
@@ -313,8 +349,16 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     }
 
 
+    protected TIntIntMap[] data = null;
+
+    protected void setData(TIntIntMap[] data) {
+        this.data = data;
+    }
 
     public void run(Collection stepArgs, int iterations) throws InterruptedException {
+
+        if(data == null)
+            data = (TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new);
 
         StopWatch watch = null;
         if(verbose) {
@@ -333,7 +377,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 }
             }
             step(stepArgs);
-            if(stopAtConvergence && !updated)
+            if(trainableVars.length==0)
                 break;
 
         }
@@ -342,6 +386,11 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     }
 
     private void init(){
+
+        if(!Double.isNaN(klthreshold)) {
+            throw new IllegalArgumentException("The usage of klthreshold is not allowed anymore. Use threshold instead.");
+        }
+
         if(!inline)
             this.posteriorModel = priorModel.copy();
         else
@@ -360,6 +409,16 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     public FrequentistCausalEM setInferenceVariation(int inferenceVariation) {
         this.inferenceVariation = inferenceVariation;
+        return this;
+    }
+
+    public FrequentistCausalEM setStopCriteria(StopCriteria stopCriteria) {
+        this.stopCriteria = stopCriteria;
+        return this;
+    }
+
+    public FrequentistCausalEM setThreshold(double threshold) {
+        this.threshold = threshold;
         return this;
     }
 

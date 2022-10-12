@@ -15,10 +15,10 @@ from pathlib import Path
 print(sys.argv)
 
 
-
+# id,seed=8,0
 id = int(sys.argv[1])
 seed = int(sys.argv[2])
-set = "s1"
+modelset = "synthetic/s1/"
 
 
 print("Running generatemodels.py")
@@ -48,11 +48,11 @@ def exec_bash_print(cmd: str, check_return: bool = False):
 def strtime():
     return datetime.now().strftime("%y%m%d_%H%M%S")
 
-
+prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/")
 prj_path = Path(str(Path("../../../").resolve())+"/")
 exp_folder = Path(prj_path, "papers/journalEM/")
 code_folder = Path(exp_folder, "code")
-res_folder = Path(exp_folder, "output_test")
+res_folder = Path(exp_folder, "output")
 model_folder = Path(exp_folder, "models")
 data_folder = Path(exp_folder, "data")
 
@@ -77,30 +77,46 @@ def runjava(javafile, args_str, heap_gbytes=None):
     print(cmd)
     exec_bash_print(cmd)
 
+## Get models
 
-def generateModel(num_nodes, output, data_size=1000,  data_increment=0.5, min_ratio=0.98, reduction=1.0, rewrite=False, seed=0):
-    # -n 6 -d 1000 -di 0.5 -mid 3 -mr 0.98 -r 1.0 --seed 1 -rw
+MODELS = [f for f in os.listdir(Path(model_folder, modelset)) if f.endswith(f"_{id}.uai")]
+
+print(MODELS)
+print(f"{len(MODELS)} models")
+
+
+# -w
+# -x 100
+# -m 500 -sc KL -th 0.00001 -a EMCC -rw --seed 0 --output ./papers/journalEM/output/synthetic/sample_files/ ./papers/journalEM/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai
+
+def learnpns(method, model, weighted = True, rewrite = False, executions = 100, max_iter = 500, stop_criteria = "KL", th = 0.00001, output = "."):
+
+    if stop_criteria == "LLratio": th = 1 - th
+
     args = ""
-    args += f"-n {num_nodes} "
-    args += f"-d {data_size} "
-    args += f"-di {data_increment} "
-    args += f"-mr {min_ratio} "
-    args += f"-r {reduction} "
+    if weighted: args += f"-w "
     if rewrite: args += f"-rw "
+    args += f"-x {executions} "
+    args += f"-m {max_iter} "
+    args += f"-sc {stop_criteria} "
+    args += f"-th {th} "
+    args += f"-a {method} "
     args += f"--seed {seed} "
     args += f"--output {output} "
-    args += "--debug "
+    args += str(model)
 
-    
-    javafile = Path(code_folder, "GenerateModel.java")
+    javafile = Path(code_folder, "LearnAndCalculatePNS.java")
     print(javafile)
     runjava(javafile, args_str=args, heap_gbytes=64)
 
+####
 
+for m in MODELS:
+    modelpath = Path(model_folder, modelset, m)
+    outputpath = Path(res_folder, modelset)
 
+    learnpns("CCVE", modelpath, output=outputpath)
 
-output = f"{model_folder}/synthetic/{set}/"
-if not os.path.exists(output):
-    os.makedirs(output)
-
-generateModel(numnodes, output, seed=seed)
+    for th in [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]:
+        for criteria in ["LLratio", "KL"]:
+            learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath)

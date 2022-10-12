@@ -1334,4 +1334,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return Probability.ratioLogLikelihood(this.getCFactorsSplittedMap(exoVars), DataUtil.getCFactorsSplittedMap(this, data, exoVars),  1);
 	}
 
+	public double logLikelihood(TIntIntMap[] data){
+		return Probability.logLikelihood(this.getCFactorsSplittedMap(),
+				DataUtil.getCFactorsSplittedMap(this, data), data.length);
+	}
+
 }

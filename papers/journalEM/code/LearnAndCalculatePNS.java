@@ -5,15 +5,21 @@ import ch.idsia.credici.inference.CausalInference;
 import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
+import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.Probability;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
+import ch.idsia.crema.factor.GenericFactor;
+import ch.idsia.crema.factor.credal.linear.IntervalFactor;
+import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.Iterables;
+import com.google.common.primitives.Doubles;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
@@ -28,7 +34,6 @@ import java.util.HashMap;
 import java.util.List;
 
 import static ch.idsia.credici.utility.Assertion.assertTrue;
-import static ch.idsia.credici.utility.Assertion.assertTrueWarning;
 import static ch.idsia.credici.utility.EncodingUtil.getRandomSeqIntMask;
 
 /*
@@ -39,20 +44,8 @@ Parameters CLI:
 * */
 
 
-    /*
-
-    save models
-    see how to decide X and Y.... check if topological order is deterministic
-    measure learning/inference time
-
-
-    * */
-
 
 public class LearnAndCalculatePNS extends Terminal {
-
-
-
 
     @CommandLine.Parameters(description = "Model path in UAI format.")
     private String modelPath;
@@ -72,11 +65,16 @@ public class LearnAndCalculatePNS extends Terminal {
     @CommandLine.Option(names = {"-x", "--executions"}, description = "Number independent EM runs. Only for EM-based methods. Default to 40")
     private int executions = 40;
 
-    @CommandLine.Option(names = {"-th", "--klthreshold"}, description = "KL threshold for stopping EM execution. Default to 0.0")
-    private double klthreshold = 0.0;
+    @CommandLine.Option(names = {"-th", "--threshold"}, description = "KL threshold for stopping EM execution. Default to 0.0")
+    private double threshold = 0.0;
 
     @CommandLine.Option(names = {"-a", "--algorithm"}, description = "Learning and inference algorithm: ${COMPLETION-CANDIDATES}")
     private algorithms alg = algorithms.CCVE;
+
+
+    @CommandLine.Option(names = {"-sc", "--stopcriteria"}, description = "Stopping criteria: ${COMPLETION-CANDIDATES}")
+    private FrequentistCausalEM.StopCriteria stopCriteria = FrequentistCausalEM.StopCriteria.KL;
+
 
 
     public enum algorithms {
@@ -92,9 +90,17 @@ public class LearnAndCalculatePNS extends Terminal {
     Path wdir = null;
     HashMap<String, String> info;
 
+    String modelID = "";
+
     int cause, effect;
-    List<HashMap> results = null;
+    int trueState = 0, falseState = 1;
+
     CausalInference inf = null;
+    double pns_l, pns_u;
+    double[] pnsValues;
+    EMCredalBuilder builder = null;
+
+    HashMap results = new HashMap<String, String>();
 
     @Override
     protected void checkArguments() {
@@ -111,7 +117,9 @@ public class LearnAndCalculatePNS extends Terminal {
     protected void entryPoint() throws Exception {
         init();
         learn();
-        //save();
+        makeInference();
+        processResults();
+        save();
 
     }
 
@@ -126,32 +134,52 @@ public class LearnAndCalculatePNS extends Terminal {
         if(alg == algorithms.CCVE){
             inf = new CredalCausalVE(model, empirical.values());
         }else if(alg == algorithms.CCALP){
-            inf = new CredalCausalApproxLP(model, empirical.values());
+            throw new ExecutionControl.NotImplementedException("Method not implemented yet");
+            //inf = new CredalCausalApproxLP(model, empirical.values());
         }else if(alg== algorithms.EMCC){
-            EMCredalBuilder builder = EMCredalBuilder.of(model, data)
+            builder = EMCredalBuilder.of(model, data)
                     .setMaxEMIter(maxIter)
                     .setNumTrajectories(executions)
                     .setWeightedEM(weighted)
                     .setTrainableVars(model.getExogenousVars())
-                    .setKlthreshold(klthreshold)
+                    .setThreshold(threshold)
+                    .setStopCriteria(stopCriteria)
                     .build();
-
             inf = new CausalMultiVE(builder.getSelectedPoints());
 
-            for(StructuralCausalModel m : builder.getTrajectories().get(0)) {
-            //    System.out.println(m.getFactors(m.getExogenousVars()));
-            }
-
-            double avgTrajectorySize = builder.getTrajectories().stream().mapToInt(t -> t.size()).average().getAsDouble();
-            logger.info("Average trajectory size: "+avgTrajectorySize);
 
         }
 
-        Watch.stopAndLog(logger, "Learning finished in ");
 
-        System.out.println(inf.probNecessityAndSufficiency(cause, effect));
+        Watch.stopAndLog(logger, "Finished learning in: ");
+        addResults("time_learn", Watch.getTime());
 
+    }
+    public void makeInference() throws ExecutionControl.NotImplementedException, InterruptedException {
 
+        logger.info("Starting inference");
+        int[] order = DAGUtil.getTopologicalOrder(model.getNetwork(), model.getEndogenousVars());
+        cause = order[0];
+        effect = order[order.length-1];
+        logger.info("Determining query: cause="+cause+", effect="+effect);
+        Watch.start();
+
+        if(inf instanceof CausalMultiVE)
+            pnsValues = ((CausalMultiVE) inf).getIndividualPNS(cause, effect, trueState, falseState);
+        else{
+            GenericFactor pns = inf.probNecessityAndSufficiency(cause, effect, trueState, falseState);
+            if(pns instanceof VertexFactor)
+                pnsValues = Doubles.concat(((VertexFactor) pns).getData()[0]);
+            else
+                pnsValues = Doubles.concat(((IntervalFactor)pns).getLower(), ((IntervalFactor)pns).getUpper());
+        }
+
+        Watch.stopAndLog(logger, "Finished inference in: ");
+        addResults("time_pns", Watch.getTime());
+
+        pns_u = Doubles.max(pnsValues);
+        pns_l = Doubles.min(pnsValues);
+        logger.info("PNS interval = ["+pns_l+","+pns_u+"]");
 
     }
 
@@ -163,22 +191,38 @@ public class LearnAndCalculatePNS extends Terminal {
         System.exit(0);
     }
 
-    protected String getLabel(){
+
+
+    private String getLabel(algorithms alg) {
         //mIter500_wtrue_sparents3_x20_0
         String str = "";
-        str += "_mIter"+this.maxIter;
-        str += "_w"+this.weighted;
-        str += "_x"+this.executions;
-        str += "_"+this.seed;
+
+        modelID = Arrays.stream(this.modelPath.split("/")).reduce((first, second) -> second).get().replace(".uai","_uai");
+        str += modelID;
+        str += "_"+alg.toString().toLowerCase();
+        if(alg == algorithms.EMCC) {
+            str += "_"+this.stopCriteria.toString().toLowerCase();
+            str += "_th"+String.valueOf(threshold).replace(".","");
+            str += "_mIter" + this.maxIter;
+            str += "_w" + this.weighted;
+            str += "_x" + this.executions;
+
+        }
+        if(alg != algorithms.CCVE) {
+            str += "_" + this.seed;
+        }
 
         return str;
+    }
 
+    protected String getLabel(){
+        return getLabel(this.alg);
     }
 
 
     public void init() throws IOException, CsvException {
 
-        wdir = Paths.get(".");
+        wdir = Paths.get(".").toAbsolutePath();
         RandomUtil.setRandomSeed(seed);
         logger.info("Starting logger with seed "+seed);
 
@@ -201,87 +245,83 @@ public class LearnAndCalculatePNS extends Terminal {
         info = infolist.get(0);
         logger.info("Loaded model information from: "+fullpath);
 
-        int[] order = DAGUtil.getTopologicalOrder(model.getNetwork(), model.getEndogenousVars());
-        cause = order[0];
-        effect = order[order.length-1];
-        logger.info("Determining query: cause="+cause+", effect="+effect);
+
 
         // initialize results
-        results = new ArrayList<HashMap>();
+        results = new HashMap<String,String>();
     }
 
 
 
+    private void addResults(String name, double value) { results.put(name, String.valueOf(value));}
+    private void addResults(String name, int value) { results.put(name, String.valueOf(value));}
+    private void addResults(String name, long value) { results.put(name, String.valueOf(value));};
+    private void addResults(String name, boolean value) { results.put(name, String.valueOf(value));};
 
 
-    private void addResults(String method, boolean selector, double ps1,
-                            double time_learn, double time_ace, double time_pns,
-                            double ace_l, double ace_u, double pns_l, double pns_u,
-                            EMCredalBuilder builder, double[] individualPNS){
+    private void processResults(){
 
-        String msg = "Adding results:";
+        results.put("method", alg);
+        results.put("modelPath", modelPath);
+        results.put("modelID", modelID);
+        results.put("infoPath", modelPath.replace(".uai","_info.csv"));
+        results.put("exact", alg==algorithms.CCVE);
 
-        HashMap r = new HashMap<String, String>();
+        if(alg != algorithms.CCVE){
+            try {
+                String exactPath = Path.of(this.output, getLabel(algorithms.CCVE)+".csv").toString();
+                String fullpath = wdir.resolve(exactPath).toAbsolutePath().toString();
+                results.put("exactPath", exactPath);
+                logger.info("Checking exact results at:"+fullpath);
+                HashMap<String, String> exactResults = DataUtil.fromCSVtoStrMap(fullpath).get(0);
 
-        r.put("method", method);
-        msg += " selector="+method;
-
-        r.put("selector", String.valueOf(selector));
-        msg += " selector="+selector;
-        r.put("ps1", String.valueOf(ps1));
-        msg += " ps1="+ps1;
-
-        if(!Double.isNaN(time_learn)) {
-            r.put("time_learn", String.valueOf(time_learn));
-            msg += " time_learn=" + time_learn;
-        }
-        if(!Double.isNaN(time_ace)) {
-            r.put("time_ace", String.valueOf(time_ace));
-            msg += " time_ace=" + time_ace;
-        }
-        if(!Double.isNaN(time_pns)) {
-            r.put("time_pns", String.valueOf(time_pns));
-            msg += " time_pns=" + time_pns;
-        }
-
-
-        r.put("ace_l", String.valueOf(ace_l));
-        msg += " ace_l="+ace_l;
-        r.put("ace_u", String.valueOf(ace_u));
-        msg += " ace_u="+ace_u;
-        r.put("pns_l", String.valueOf(pns_l));
-        msg += " pns_l="+pns_l;
-        r.put("pns_u", String.valueOf(pns_u));
-        msg += " pns_u="+pns_u;
-
-        r.put("model_path", modelPath);
-
-
-
-        if(builder != null) {
-            int i = 0;
-            for(List<StructuralCausalModel> t : builder.getTrajectories()){
-                int size = t.size() - 1;
-                r.put("trajectory_size_"+i, size);
-                i++;
-
+                logger.info("Loaded exact results: ["+exactResults.get("pns_l")+","+exactResults.get("pns_u")+"]");
+            }catch (Exception e) {
+                logger.warn("Exact results not found.");
             }
         }
-        if(individualPNS != null)
-            for(int i=0; i<individualPNS.length; i++) r.put("pns_"+i, individualPNS[i]);
 
+        if(alg==algorithms.EMCC){
 
-        results.add(r);
-        logger.debug(msg);
+            int[] iter = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
+            double avgTrajectorySize = Arrays.stream(iter).average().getAsDouble();
+            logger.info("Average trajectory size: "+avgTrajectorySize);
 
+            //Store trajectory sizes
+            for(int i=0; i<iter.length; i++) addResults("iter_"+i, iter[i]);
+            for(int i=0;i<pnsValues.length; i++) addResults("pns_"+i, pnsValues[i]);
+
+            // maximum possible log-likelihood
+            addResults("ll_max", Probability.maxLogLikelihood(model, data));
+            // Add individual log-likelihoods and ratios
+            List<StructuralCausalModel> selectedPoints = builder.getSelectedPoints();
+            for(int i=0; i<selectedPoints.size(); i++) {
+                addResults("ratio_"+i, selectedPoints.get(i).ratioLogLikelihood(data));
+                addResults("ll_"+i, selectedPoints.get(i).logLikelihood(data));
+            }
+
+            addResults("datasize", data.length);
+
+            results.put("stop_criteria", stopCriteria.toString());
+            addResults("threshold", threshold);
+            addResults("iter_max", maxIter);
+        }
+
+        addResults("cause", cause);
+        addResults("effect", effect);
+        addResults("trueState", trueState);
+        addResults("falseState", falseState);
+        addResults("pns_u", pns_u);
+        addResults("pns_l", pns_l);
     }
+
 
     private void save() throws IOException {
 
-        String filename = Iterables.getLast(Arrays.asList(this.modelPath.split("/"))).replace(".uai",getLabel());
-        String fullpath = this.wdir.resolve(this.output).resolve(filename+".csv").toString();
+        String filename = Path.of(this.output, getLabel()+".csv").toString();
+        String fullpath = this.wdir.resolve(filename).toString();
         logger.info("Saving info at:" +fullpath);
-        DataUtil.toCSV(fullpath, results);
+        DataUtil.toCSV(fullpath, List.of(results));
 
 
     }

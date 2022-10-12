@@ -4,8 +4,6 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;
-import ch.idsia.credici.utility.DataUtil;
-import ch.idsia.credici.utility.Probability;
 import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.JoinInference;
@@ -46,10 +44,13 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     StopCriteria stopCriteria = StopCriteria.KL;
 
-    private double ratioThreshold = 1.0;
+    protected double klthreshold = Double.NaN;
+
+    private double threshold = 0.0;
 
     public enum StopCriteria {
         KL,
+        L1,
         LLratio
     }
 
@@ -162,24 +163,16 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private boolean hasConverged(int... exoCC) {
         if(stopCriteria == StopCriteria.KL) {
-            for (int u : exoCC) {
-                if (Probability.KLsymmetrized(posteriorModel.getFactor(u), (BayesianFactor) replacedFactors.get(u), true) >= klthreshold) {
-                    return false;
-                }
-            }
-            return true;
+            return TrajectoryAnalyser.hasConvergedKL((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
+        }else if(stopCriteria == StopCriteria.L1) {
+                return TrajectoryAnalyser.hasConvergedL1((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
         }else if(stopCriteria == StopCriteria.LLratio){
-            double ratio = Probability.ratioLogLikelihood(((StructuralCausalModel)this.posteriorModel).getCFactorsSplittedMap(exoCC),
-                                DataUtil.getCFactorsSplittedMap((StructuralCausalModel)this.posteriorModel, data, exoCC),  1);
-            if(ratio>=ratioThreshold)
-                return true;
-
+            return TrajectoryAnalyser.hasConvergedLLratio((StructuralCausalModel) posteriorModel, data, threshold, exoCC);
 
         }else{
             throw new IllegalArgumentException("Wrong stopping Criteria");
         }
 
-        return false;
     }
 
     public FrequentistCausalEM setRegularization(double regularization) {
@@ -393,6 +386,11 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     }
 
     private void init(){
+
+        if(!Double.isNaN(klthreshold)) {
+            throw new IllegalArgumentException("The usage of klthreshold is not allowed anymore. Use threshold instead.");
+        }
+
         if(!inline)
             this.posteriorModel = priorModel.copy();
         else
@@ -419,8 +417,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         return this;
     }
 
-    public FrequentistCausalEM setRatioThreshold(double ratioThreshold) {
-        this.ratioThreshold = ratioThreshold;
+    public FrequentistCausalEM setThreshold(double threshold) {
+        this.threshold = threshold;
         return this;
     }
 

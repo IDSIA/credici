@@ -26,8 +26,7 @@ public class EMstopCriteria {
 
         int maxEMIter = 500;
         int numPoints = 100;
-        double klthreshold = 0.00001;
-        double ratiothreshold = 0.999;
+        double threshold = 0.00001;
         FrequentistCausalEM.StopCriteria stopCriteria = FrequentistCausalEM.StopCriteria.KL; //LLratio or KL
 
 
@@ -56,8 +55,7 @@ public class EMstopCriteria {
                 .setNumTrajectories(numPoints)
                 .setWeightedEM(true)
                 .setTrainableVars(model.getExogenousVars())
-                .setKlthreshold(klthreshold)
-                .setRatioThreshold(ratiothreshold)
+                .setThreshold(threshold)
                 .setStopCriteria(stopCriteria)
                 .build();
 
@@ -73,8 +71,6 @@ public class EMstopCriteria {
         VertexFactor resEM = (VertexFactor) multiVE.probNecessityAndSufficiency(cause, effect);
         System.out.println("EM result");
         System.out.println(resEM);
-
-
 
         model.exoConnectComponents().toArray();  // 1,6,4
 

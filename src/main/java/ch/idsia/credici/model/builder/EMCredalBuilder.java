@@ -64,8 +64,7 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	private int[] trainableVars = null;
 
-	private double klthreshold = 0.0;
-	private double ratioThreshold = 0.0;
+	private double threshold = 0.0;
 	private FrequentistCausalEM.StopCriteria stopCriteria = FrequentistCausalEM.StopCriteria.KL;
 
 
@@ -220,8 +219,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	}
 
-	public EMCredalBuilder setKlthreshold(double klthreshold) {
-		this.klthreshold = klthreshold;
+	public EMCredalBuilder setThreshold(double threshold) {
+		this.threshold = threshold;
 		return this;
 	}
 
@@ -393,18 +392,18 @@ public class EMCredalBuilder extends CredalBuilder{
 		ExpectationMaximization em = null;
 		Collection stepArgs = null;
 		if(this.data==null) {
-			em = new BayesianCausalEM(startingModel).setRegularization(0.0);
+			em = new BayesianCausalEM(startingModel).setKlthreshold(threshold).setRegularization(0.0);
 			stepArgs = (Collection) endogJointProbs.values();
 		}else if(weightedEM) {
 			em = new WeightedCausalEM(startingModel).setRegularization(0.0)
 					.setStopCriteria(stopCriteria)
-					.setRatioThreshold(ratioThreshold)
+					.setThreshold(threshold)
 					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
 		}else{
 			em = new FrequentistCausalEM(startingModel)
 					.setStopCriteria(stopCriteria)
-					.setRatioThreshold(ratioThreshold)
+					.setThreshold(threshold)
 					.setRegularization(0.0)
 					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
@@ -412,8 +411,7 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		em.setVerbose(verbose)
 				.setRecordIntermediate(true)
-				.setTrainableVars(this.trainableVars)
-				.setKlthreshold(klthreshold);
+				.setTrainableVars(this.trainableVars);
 		em.run(stepArgs, maxEMIter);
 
 
@@ -473,10 +471,6 @@ public class EMCredalBuilder extends CredalBuilder{
 		return this;
 	}
 
-	public EMCredalBuilder setRatioThreshold(double ratioThreshold) {
-		this.ratioThreshold = ratioThreshold;
-		return this;
-	}
 
 	public EMCredalBuilder setStopCriteria(FrequentistCausalEM.StopCriteria stopCriteria) {
 		this.stopCriteria = stopCriteria;

@@ -25,6 +25,7 @@ import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
 import picocli.CommandLine;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -120,6 +121,8 @@ public class LearnAndCalculatePNS extends Terminal {
         makeInference();
         processResults();
         save();
+
+
 
     }
 
@@ -226,11 +229,17 @@ public class LearnAndCalculatePNS extends Terminal {
         RandomUtil.setRandomSeed(seed);
         logger.info("Starting logger with seed "+seed);
 
+        String targetFile = getTargetPath().toString();
+        if(!rewrite && new File(targetFile).exists()){
+            String msg = "Not rewriting. File exits: "+targetFile;
+            logger.severe(msg);
+            throw new IllegalStateException(msg);
+        }
+
         // Load model
         String fullpath = wdir.resolve(modelPath).toString();
         model = (StructuralCausalModel) IO.readUAI(fullpath);
         logger.info("Loaded model from: "+fullpath);
-
 
         // Load data
         fullpath = wdir.resolve(modelPath.replace(".uai",".csv")).toString();
@@ -244,8 +253,6 @@ public class LearnAndCalculatePNS extends Terminal {
         if(infolist.size()!=1) throw new IllegalArgumentException("Wrong size for the info file");
         info = infolist.get(0);
         logger.info("Loaded model information from: "+fullpath);
-
-
 
         // initialize results
         results = new HashMap<String,String>();
@@ -315,14 +322,14 @@ public class LearnAndCalculatePNS extends Terminal {
         addResults("pns_l", pns_l);
     }
 
+    private Path getTargetPath(){
+        return Path.of(this.output, getLabel()+".csv");
+    }
 
     private void save() throws IOException {
-
-        String filename = Path.of(this.output, getLabel()+".csv").toString();
-        String fullpath = this.wdir.resolve(filename).toString();
+        String fullpath = this.wdir.resolve(getTargetPath()).toString();
         logger.info("Saving info at:" +fullpath);
         DataUtil.toCSV(fullpath, List.of(results));
-
 
     }
 

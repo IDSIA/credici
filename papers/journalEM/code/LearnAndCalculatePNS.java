@@ -8,6 +8,7 @@ import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
+import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
@@ -17,6 +18,7 @@ import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.io.uai.UAIParser;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
@@ -41,7 +43,7 @@ import static ch.idsia.credici.utility.EncodingUtil.getRandomSeqIntMask;
 
 Parameters CLI:
 -w -x 20 -a CCVE --seed 0 ./papers/journalEM/models/synthetic/s1/set4/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai
-
+-w -x 100 -m 500 -sc LLratio -th 0.999999 -a EMCC --seed 0 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
 * */
 
 
@@ -238,6 +240,7 @@ public class LearnAndCalculatePNS extends Terminal {
 
         // Load model
         String fullpath = wdir.resolve(modelPath).toString();
+        CausalUAIParser.ignoreChecks = true;
         model = (StructuralCausalModel) IO.readUAI(fullpath);
         logger.info("Loaded model from: "+fullpath);
 

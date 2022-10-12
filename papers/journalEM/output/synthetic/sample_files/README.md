@@ -32,9 +32,9 @@ Other descriptive fields
 Fields with results
 ---------------------------
 
-ll_max: maximum log-likelihood that can be obtained with this data and model.
-ll_i: each field of this kind (with i>=0) indicates the log-likelihood of a resulting precise SCM.
-ratio_i: ratio ll_max/ll_i where the optimal value is 1.0.
-iter_i: indicates the number of iteration at the ith individual EM run. It cannot be greater than iter_max.
-time_learn: time in ms. for estimating the P(U).
-time_pns: time in ms. for calculating the imprecise PNS.
+- ll_max: maximum log-likelihood that can be obtained with this data and model.
+- ll_i: each field of this kind (with i>=0) indicates the log-likelihood of a resulting precise SCM.
+- ratio_i: ratio ll_max/ll_i where the optimal value is 1.0.
+- iter_i: indicates the number of iteration at the ith individual EM run. It cannot be greater than iter_max.
+- time_learn: time in ms. for estimating the P(U).
+- time_pns: time in ms. for calculating the imprecise PNS.

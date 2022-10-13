@@ -9,6 +9,8 @@ import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
+import ch.idsia.credici.model.tools.CausalGraphTools;
+import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
@@ -243,6 +245,10 @@ public class LearnAndCalculatePNS extends Terminal {
         CausalUAIParser.ignoreChecks = true;
         model = (StructuralCausalModel) IO.readUAI(fullpath);
         logger.info("Loaded model from: "+fullpath);
+
+        int markovianity = CausalGraphTools.getMarkovianity(model.getNetwork());
+        if(markovianity>1 && alg != algorithms.EMCC)
+            throw new IllegalArgumentException("A model of this markovianity cannot be solved with this method.");
 
         // Load data
         fullpath = wdir.resolve(modelPath.replace(".uai",".csv")).toString();

@@ -45,7 +45,7 @@ info.num_vars.max()
 
 
 list(info.columns)
-
+len(info)
 print(info.markovianity.groupby(info.markovianity).count())
 
 print(info.num_vars.groupby(info.num_vars).count())

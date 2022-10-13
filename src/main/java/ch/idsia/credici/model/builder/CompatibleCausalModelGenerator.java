@@ -222,9 +222,9 @@ public class CompatibleCausalModelGenerator {
 
 
         }while(repeat);
-
-        if(markovianity>1)
-            throw new NotImplementedException("Code not implemented for markovianity "+markovianity);
+        markovianity = markObtained;
+        //if(markovianity>1)
+        //    throw new NotImplementedException("Code not implemented for markovianity "+markovianity);
 
         if(markovianity != 0){
             logger.debug("Splitting dag DAG: "+dag);
@@ -254,6 +254,7 @@ public class CompatibleCausalModelGenerator {
         model = CausalBuilder.of(endoDAG, 2)
                 .setCausalDAG(causalDAG)
                 .setEmptyFactors(false)
+                .setMaxExoCardNQM(16)
                 .build();
 
         if(mergeExoPairs.size()>0)
@@ -338,6 +339,8 @@ public class CompatibleCausalModelGenerator {
 
 
     private void reduceModel(){
+        if(markovianity>1)
+            return;
         double cardBefore, cardAfter;
         cardBefore=StatisticsModel.of(model).avgExoCardinality();
         ExogenousReduction reducer = new ExogenousReduction(this.model,  data).removeWithZeroUpper();
@@ -355,7 +358,7 @@ public class CompatibleCausalModelGenerator {
 
 
     public static void main(String[] args) {
-        int s = 3;
+        int s = 1;
         Logger.setGlobal(new Logger().setLabel("model_gen").setToStdOutput(true).setLevel(Logger.Level.DEBUG));
 
 
@@ -374,7 +377,7 @@ public class CompatibleCausalModelGenerator {
                         .setDatasize(1000)
                         .setDataIncrementFactor(0.5)
                         .setNumNodes(8)
-                        .setMarkovianity(1);
+                        .setMarkovianity(2);
 
                 gen.run();
                 StructuralCausalModel m = gen.getModel();

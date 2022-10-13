@@ -43,6 +43,8 @@ public class CausalBuilder {
 
     private boolean emptyFactors = false;
 
+    private int maxExoCardNQM = Integer.MAX_VALUE;
+
 
 
 
@@ -153,15 +155,23 @@ public class CausalBuilder {
                        .toArray(BayesianFactor[]::new)[0];
                exoVarSizes.put(u,eq.getDomain().getCardinality(u));
             }
-        }else if(isNonQuasiMarkovian()) {
+      //  }else if(isNonQuasiMarkovian()) {
             // todo: compute in non-markovian equationless case
-            throw new NotImplementedException("");
+     //       throw new NotImplementedException("");
         }else{
             exoVarSizes = new TIntIntHashMap();
-            for(int u : DAGUtil.getRootNodes(causalDAG)){
-                int[] ch = causalDAG.getChildren(u);
-                exoVarSizes.put(u, EquationOps.maxExoCardinality(u, causalDAG, model.getDomain(model.getEndogenousVars())));
+
+            for(int[] exoVars : CausalGraphTools.exoConnectComponents(causalDAG)){
+                if(exoVars.length==1){
+                    exoVarSizes.put(exoVars[0], EquationOps.maxExoCardinality(exoVars[0], causalDAG, model.getDomain(model.getEndogenousVars())));
+                }else{
+                    int cardU = EquationOps.maxExoCardNQM(exoVars, causalDAG, model.getDomain(model.getEndogenousVars()));
+                    cardU = Integer.min(cardU, maxExoCardNQM);
+                    for(int u : exoVars) exoVarSizes.put(u, cardU);
+                }
             }
+
+
 
         }
 
@@ -211,17 +221,24 @@ public class CausalBuilder {
                 }
             }
         } else {
-            for(int u: model.getExogenousVars()){
-                int[] chU = model.getEndogenousChildren(u);
-                if(chU.length==1){
-                    model.setFactor(chU[0], EquationBuilder.of(model).withAllAssignments(chU[0]));
-                }else{
-                    HashMap eqs = (HashMap) EquationBuilder.of(model).withAllAssignmentsQM(u);
-                    for(int x : chU){
-                        model.setFactor(x, (BayesianFactor) eqs.get(x));
-                    }
+            model.fillWithRandomEquations();    // Eqs in NQM components will remain random
+            for(int[] exoVars : model.exoConnectComponents()) setEquations(exoVars);
+        }
+    }
+
+    private void setEquations(int... exoCC){
+        if(exoCC.length==1) {
+            int u = exoCC[0];
+            int[] chU = model.getEndogenousChildren(u);
+            if (chU.length == 1) {
+                model.setFactor(chU[0], EquationBuilder.of(model).withAllAssignments(chU[0]));
+            } else {
+                HashMap eqs = (HashMap) EquationBuilder.of(model).withAllAssignmentsQM(u);
+                for (int x : chU) {
+                    model.setFactor(x, (BayesianFactor) eqs.get(x));
                 }
             }
+
         }
     }
 
@@ -281,6 +298,10 @@ public class CausalBuilder {
         return this;
     }
 
+    public CausalBuilder setMaxExoCardNQM(int maxExoCardNQM) {
+        this.maxExoCardNQM = maxExoCardNQM;
+        return this;
+    }
 
     public CausalBuilder setEquations(BayesianFactor[] equations) {
         this.equations = equations;

@@ -1,6 +1,7 @@
 package ch.idsia.credici.factor;
 
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.tools.CausalGraphTools;
 import ch.idsia.credici.utility.CollectionTools;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DomainUtil;
@@ -237,8 +238,22 @@ public class EquationOps {
 
 	}
 
-	public static int maxExoCardinality(int exoVar, DirectedAcyclicGraph causalDAG, Strides domains) {
+	public static int maxExoCardNQM(int[] exoVars, SparseDirectedAcyclicGraph causalDAG, Strides domains){
+		int card = 1;
+		int[] chU = IntStream.of(exoVars)
+				.mapToObj(u -> CausalGraphTools.getEndogenousChildren(causalDAG, u))
+				.flatMapToInt(s -> Arrays.stream(s)).distinct().toArray();
 
+		for(int x: chU){
+			int[] endoPa = CausalGraphTools.getEndogenousParents(causalDAG, x);
+			int m = DomainUtil.subDomain(domains, endoPa).getCombinations();
+			card *= Math.pow(domains.getCardinality(x), m);
+		}
+
+		return card;
+	}
+
+	public static int maxExoCardinality(int exoVar, DirectedAcyclicGraph causalDAG, Strides domains) {
 
 		DirectedAcyclicGraph endoDAG = DAGUtil.getSubDAG((SparseDirectedAcyclicGraph) causalDAG, DAGUtil.getNonRootNodes((SparseDirectedAcyclicGraph) causalDAG));
 

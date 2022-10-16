@@ -60,13 +60,25 @@ public class FactorUtil {
 		else if (f instanceof BayesianFactor)
 			res = ((BayesianFactor) f).filter(var, state);
 
-		else if (f instanceof IntervalFactor)
-			res = ((IntervalFactor) f).filter(var, state);
+		else if (f instanceof IntervalFactor) {
+			res = filterInterval((IntervalFactor) f, var, state);
+		}
 		else
 			throw new IllegalStateException("Cannot cast result");
 
 		return res;
 	}
+
+	public static IntervalFactor filterInterval(IntervalFactor f, int var, int state){
+		int[] dom = f.getDomain().getVariables();
+		if(dom.length!=1 || dom[0]!=var)
+		    return f.filter(var,state);
+		IntervalFactor res = new IntervalFactor(Strides.empty(), Strides.empty());
+		res.setLower(new double[]{f.getDataLower()[0][state]});
+		res.setUpper(new double[]{f.getDataUpper()[0][state]});
+		return res;
+	}
+
 
 	public static void print(BayesianFactor p) { print(p, new HashMap());}
 

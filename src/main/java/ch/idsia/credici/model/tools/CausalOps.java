@@ -144,21 +144,25 @@ public class CausalOps {
                 // Set the factor with the new domain
                 GenericFactor f = (GenericFactor) m.getFactor(x_0);
 
-                int[] leftVars;
-                int[] rightVars;
-                if(f instanceof VertexFactor) {
-                    leftVars = ((VertexFactor)f).getDataDomain() .getVariables();
-                    rightVars = ((VertexFactor)f).getSeparatingDomain() .getVariables();
-                }else{
-                    leftVars = ((SeparateHalfspaceFactor)f).getDataDomain() .getVariables();
-                    rightVars = ((SeparateHalfspaceFactor)f).getSeparatingDomain() .getVariables();
+                if(f instanceof BayesianFactor){
+                    // Set the factor with the new domain
+                    f = f.renameDomain(map.getEquivalentVars(w,f.getDomain().getVariables()));
                 }
-                f = f.renameDomain(map.getEquivalentVars(w,Ints.concat(leftVars,rightVars)));
-
-                f = (GenericFactor) ((SeparatelySpecified)f).sortParents();
-
-
+                else {
+                    int[] leftVars;
+                    int[] rightVars;
+                    if (f instanceof VertexFactor) {
+                        leftVars = ((VertexFactor) f).getDataDomain().getVariables();
+                        rightVars = ((VertexFactor) f).getSeparatingDomain().getVariables();
+                    } else {
+                        leftVars = ((SeparateHalfspaceFactor) f).getDataDomain().getVariables();
+                        rightVars = ((SeparateHalfspaceFactor) f).getSeparatingDomain().getVariables();
+                    }
+                    f = f.renameDomain(map.getEquivalentVars(w, Ints.concat(leftVars, rightVars)));
+                    f = (GenericFactor) ((SeparatelySpecified) f).sortParents();
+                }
                 merged.setFactor(x_w, f);
+
             }
             w++;
         }

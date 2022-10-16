@@ -141,8 +141,8 @@ public class LearnAndCalculatePNS extends Terminal {
         if(alg == algorithms.CCVE){
             inf = new CredalCausalVE(model, empirical.values());
         }else if(alg == algorithms.CCALP){
-            throw new ExecutionControl.NotImplementedException("Method not implemented yet");
-            //inf = new CredalCausalApproxLP(model, empirical.values());
+            //throw new ExecutionControl.NotImplementedException("Method not implemented yet");
+            inf = new CredalCausalApproxLP(model, empirical.values());
         }else if(alg== algorithms.EMCC){
             builder = EMCredalBuilder.of(model, data)
                     .setMaxEMIter(maxIter)
@@ -160,6 +160,7 @@ public class LearnAndCalculatePNS extends Terminal {
 
         Watch.stopAndLog(logger, "Finished learning in: ");
         addResults("time_learn", Watch.getTime());
+
 
     }
     public void makeInference() throws ExecutionControl.NotImplementedException, InterruptedException {
@@ -187,6 +188,12 @@ public class LearnAndCalculatePNS extends Terminal {
         pns_u = Doubles.max(pnsValues);
         pns_l = Doubles.min(pnsValues);
         logger.info("PNS interval = ["+pns_l+","+pns_u+"]");
+
+        logger.info("Total time: "
+                +(Long.parseLong((String) results.get("time_learn"))
+                +Long.parseLong((String) results.get("time_pns"))
+        )+" ms.");
+
 
     }
 
@@ -246,7 +253,9 @@ public class LearnAndCalculatePNS extends Terminal {
         model = (StructuralCausalModel) IO.readUAI(fullpath);
         logger.info("Loaded model from: "+fullpath);
 
+
         int markovianity = CausalGraphTools.getMarkovianity(model.getNetwork());
+        logger.debug("Markovianity: "+markovianity);
         if(markovianity>1 && alg != algorithms.EMCC)
             throw new IllegalArgumentException("A model of this markovianity cannot be solved with this method.");
 

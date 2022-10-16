@@ -18,7 +18,7 @@ public class PGMcode {
         ///// Code 1
 
         //Load the empirical model
-        BayesianNetwork bnet = (BayesianNetwork) IO.read("models/party_empirical.uai");
+        BayesianNetwork bnet = (BayesianNetwork) IO.read("models/party-empirical.uai");
 
         // Build the causal model
         StructuralCausalModel causalModel = CausalBuilder.of(bnet).build();
@@ -77,6 +77,7 @@ public class PGMcode {
                 .setEvidence(x[2], 0)
                 .run();
 
+        System.out.println(resApprox);
 
     }
 }

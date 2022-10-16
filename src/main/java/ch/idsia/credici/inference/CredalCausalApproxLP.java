@@ -1,10 +1,16 @@
 package ch.idsia.credici.inference;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.stream.IntStream;
 
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.InferenceTools;
+import ch.idsia.crema.factor.GenericFactor;
+import ch.idsia.crema.factor.convert.BayesianToHalfSpace;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.GraphicalModel;
 import jdk.jshell.spi.ExecutionControl;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -56,8 +62,8 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
         TIntIntMap evidence = q.getEvidence();
         TIntIntMap intervention = q.getIntervention();
 
-        if(target.length>1)
-            throw new IllegalArgumentException("A single target variable is allowed with CredalCausalAproxLP ");
+        //if(target.length>1)
+        //    throw new IllegalArgumentException("A single target variable is allowed with CredalCausalAproxLP ");
 
 
         // Get the inference model (simple mutilated or twin graph)
@@ -79,11 +85,13 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
         }
 
         for(int v : infModel.getVariables()) {
-            infModel.setFactor(v, ((SeparateHalfspaceFactor) infModel.getFactor(v)).removeNormConstraints());
-            if(epsilon>0.0){
-                infModel.setFactor(v, ((SeparateHalfspaceFactor) infModel.getFactor(v)).getPerturbedZeroConstraints(epsilon));
+            GenericFactor f = infModel.getFactor(v);
+            if(f instanceof SeparateHalfspaceFactor) {
+                infModel.setFactor(v, ((SeparateHalfspaceFactor) f).removeNormConstraints());
+                if (epsilon > 0.0) {
+                    infModel.setFactor(v, ((SeparateHalfspaceFactor) infModel.getFactor(v)).getPerturbedZeroConstraints(epsilon));
+                }
             }
-
         }
         return infModel;
 
@@ -126,15 +134,30 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
 
         SparseModel pns_model = (SparseModel) CausalOps.merge(reality, doTrue, doFalse);
 
+
         WorldMapping map = WorldMapping.getMap(pns_model);
         int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
         for(int x:CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
 
-        CausalInference infInternal =  new CredalCausalVE(pns_model);
-        VertexFactor prob = (VertexFactor) infInternal.causalQuery().setTarget(target).run();
-        return (IntervalFactor) FactorUtil.filter(FactorUtil.filter(prob, target[0], trueState), target[1], falseState);
+
+        TIntIntMap query = InferenceTools.modifyModelForJointQuery(pns_model, target, new int[]{trueState, falseState});
+        int newTarget =query.keys()[0];
+        int newValue = query.values()[0];
+
+        pns_model.setFactor(newTarget,
+                new BayesianToHalfSpace().apply((BayesianFactor) pns_model.getFactor(newTarget), newTarget));
+
+        CausalInference infInternal =  new CredalCausalApproxLP(pns_model);
+        IntervalFactor prob = (IntervalFactor) infInternal.causalQuery().setTarget(newTarget).run();
+        return (IntervalFactor) FactorUtil.filter(prob, newTarget, newValue);
+
+        //VertexFactor prob = (VertexFactor) infInternal.causalQuery().setTarget(target[0]).run();
+        //return (IntervalFactor) FactorUtil.filter(prob, target[0], 0);
 
     }
+
+
+
 
     public double getEpsilon() {
         return epsilon;

@@ -116,7 +116,9 @@ for m in MODELS:
     outputpath = Path(res_folder, modelset)
 
     learnpns("CCVE", modelpath, output=outputpath)
+    learnpns("CCALP", modelpath, output=outputpath)
 
-    for th in [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]:
+
+for th in [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]:
         for criteria in ["LLratio", "KL"]:
             learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath)

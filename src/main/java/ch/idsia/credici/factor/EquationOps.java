@@ -266,8 +266,8 @@ public class EquationOps {
 					((SparseDirectedAcyclicGraph) endoDAG).getParents(endoCh[i]),
 					CollectionTools.toIntArray(previousVars));
 
-			int cardX = domains.intersection(endoCh[i]).getCombinations();
-			int cardY = domains.intersection(endoPa).getCombinations();
+			int cardX = domains.sort().intersection(endoCh[i]).getCombinations();
+			int cardY = domains.sort().intersection(endoPa).getCombinations();
 			size *= (int)Math.pow(cardX, cardY);
 
 			previousVars.add(endoCh[i]);

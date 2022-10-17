@@ -118,10 +118,10 @@ def learnpns(method, model, weighted = True, rewrite = False, executions = 100, 
 
 for m in MODELS:
     modelpath = Path(model_folder, modelset, m)
-    outputpath = Path(res_folder, modelset)
+    outputpath = Path(res_folder, modelsetOutput)
 
     #learnpns("CCVE", modelpath, output=outputpath)
-    #learnpns("CCALP", modelpath, output=modelsetOutput)
+    #learnpns("CCALP", modelpath, output=outputpath)
 
 
 for th in TH:

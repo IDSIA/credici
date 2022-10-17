@@ -92,7 +92,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		if(exoVarSizes.length==0){
 			exoVarSizes =  IntStream.of(empiricalDAG.getVariables())
-					.map(v -> dagDomain.intersection(ArrayUtils.add(empiricalDAG.getParents(v), v)).getCombinations()+1)
+					.map(v -> dagDomain.sort().intersection(ArrayUtils.add(empiricalDAG.getParents(v), v)).getCombinations()+1)
 					.toArray();
 		}else if(exoVarSizes.length==1){
 			int s = exoVarSizes[0];

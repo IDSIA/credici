@@ -123,8 +123,8 @@ public class FactorUtil {
 
 	public static BayesianFactor  fixPrecission(BayesianFactor f, int num_decimals, boolean newZeros, int... left_vars){
 
-		Strides left = f.getDomain().intersection(left_vars);
-		Strides right = f.getDomain().remove(left);
+		Strides left = f.getDomain().sort().intersection(left_vars);
+		Strides right = f.getDomain().sort().remove(left);
 		BayesianFactor newFactor = f.reorderDomain(left.concat(right));
 		double[][] newData = new double[right.getCombinations()][left.getCombinations()];
 		double[][] oldData = ArraysUtil.reshape2d(newFactor.getData(), right.getCombinations());
@@ -314,5 +314,7 @@ public class FactorUtil {
 		}
 		return out;
 	}
+
+
 
 }

@@ -7,6 +7,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.SeparatelySpecified;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -195,10 +196,14 @@ public class CausalOps {
             }
 
         // Fix the value of the intervened variable
-        do_model.setFactor(var, model.getFactor(var).get_deterministic(var, state));
+        Strides dom = model.getFactor(var).getDomain().sort().intersection(var);
+        BayesianFactor f = BayesianFactor.deterministic(dom, state);
+        do_model.setFactor(var, f);
         return do_model;
 
     }
+
+
 
     public static StructuralCausalModel intervention(StructuralCausalModel model, int var, int state, boolean... removeDisconnected){
         return (StructuralCausalModel) intervention((GenericSparseModel) model, var, state, removeDisconnected);

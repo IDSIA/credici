@@ -311,6 +311,16 @@ public class DataUtil {
 		return null;
 	}
 
+	public static TIntIntMap[] renameVars(TIntIntMap[]data, int[] oldVars, int[] newVars){
+		final TIntIntMap map = ObservationBuilder.observe(oldVars, newVars);
+		return Arrays.stream(data).map(t -> {
+			TIntIntMap newTuple = new TIntIntHashMap();
+			for(int v : map.keys())
+				newTuple.put(map.get(v), t.get(v));
+			return newTuple;
+		}).toArray(TIntIntMap[]::new);
+	}
+
 	public static void main(String[] args) throws IOException {
 
 		List<String[]> data = new ArrayList<>();

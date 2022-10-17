@@ -19,6 +19,11 @@ print(sys.argv)
 id = int(sys.argv[1])
 seed = int(sys.argv[2])
 modelset = "synthetic/s1/"
+modelsetOutput = "synthetic/s1b/"
+#TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
+TH = [0.0, 0.00000001]
+SCRITERIA = ["LLratio", "KL"]
+
 
 
 print("Running generatemodels.py")
@@ -115,10 +120,10 @@ for m in MODELS:
     modelpath = Path(model_folder, modelset, m)
     outputpath = Path(res_folder, modelset)
 
-    learnpns("CCVE", modelpath, output=outputpath)
-    learnpns("CCALP", modelpath, output=outputpath)
+    #learnpns("CCVE", modelpath, output=outputpath)
+    #learnpns("CCALP", modelpath, output=modelsetOutput)
 
 
-for th in [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]:
-        for criteria in ["LLratio", "KL"]:
+for th in TH:
+        for criteria in SCRITERIA:
             learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath)

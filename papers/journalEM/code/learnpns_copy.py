@@ -20,7 +20,7 @@ id = int(sys.argv[1])
 seed = int(sys.argv[2])
 
 modelset = "synthetic/s1/"
-modelset = "triangolo/"
+#modelset = "triangolo/"
 modelsetOutput = modelset
 filterbyid = True
 CAUSE_EFFECT = []
@@ -28,21 +28,6 @@ heapGB = 64
 TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
 #TH = [0.0, 0.00000001]
 SCRITERIA = ["LLratio", "KL"]
-executions = None
-init_index = 0
-repetitions = 1
-
-if "triangolo" in modelset:
-    modelsetOutput = modelset
-    filterbyid = False
-    CAUSE_EFFECT = [(3,0),(7,0),(5,0)]
-    heapGB = 128
-    SCRITERIA = ["KL"]
-    executions = 1
-    init_index = seed
-    repetitions = 10
-
-
 
 
 
@@ -65,11 +50,11 @@ def gen_exec(cmd, check_return: bool = False):
 
 def exec_bash(cmd: str, check_return: bool = False):
     return [s for s in gen_exec(cmd.split(), check_return)]
-    
+
 def exec_bash_print(cmd: str, check_return: bool = False):
     for path in gen_exec(cmd.split(), check_return):
         print(path, end="")
-        
+
 def strtime():
     return datetime.now().strftime("%y%m%d_%H%M%S")
 
@@ -148,16 +133,13 @@ def learnpns(method, model, weighted = True,
 
 if len(CAUSE_EFFECT)==0: CAUSE_EFFECT = [(None, None)]
 
-for r in range(0,repetitions):
-    for m in MODELS:
-        modelpath = Path(model_folder, modelset, m, seed=seed)
-        outputpath = Path(res_folder, modelsetOutput,seed=seed)
-        for c,e in CAUSE_EFFECT:
-            #learnpns("CCVE", modelpath, output=outputpath, cause=c, effect=e)
-            #learnpns("CCALP", modelpath, output=outputpath, cause=c, effect=e)
-            for th in TH:
-                    for criteria in SCRITERIA:
-                        learnpns("EMCC", modelpath,
-                                 executions = executions,
-                                 stop_criteria=criteria, th=th, output=outputpath,
-                                 cause=c, effect=e, seed=seed+repetitions)
+for m in MODELS:
+    modelpath = Path(model_folder, modelset, m)
+    outputpath = Path(res_folder, modelsetOutput)
+
+    for c,e in CAUSE_EFFECT:
+        #learnpns("CCVE", modelpath, output=outputpath, cause=c, effect=e)
+        #learnpns("CCALP", modelpath, output=outputpath, cause=c, effect=e)
+        for th in TH:
+            for criteria in SCRITERIA:
+                learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath, cause=c, effect=e)

@@ -31,7 +31,6 @@ SCRITERIA = ["LLratio", "KL"]
 
 
 
-print("Running generatemodels.py")
 print(f"id={id}")
 print(f"seed={seed}")
 
@@ -114,7 +113,6 @@ def learnpns(method, model, weighted = True,
     if weighted: args += f"-w "
     if rewrite: args += f"-rw "
     args += f"-x {executions} "
-    args += f"-ii {init_index} "
     args += f"-m {max_iter} "
     args += f"-sc {stop_criteria} "
     args += f"-th {th} "

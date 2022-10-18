@@ -26,8 +26,6 @@ public class CausalOps {
      * @return
      */
     public static StructuralCausalModel merge(StructuralCausalModel reality, StructuralCausalModel... models) {
-        // ALESSANDRO: code for counterfactual graphs
-        //check that the variables are the same
         for(StructuralCausalModel m : models){
             if (!Arrays.equals(reality.getExogenousVars(), m.getExogenousVars()) ||
                     !Arrays.equals(reality.getEndogenousVars(), m.getEndogenousVars()))
@@ -197,10 +195,20 @@ public class CausalOps {
 
         // Fix the value of the intervened variable
         Strides dom = model.getFactor(var).getDomain().sort().intersection(var);
-        BayesianFactor f = BayesianFactor.deterministic(dom, state);
+        GenericFactor f = getDeterministic(model.getFactor(var), dom, state);
         do_model.setFactor(var, f);
         return do_model;
 
+    }
+
+    private static GenericFactor getDeterministic(GenericFactor f, Strides dom, int state){
+        if(f instanceof BayesianFactor)
+            return BayesianFactor.deterministic(dom, state);
+        if(f instanceof VertexFactor)
+            return VertexFactor.deterministic(dom,state);
+        if(f instanceof SeparateHalfspaceFactor)
+            return SeparateHalfspaceFactor.deterministic(dom, state);
+        throw new IllegalArgumentException("Not known factor type");
     }
 
 

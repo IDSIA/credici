@@ -15,14 +15,21 @@ from pathlib import Path
 print(sys.argv)
 
 
-# id,seed=8,0
+id,seed=8,0
 id = int(sys.argv[1])
 seed = int(sys.argv[2])
+
 modelset = "synthetic/s1/"
-modelsetOutput = "synthetic/s1b/"
-#TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
-TH = [0.0, 0.00000001]
+modelset = "triangolo/"
+modelsetOutput = modelset
+filterbyid = False
+CAUSE_EFFECT = [(3,0),(7,0),(5,0)]
+
+
+TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
+#TH = [0.0, 0.00000001]
 SCRITERIA = ["LLratio", "KL"]
+SCRITERIA = ["KL"]
 
 
 
@@ -84,7 +91,9 @@ def runjava(javafile, args_str, heap_gbytes=None):
 
 ## Get models
 
-MODELS = [f for f in os.listdir(Path(model_folder, modelset)) if f.endswith(f"_{id}.uai")]
+end_pattern = ".uai"
+if filterbyid: f"_{id}"+end_pattern
+MODELS = [f for f in os.listdir(Path(model_folder, modelset)) if f.endswith(end_pattern)]
 
 print(MODELS)
 print(f"{len(MODELS)} models")
@@ -94,7 +103,7 @@ print(f"{len(MODELS)} models")
 # -x 100
 # -m 500 -sc KL -th 0.00001 -a EMCC -rw --seed 0 --output ./papers/journalEM/output/synthetic/sample_files/ ./papers/journalEM/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai
 
-def learnpns(method, model, weighted = True, rewrite = False, executions = 100, max_iter = 500, stop_criteria = "KL", th = 0.00001, output = "."):
+def learnpns(method, model, weighted = True, rewrite = False, executions = 100, max_iter = 500, stop_criteria = "KL", th = 0.00001, output = ".", cause=None, effect=None):
 
     if stop_criteria == "LLratio": th = 1 - th
 
@@ -108,6 +117,8 @@ def learnpns(method, model, weighted = True, rewrite = False, executions = 100, 
     args += f"-a {method} "
     args += f"--seed {seed} "
     args += f"--output {output} "
+    if cause is not None: args += f"--cause {cause} "
+    if effect is not None: args += f"--effect {effect} "
     args += str(model)
 
     javafile = Path(code_folder, "LearnAndCalculatePNS.java")
@@ -116,14 +127,15 @@ def learnpns(method, model, weighted = True, rewrite = False, executions = 100, 
 
 ####
 
+if len(CAUSE_EFFECT)==0: CAUSE_EFFECT = [(None, None)]
+
 for m in MODELS:
     modelpath = Path(model_folder, modelset, m)
     outputpath = Path(res_folder, modelsetOutput)
 
-    #learnpns("CCVE", modelpath, output=outputpath)
-    #learnpns("CCALP", modelpath, output=outputpath)
-
-
-for th in TH:
-        for criteria in SCRITERIA:
-            learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath)
+    for c,e in CAUSE_EFFECT:
+        #learnpns("CCVE", modelpath, output=outputpath, cause=c, effect=e)
+        #learnpns("CCALP", modelpath, output=outputpath, cause=c, effect=e)
+        for th in TH:
+                for criteria in SCRITERIA:
+                    learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath, cause=c, effect=e)

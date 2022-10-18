@@ -80,9 +80,9 @@ public class LearnAndCalculatePNS extends Terminal {
     private algorithms alg = algorithms.CCVE;
 
     @CommandLine.Option(names = {"-c", "--cause"}, description = "Cause in the PNS query. Default to the 1st node in the topological order.")
-    private int cause = -1;
+    private int inputCause = -1;
     @CommandLine.Option(names = {"-e", "--effect"}, description = "Effect in the PNS query. Default to the last node in the topological order.")
-    private int effect = -1;
+    private int inputEffect = -1;
 
 
     @CommandLine.Option(names = {"-sc", "--stopcriteria"}, description = "Stopping criteria: ${COMPLETION-CANDIDATES}")
@@ -105,6 +105,7 @@ public class LearnAndCalculatePNS extends Terminal {
 
     String modelID = "";
 
+    int cause = -1, effect = -1;
     int trueState = 0, falseState = 1;
 
     CausalInference inf = null;
@@ -202,26 +203,25 @@ public class LearnAndCalculatePNS extends Terminal {
     }
 
     private void getCauseEffect() {
-        if(cause>0 && effect >0) {
-            logger.info("Query from arguments: cause=" + cause + ", effect=" + effect);
+
+        int[] order = DAGUtil.getTopologicalOrder(model.getNetwork(), model.getEndogenousVars());
+        if(inputCause<0) {
+            cause = order[0];
+            logger.info("Determining cause=" + cause);
+        }else{
+            cause = inputCause
+            logger.info("From arguments cause=" + cause);
         }
-        else {
-            int[] order = DAGUtil.getTopologicalOrder(model.getNetwork(), model.getEndogenousVars());
-            if(cause<0) {
-                cause = order[0];
-                logger.info("Determining cause=" + cause);
-            }else{
-                logger.info("From arguments cause=" + cause);
-            }
-            if(effect<0) {
-                effect = order[order.length - 1];
-                logger.info("Determining effect=" + effect);
-            }else{
-                logger.info("From arguments effect=" + effect);
-            }
-            logger.info("Determining query: cause=" + cause + ", effect=" + effect);
+        if(inputEffect<0) {
+            effect = order[order.length - 1];
+            logger.info("Determining effect=" + effect);
+        }else{
+            effect = inputEffect;
+            logger.info("From arguments effect=" + effect);
         }
+        logger.info("Determining query: cause=" + cause + ", effect=" + effect);
     }
+
 
     public static void main(String[] args) {
         argStr = String.join(";", args);
@@ -248,8 +248,8 @@ public class LearnAndCalculatePNS extends Terminal {
             str += "_x" + this.executions;
 
         }
-        if(cause>=0) str += "_c"+cause;
-        if(effect>=0) str += "_e"+effect;
+        if(inputCause>=0) str += "_c"+inputCause;
+        if(inputEffect>=0) str += "_e"+inputEffect;
 
 
 

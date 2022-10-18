@@ -140,4 +140,4 @@ for m in MODELS:
         #learnpns("CCALP", modelpath, output=outputpath, cause=c, effect=e)
         for th in TH:
                 for criteria in SCRITERIA:
-                    learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath, cause=c, effect=e)
+                    learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath, cause=c, effect=e, seed=seed)

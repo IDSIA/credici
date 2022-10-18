@@ -89,7 +89,7 @@ def runjava(javafile, args_str, heap_gbytes=None):
 ## Get models
 
 end_pattern = ".uai"
-if filterbyid: f"_{id}"+end_pattern
+if filterbyid: end_pattern = f"_{id}"+end_pattern
 MODELS = [f for f in os.listdir(Path(model_folder, modelset)) if f.endswith(end_pattern)]
 
 print(MODELS)

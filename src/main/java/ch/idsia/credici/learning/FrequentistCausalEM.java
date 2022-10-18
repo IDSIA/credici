@@ -202,26 +202,44 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
 
     BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException {
-        String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, obs.keys(), obs.values()));
 
+        if(query.length>1)
+            throw new IllegalArgumentException("Target variable cannot be more than one. Not implemented");
+
+        int var = query[0];
+
+        // Consider only d-connected observed variables
+        int[] obsVars = IntStream.of(obs.keys())
+                .filter(x -> !DAGUtil.dseparated(
+                        ((StructuralCausalModel)priorModel).getNetwork(),
+                        var,
+                        x,
+                        obs.keys()))
+                .toArray();
+
+        TIntIntMap filteredObs = new TIntIntHashMap();
+        for(int v : obsVars) filteredObs.put(v, obs.get(v));
+
+
+        String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, filteredObs.keys(), filteredObs.values()));
 
         if(!posteriorCache.containsKey(hash) || !usePosteriorCache) {
 
             BayesianFactor p = null;
             switch (this.inferenceVariation){
-                case 0: p = inferenceVariation0(query, obs); break;
-                case 1: p = inferenceVariation1(query, obs); break;
-                case 2: p = inferenceVariation2(query, obs, hash); break;
-                case 3: p = inferenceVariation3(query, obs); break;
-                case 4: p = inferenceVariation4(query, obs, hash); break;
+                case 0: p = inferenceVariation0(query, filteredObs); break;
+                case 1: p = inferenceVariation1(query, filteredObs); break;
+                case 2: p = inferenceVariation2(query, filteredObs, hash); break;
+                case 3: p = inferenceVariation3(query, filteredObs); break;
+                case 4: p = inferenceVariation4(query, filteredObs, hash); break;
 
             }
-
             if(usePosteriorCache)
                 posteriorCache.put(hash, p);
             else
                 return p;
         }
+
         return posteriorCache.get(hash);
 
     }

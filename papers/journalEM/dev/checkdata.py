@@ -3,7 +3,7 @@ import pandas as pd
 from pathlib import Path
 
 wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici"
-dataset = "papers/journalEM/data/triangolo_data_d1000.csv"
+dataset = "papers/journalEM/data/triangolo_causal.csv"
 
 data = pd.read_csv(Path(wdir,dataset), index_col=0)
 

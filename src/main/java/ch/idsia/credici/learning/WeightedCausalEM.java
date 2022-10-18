@@ -94,19 +94,8 @@ public class WeightedCausalEM extends FrequentistCausalEM {
 
             for (int var : trainableVars) {
 
-
                 int[] relevantVars = ArraysUtil.addToSortedArray(posteriorModel.getParents(var), var);
                 int[] hidden =  IntStream.of(relevantVars).filter(x -> !observation.containsKey(x)).toArray();
-
-                //int[] obsVars = IntStream.of(relevantVars).filter(x -> observation.containsKey(x)).toArray();
-                // Consider only d-connected observed variables
-                int[] obsVars = IntStream.of(observation.keys())
-                        .filter(x -> !DAGUtil.dseparated(
-                                ((StructuralCausalModel)priorModel).getNetwork(),
-                                var,
-                                x,
-                                observation.keys()))
-                        .toArray();
 
                 if(hidden.length>0){
                     // Case with missing data

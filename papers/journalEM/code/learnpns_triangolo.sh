@@ -1,7 +1,6 @@
 #!/bin/bash
 
-sbatch --export=init_seed=0 -n 10 learnpns_triangolo.sbs
-sbatch --export=init_seed=10 -n 10 learnpns_triangolo.sbs
-sbatch --export=init_seed=20 -n 10 learnpns_triangolo.sbs
-sbatch --export=init_seed=30 -n 10 learnpns_triangolo.sbs
-sbatch --export=init_seed=40 -n 10 learnpns_triangolo.sbs
+sbatch --exclusive --export=init_seed=0 -n 25 learnpns_triangolo.sbs
+sbatch --exclusive --export=init_seed=25 -n 25 learnpns_triangolo.sbs
+sbatch --exclusive --export=init_seed=50 -n 25 learnpns_triangolo.sbs
+sbatch --exclusive --export=init_seed=75 -n 25 learnpns_triangolo.sbs

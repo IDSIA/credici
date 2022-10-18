@@ -24,6 +24,8 @@ modelset = "triangolo/"
 modelsetOutput = modelset
 filterbyid = False
 CAUSE_EFFECT = [(3,0),(7,0),(5,0)]
+#heapGB = 64
+heapGB = 128
 
 
 TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
@@ -123,7 +125,7 @@ def learnpns(method, model, weighted = True, rewrite = False, executions = 100, 
 
     javafile = Path(code_folder, "LearnAndCalculatePNS.java")
     print(javafile)
-    runjava(javafile, args_str=args, heap_gbytes=64)
+    runjava(javafile, args_str=args, heap_gbytes=heapGB)
 
 ####
 

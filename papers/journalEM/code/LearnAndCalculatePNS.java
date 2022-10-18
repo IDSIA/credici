@@ -209,7 +209,7 @@ public class LearnAndCalculatePNS extends Terminal {
             cause = order[0];
             logger.info("Determining cause=" + cause);
         }else{
-            cause = inputCause
+            cause = inputCause;
             logger.info("From arguments cause=" + cause);
         }
         if(inputEffect<0) {

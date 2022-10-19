@@ -943,7 +943,16 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			inf.setFactors(infModel.getFactors());
 
 			BayesianFactor f = null;
-			f = (BayesianFactor) inf.conditionalQuery(left, right);
+			System.out.println(left+"|"+Arrays.toString(right));
+
+			//if(!isMarkovianCC(left))
+				f = (BayesianFactor) inf.conditionalQuery(left, right);
+			//else{
+			//	int u = getExogenousParents(left)[0];
+			//	f = BayesianFactor.combineAll(this.getFactors(left, u)).marginalize(u);
+			//}
+
+			System.out.println(f);
 			factors.put(left,f);
 		}
 		return factors;
@@ -1271,6 +1280,21 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return this.endoConnectComponents().stream().mapToInt(c -> ((int[])c).length).max().getAsInt();
 	}
 
+	public boolean isMarkovianCC(int endoVar){
+		if(!this.isEndogenous(endoVar))
+			throw new IllegalArgumentException("Wrong type of variables");
+
+		if(this.getExogenousParents(endoVar).length>1)
+			return false;
+		int exoVar = this.getExogenousParents(endoVar)[0];
+
+		if(this.getEndogenousChildren(exoVar).length>1)
+			return false;
+
+
+		return true;
+
+	}
 
 	public boolean isConservative(){
 		for(int u: this.getExogenousVars()) {

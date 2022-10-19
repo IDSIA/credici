@@ -13,18 +13,13 @@ from pathlib import Path
 #### Parameter experiments
 
 
-
-
-
-print(sys.argv)
-
 modelname = "triangolo" # party triangolo
 sizes = [1000]
 resampling = False
 run_em = True
 
 
-
+max_iter, EM_SEEDS = 10,[0]
 max_iter = int(sys.argv[1])
 EM_SEEDS = [int(sys.argv[2])]
 
@@ -62,6 +57,7 @@ def strtime():
 
 
 
+prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici")
 
 prj_path = Path(str(Path("../../../").resolve())+"/")
 exp_folder = Path(prj_path, "papers/journalEM/")
@@ -72,7 +68,7 @@ data_folder = Path(exp_folder, "data")
 
 
 jar_file = Path(prj_path, "target/credici-0.1.3-jar-with-dependencies.jar")
-#java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
+java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
 java = "java"
 
 

@@ -1,6 +1,7 @@
 package code;
 
 import ch.idsia.credici.IO;
+import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
@@ -26,6 +27,8 @@ import java.util.*;
 public class RunSingleEM extends Terminal {
 
 	/*
+
+	-s 0 --maxiter 1 -w -d
 
 	 -s 0 --maxiter 100 -w  -d ./papers/journalEM/data/party_data.csv ./papers/journalEM/models/party_causal.uai
 
@@ -117,6 +120,8 @@ public class RunSingleEM extends Terminal {
 		EMCredalBuilder builder = new EMCredalBuilder(model, data)
 				.setMaxEMIter(maxIter)
 				.setWeightedEM(weighted)
+				.setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
+				.setThreshold(0.0)
 				.setNumTrajectories(1)
 				.setTrainableVars(trainableVars)
 				.setVerbose(!quiet)
@@ -125,12 +130,17 @@ public class RunSingleEM extends Terminal {
 		long time = Watch.stop();
 		int iter = builder.getTrajectories().get(0).size() - 1;
 		StructuralCausalModel m = builder.getSelectedPoints().get(0);
-		HashMap<Set<Integer>, BayesianFactor> inducedDist = m.getEmpiricalMap();
-		double ratio = Probability.ratioLogLikelihood(inducedDist, empMap, 1);
+		//HashMap<Set<Integer>, BayesianFactor> inducedDist = m.getEmpiricalMap();
+
 
 		logger.info("Single EM run ("+iter+" iterations) finished in "+time+" ms.");
-		logger.info("Induced distribution from model: "+inducedDist.toString());
-		logger.info("Llk-ratio: "+ratio);
+		double ratio = Double.NaN;
+		try {
+			ratio = model.ratioLogLikelihood(data);
+			logger.info("Llk-ratio: " + ratio);
+		}catch (Exception e){
+			logger.warn("Cannot calculate ratio: "+e.getMessage());
+		}
 
 
 
@@ -156,7 +166,9 @@ public class RunSingleEM extends Terminal {
 		stats.put("datasize", String.valueOf(datasize));
 		stats.put("time", String.valueOf(time));
 		stats.put("iterations", String.valueOf(iter));
-		stats.put("ratio", String.valueOf(ratio));
+		String ratioStr = "";
+		if(!Double.isNaN(ratio)) ratioStr = String.valueOf(ratio);
+		stats.put("ratio", ratioStr);
 		stats.put("p1", String.valueOf(p1));
 
 

@@ -19,7 +19,7 @@ MODELS = ["triangolo_bias_0110", "triangolo_bias_0111", "triangolo_bias_0001"]
 sizes = [1000]
 run_em = True
 
-
+max_iter, EM_SEEDS=[10, 0]
 max_iter = int(sys.argv[1])
 EM_SEEDS = [int(sys.argv[2])]
 

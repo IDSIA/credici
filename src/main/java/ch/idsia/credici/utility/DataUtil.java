@@ -321,6 +321,17 @@ public class DataUtil {
 		}).toArray(TIntIntMap[]::new);
 	}
 
+	public static TIntIntMap[] vconcatBinary(TIntIntMap[] data1, TIntIntMap[] data2){
+		return Stream.concat(Stream.of(data1), Stream.of(data2)).toArray(TIntIntMap[]::new);
+	}
+	public static TIntIntMap[] vconcat(TIntIntMap[]...datasets){
+		TIntIntMap[] out = datasets[0];
+		for(int i=1; i<datasets.length; i++)
+			out = vconcatBinary(out, datasets[i]);
+		return out;
+	}
+
+
 	public static void main(String[] args) throws IOException {
 
 		List<String[]> data = new ArrayList<>();

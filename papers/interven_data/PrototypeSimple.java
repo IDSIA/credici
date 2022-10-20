@@ -65,6 +65,8 @@ public class PrototypeSimple {
             TIntIntMap[] intData_x0 = model_x0.samples((int)(datasize), model_x0.getEndogenousVars());
 
 
+
+
             // Extend the model
             StructuralCausalModel counterfactualModel = model.merge(model_x0);
 

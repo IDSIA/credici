@@ -477,6 +477,18 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return ch.idsia.credici.model.tools.CausalOps.intervention(this, var, state, removeDisconnected);
 	}
 
+	public StructuralCausalModel intervention(TIntIntMap obs) {
+		StructuralCausalModel out = this.copy();
+		for(int v : obs.keys())
+			out = out.intervention(v, obs.get(v));
+		return out;
+	}
+	public StructuralCausalModel intervention(TIntIntMap obs, boolean removeDisconnected) {
+		StructuralCausalModel out = this.copy();
+		for(int v : obs.keys())
+			out = out.intervention(v, obs.get(v), removeDisconnected);
+		return out;
+	}
 
 	/**
 	 * Prints a summary of the SCM

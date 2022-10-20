@@ -77,7 +77,7 @@ def calculatePNS(path, cause, effect, description):
     
     javafile = Path(code_folder, "CalculatePNS.java")
 
-    cmd = f"{java} -Xmx128g -cp {jar_file} {javafile} {args}"
+    cmd = f"{java} -Xmx64g -cp {jar_file} {javafile} {args}"
     print(cmd)
     exec_bash_print(cmd)
 

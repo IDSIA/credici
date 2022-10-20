@@ -106,7 +106,7 @@ def sampler(model, datafile, datasize=500, seed=0):
     javafile = Path(code_folder, "Sampler.java")
 
 
-    cmd = f"{java} -cp {jar_file} {javafile} {args}"
+    cmd = f"{java} -Xmx64g -cp {jar_file} {javafile} {args}"
     print(cmd)
     exec_bash_print(cmd) 
     

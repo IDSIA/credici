@@ -20,21 +20,20 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class DrugGenderExample {
-    public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException, IOException, CsvException {
 
-        int maxIter = 500;
-        int executions = 10;
+
+    static int T = 0;  //  Gender
+    static int S = 1;  // Treatment
+    static int G = 2;  // Survival
+
+    // states for G, T and S
+    static int female=1, drug=1, survived=1;
+    static int male=0, no_drug=0, dead=0;
+
+    public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException, IOException, CsvException {
 
         String wdir = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici";
         String folder = Path.of(wdir, "papers/clear23/").toString();
-
-        int G = 0;  //  Gender
-        int T = 1;  // Treatment
-        int S = 2;  // Survival
-
-        // states for G, T and S
-        int female=1, drug=1, survived=1;
-        int male=0, no_drug=0, dead=0;
 
         // Conservative SCM
         StructuralCausalModel model = (StructuralCausalModel) IO.read(folder+"/models/literature/consPearl.uai");
@@ -77,15 +76,48 @@ public class DrugGenderExample {
         TIntIntMap[] dataDoNoDrug = DataUtil.dataFromCounts(countsDoNoDrug);
         DataUtil.toCSV(folder+"/models/literature/dataPearlDoNoDrug.csv", dataDoNoDrug);
 
+        TIntIntMap[] interventions= null;
+        TIntIntMap[][] datasets = null;
 
-        TIntIntMap[] interventions = new TIntIntMap[]{DataUtil.observe(T,drug), DataUtil.observe(T,no_drug)};
-        TIntIntMap[][] datasets = new TIntIntMap[][]{dataDoDrug, dataDoNoDrug};
+        interventions = new TIntIntMap[]{DataUtil.observe(T,drug), DataUtil.observe(T,no_drug)};
+        datasets = new TIntIntMap[][]{dataDoDrug, dataDoNoDrug};
+        calculatePNS("do(drug) + do(no_drug)", model, null, interventions, datasets);
 
+        interventions = new TIntIntMap[]{DataUtil.observe(T,drug)};
+        datasets = new TIntIntMap[][]{dataDoDrug};
+        calculatePNS("do(drug)", model, null, interventions, datasets);
+
+        interventions = new TIntIntMap[]{DataUtil.observe(T,no_drug)};
+        datasets = new TIntIntMap[][]{dataDoNoDrug};
+        calculatePNS("do(no_drug)", model, null, interventions, datasets);
+
+
+        interventions = new TIntIntMap[]{DataUtil.observe(T,drug), DataUtil.observe(T,no_drug)};
+        datasets = new TIntIntMap[][]{dataDoDrug, dataDoNoDrug};
+        calculatePNS("Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets);
+
+        interventions = new TIntIntMap[]{DataUtil.observe(T,drug)};
+        datasets = new TIntIntMap[][]{dataDoDrug};
+        calculatePNS("Observational + do(drug)", model, dataObs, interventions, datasets);
+
+        interventions = new TIntIntMap[]{DataUtil.observe(T,no_drug)};
+        datasets = new TIntIntMap[][]{dataDoNoDrug};
+        calculatePNS("Observational + do(no_drug)", model, dataObs, interventions, datasets);
+
+
+
+
+        // todo: extend
+
+
+    }
+
+    private static void calculatePNS(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws InterruptedException, ExecutionControl.NotImplementedException {
         DataIntegrator integrator = DataIntegrator.of(model);
         if(dataObs != null)
             integrator.setObservationalData(dataObs);
 
-        for(int i=0; i<interventions.length; i++)
+        for(int i = 0; i< interventions.length; i++)
             integrator.setData(interventions[i], datasets[i]);
 
 
@@ -109,6 +141,11 @@ public class DrugGenderExample {
 
         CausalMultiVE inf = new CausalMultiVE(selectedPoints);
         VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(T, S, drug, no_drug);
-        System.out.println(res_obs);
+        //System.out.println(description);
+        double pns_u = Math.max(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+        double pns_l = Math.min(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+        System.out.println("PNS=["+pns_l+","+pns_u+"]\t Datasets: "+description);
     }
+
+
 }

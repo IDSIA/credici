@@ -332,6 +332,16 @@ public class DataUtil {
 	}
 
 
+	public static ObservationBuilder observe(int...varsAndValues){
+		if(varsAndValues.length % 2 != 0)
+			throw new IllegalArgumentException("Number of arguments should be pair");
+
+		return ObservationBuilder.observe(
+				IntStream.range(0, varsAndValues.length).filter(i -> i%2==0).map(i -> varsAndValues[i]).toArray(),
+				IntStream.range(0, varsAndValues.length).filter(i -> i%2==1).map(i -> varsAndValues[i]).toArray()
+		);
+	}
+
 	public static void main(String[] args) throws IOException {
 
 		List<String[]> data = new ArrayList<>();

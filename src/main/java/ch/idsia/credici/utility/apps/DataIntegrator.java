@@ -171,7 +171,7 @@ public class DataIntegrator {
 
 
         DataIntegrator integrator = DataIntegrator.of(model)
-                .setObservationalData(obsData)
+                //.setObservationalData(obsData)
                 .setData(inter0, interData0)
                 .setData(inter1, interData1)
                 .compile();

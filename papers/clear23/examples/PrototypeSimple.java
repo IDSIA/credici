@@ -1,3 +1,5 @@
+package examples;
+
 import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;

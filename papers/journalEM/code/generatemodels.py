@@ -18,7 +18,7 @@ print(sys.argv)
 
 numnodes = int(sys.argv[1])
 seed = int(sys.argv[2])
-set = "s1"
+set = "s2"
 
 
 print("Running generatemodels.py")

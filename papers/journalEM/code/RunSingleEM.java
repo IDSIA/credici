@@ -32,7 +32,7 @@ public class RunSingleEM extends Terminal {
 
 	 -s 0 --maxiter 100 -w  -d ./papers/journalEM/data/party_data.csv ./papers/journalEM/models/party_causal.uai
 
-	 -d 500 --seed 0 -o /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/data/triangolo_data_d500.csv /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo_empirical.uai
+	 -s 0 --maxiter 100 -w  -d /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/data/triangolo_data_d500.csv /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo/triangolo_causal.uai
 
 	 */
 

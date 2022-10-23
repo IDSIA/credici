@@ -202,26 +202,46 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
 
     BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException {
-        String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, obs.keys(), obs.values()));
 
+        if(query.length>1)
+            throw new IllegalArgumentException("Target variable cannot be more than one. Not implemented");
+
+        int var = query[0];
+
+        // Consider only d-connected observed variables
+        int[] obsVars = IntStream.of(obs.keys())
+                .filter(x -> !DAGUtil.dseparated(
+                        ((StructuralCausalModel)priorModel).getNetwork(),
+                        var,
+                        x,
+                        obs.keys()))
+                .toArray();
+
+        TIntIntMap filteredObs = new TIntIntHashMap();
+        for(int v : obsVars) filteredObs.put(v, obs.get(v));
+
+
+        String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, filteredObs.keys(), filteredObs.values()));
 
         if(!posteriorCache.containsKey(hash) || !usePosteriorCache) {
-
+           // System.out.println(hash.replace("-1","|"));
+           // if(query[0]==3 && ArraysUtil.contains(11, obs.keys()))
+           //     System.out.println();
             BayesianFactor p = null;
             switch (this.inferenceVariation){
-                case 0: p = inferenceVariation0(query, obs); break;
-                case 1: p = inferenceVariation1(query, obs); break;
-                case 2: p = inferenceVariation2(query, obs, hash); break;
-                case 3: p = inferenceVariation3(query, obs); break;
-                case 4: p = inferenceVariation4(query, obs, hash); break;
+                case 0: p = inferenceVariation0(query, filteredObs); break;
+                case 1: p = inferenceVariation1(query, filteredObs); break;
+                case 2: p = inferenceVariation2(query, filteredObs, hash); break;
+                case 3: p = inferenceVariation3(query, filteredObs); break;
+                case 4: p = inferenceVariation4(query, filteredObs, hash); break;
 
             }
-
             if(usePosteriorCache)
                 posteriorCache.put(hash, p);
             else
                 return p;
         }
+
         return posteriorCache.get(hash);
 
     }
@@ -245,6 +265,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         for(int x: obs.keys())
             if(ArraysUtil.contains(x, infModel.getVariables()))
                 newObs.put(x, obs.get(x));
+
         return inferenceEngine.apply(infModel, query, newObs);  // P(U|X=obs)
     }
 
@@ -258,9 +279,11 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     BayesianFactor inferenceVariation2(int[] query, TIntIntMap obs, String hash) throws InterruptedException {
         StructuralCausalModel infModel = null;
 
+
+
         if(!modelCache.containsKey(hash)) {
-            infModel = (StructuralCausalModel) new CutObserved().execute(posteriorModel, obs);
-            infModel = new RemoveBarren().execute(infModel, query, obs);
+            //infModel = (StructuralCausalModel) new CutObserved().execute(posteriorModel, obs);
+            infModel = (StructuralCausalModel) new RemoveBarren().execute(new CutObserved().execute(posteriorModel, obs), query, obs);
         } else{
             infModel = modelCache.get(hash);
             for(int u: infModel.getExogenousVars()){
@@ -272,7 +295,12 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         for(int x: obs.keys())
             if(ArraysUtil.contains(x, infModel.getVariables()))
                 newObs.put(x, obs.get(x));
-        return inferenceEngine.apply(infModel, query, newObs);  // P(U|X=obs)
+
+        //System.out.println(query[0]+"|"+Arrays.toString(newObs.keys()));
+        BayesianFactor p =  inferenceEngine.apply(infModel, query, newObs);  // P(U|X=obs)
+        //BayesianFactor p2 =  inferenceEngine.apply(posteriorModel, query, obs);  // P(U|X=obs)
+        //System.out.println(p+"\n"+p2);
+        return p;
     }
 
     /*

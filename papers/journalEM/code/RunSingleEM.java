@@ -34,6 +34,8 @@ public class RunSingleEM extends Terminal {
 
 	 -s 0 --maxiter 100 -w  -d /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/data/triangolo_data_d500.csv /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo/triangolo_causal.uai
 
+	 -s 0 --maxiter 1 -w -d /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo/triangolo_causal.csv /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo/triangolo_causal.uai
+
 	 */
 
 	@CommandLine.Parameters(description = "Model path in UAI format.")
@@ -116,7 +118,7 @@ public class RunSingleEM extends Terminal {
 		logger.info("Trainable variables: "+ Arrays.toString(trainableVars));
 
 		Watch.start();
-
+/*
 		EMCredalBuilder builder = new EMCredalBuilder(model, data)
 				.setMaxEMIter(maxIter)
 				.setWeightedEM(weighted)
@@ -127,9 +129,19 @@ public class RunSingleEM extends Terminal {
 				.setVerbose(!quiet)
 				.build();
 
+ */
+		EMCredalBuilder builder = new EMCredalBuilder(model, data)
+				.setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
+				.setThreshold(0.0)
+				.setNumTrajectories(1)
+				.setWeightedEM(true)
+				.setVerbose(false)
+				.setMaxEMIter(1).build();
+
 		long time = Watch.stop();
 		int iter = builder.getTrajectories().get(0).size() - 1;
 		StructuralCausalModel m = builder.getSelectedPoints().get(0);
+		IO.writeUAI(m, "ratio_problem.uai");
 		//HashMap<Set<Integer>, BayesianFactor> inducedDist = m.getEmpiricalMap();
 
 

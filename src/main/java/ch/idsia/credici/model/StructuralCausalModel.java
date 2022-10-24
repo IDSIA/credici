@@ -945,12 +945,13 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			inf.setFactors(infModel.getFactors());
 
 			BayesianFactor f = null;
-			//if(!isMarkovianCC(left))
+			if(!isMarkovianCC(left))
 				f = (BayesianFactor) inf.conditionalQuery(left, right);
-			//else{
-			//	int u = getExogenousParents(left)[0];
-			//	f = BayesianFactor.combineAll(this.getFactors(left, u)).marginalize(u);
-			//}
+			else{
+				int u = getExogenousParents(left)[0];
+				f = BayesianFactor.combineAll(this.getFactors(left, u)).marginalize(u);
+			}
+			//System.out.println(f);
 			factors.put(left,f);
 		}
 		return factors;
@@ -968,7 +969,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			inf.setFactors(infModel.getFactors());
 
 			BayesianFactor f = null;
-			f = (BayesianFactor) inf.conditionalQuery(left, right);
+			if(!isMarkovianCC(left))
+				f = (BayesianFactor) inf.conditionalQuery(left, right);
+			else{
+				int u = getExogenousParents(left)[0];
+				f = BayesianFactor.combineAll(this.getFactors(left, u)).marginalize(u);
+			}
 			factors.put(left,f);
 		}
 		return factors;

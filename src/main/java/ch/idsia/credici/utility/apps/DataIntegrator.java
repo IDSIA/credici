@@ -85,7 +85,10 @@ public class DataIntegrator {
             return data;
 
         // Rename the variables in the interventional data
-        int[] newVars = extendedModel.getMap().getEquivalentVars(getInterventionIndex(intervention), obsModel.getEndogenousVars());
+        int index = getInterventionIndex(intervention);
+        if(!hasObservational())
+            index++;
+        int[] newVars = extendedModel.getMap().getEquivalentVars(index, obsModel.getEndogenousVars());
         return DataUtil.renameVars(datasets.get(intervention), obsModel.getEndogenousVars(), newVars);
 
     }
@@ -95,8 +98,15 @@ public class DataIntegrator {
            if(key.equals(String.valueOf(interventionOrder.get(i))))
                return i;
        throw new IllegalArgumentException("Wrong intervention");
+    }
 
-
+    public boolean hasObservational(){
+        try{
+            getInterventionIndex(new TIntIntHashMap());
+        }catch (Exception e){
+            return false;
+        }
+        return true;
     }
 
     private void transformAllData(){

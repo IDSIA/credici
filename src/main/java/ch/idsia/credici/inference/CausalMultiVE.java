@@ -134,6 +134,25 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 		return new VertexFactor(Strides.empty(), Strides.empty(), vals);
 	}
 
+	public GenericFactor probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException, ExecutionControl.NotImplementedException {
+
+		double max = Double.NEGATIVE_INFINITY;
+		double min = Double.POSITIVE_INFINITY;
+
+
+		for (CausalVE i : this.getInferenceList()) {
+			double psn = i.probNecessityAndSufficiency(cause, effect, causeTrue, causeFalse, effectTrue, effectFalse).getValue(0);
+			if (psn > max) max = psn;
+			if (psn < min) min = psn;
+		}
+
+		double[][][] vals = new double[1][2][1];
+		vals[0][0][0] = min;
+		vals[0][1][0] = max;
+
+		return new VertexFactor(Strides.empty(), Strides.empty(), vals);
+	}
+
 
 	public CausalMultiVE filter(int[] mask){
 		List newInfList = Arrays

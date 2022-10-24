@@ -10,6 +10,8 @@ import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.apps.DataIntegrator;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.factor.convert.BayesianToInterval;
+import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.RandomUtil;
 import com.opencsv.exceptions.CsvException;
@@ -18,6 +20,7 @@ import jdk.jshell.spi.ExecutionControl;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -54,7 +57,7 @@ public class DrugGenderExample {
         RandomUtil.setRandomSeed(seed);
         // Conservative SCM
         StructuralCausalModel model = (StructuralCausalModel) IO.read(folder+"/models/literature/consPearl.uai");
-        model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
+        //model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
 
         // Define counts and data
 
@@ -98,7 +101,7 @@ public class DrugGenderExample {
 
         interventions = new TIntIntMap[]{DataUtil.observe(T,no_drug)};
         datasets = new TIntIntMap[][]{dataDoNoDrug};
-        //calculatePNS("Observational + do(no_drug)", model, dataObs, interventions, datasets);
+        calculatePNS("Observational + do(no_drug)", model, dataObs, interventions, datasets);
     }
 
     private static void dataFromObservational(StructuralCausalModel model) throws IOException, CsvException, InterruptedException {
@@ -114,6 +117,8 @@ public class DrugGenderExample {
                 .setMaxEMIter(200);
         builder.build();
         StructuralCausalModel m = builder.getSelectedPoints().get(0);
+
+
 
         dataObs = m.samples(2000, model.getEndogenousVars());
         dataDoDrug = m.intervention(T, drug).samples(1000, model.getEndogenousVars());
@@ -135,6 +140,7 @@ public class DrugGenderExample {
 
         dataObs = DataUtil.dataFromCounts(countsObs);
         DataUtil.toCSV(folder+"/models/literature/dataPearlObs.csv", dataObs);
+        System.out.println(DataUtil.getCFactorsSplittedMap(model, dataObs));;
 
         //// Interventional data do(T=drug)
         BayesianFactor countsDoDrug = new BayesianFactor(model.getDomain(T,G,S));
@@ -145,6 +151,7 @@ public class DrugGenderExample {
 
         dataDoDrug = DataUtil.dataFromCounts(countsDoDrug);
         DataUtil.toCSV(folder+"/models/literature/dataPearlDoDrug.csv", dataDoDrug);
+        System.out.println(DataUtil.getCFactorsSplittedMap(model, dataDoDrug));;
 
 
         //// Interventional data do(T=no_drug)
@@ -156,13 +163,15 @@ public class DrugGenderExample {
 
         dataDoNoDrug = DataUtil.dataFromCounts(countsDoNoDrug);
         DataUtil.toCSV(folder+"/models/literature/dataPearlDoNoDrug.csv", dataDoNoDrug);
+        System.out.println(DataUtil.getCFactorsSplittedMap(model, dataDoNoDrug));;
+
     }
 
 
     private static void dataRandom(StructuralCausalModel model) throws IOException {
 
         model.fillExogenousWithRandomFactors(5);
-        dataObs = model.samples(2000, model.getEndogenousVars());
+        dataObs = model.samples(10000, model.getEndogenousVars());
 
         dataDoDrug = model.intervention(T, drug).samples(1000, model.getEndogenousVars());
         dataDoNoDrug = model.intervention(T, no_drug).samples(1000, model.getEndogenousVars());
@@ -170,6 +179,9 @@ public class DrugGenderExample {
     }
 
     private static void calculatePNS(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws InterruptedException, ExecutionControl.NotImplementedException {
+
+//        System.out.println("\n\n===="+description+"======");
+
         DataIntegrator integrator = DataIntegrator.of(model);
         if(dataObs != null)
             integrator.setObservationalData(dataObs);
@@ -191,23 +203,38 @@ public class DrugGenderExample {
                     //EMCredalBuilder builder = EMCredalBuilder.of(model, data)
                     .setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
                     .setThreshold(0.0)
-                    .setNumTrajectories(50)
+                    .setNumTrajectories(30)
                     .setWeightedEM(true)
                     .setVerbose(false)
                     .setMaxEMIter(200);
 
+            //if(dataObs==null)
+            //    builder.setTrainableVars(model.getExogenousParents(G,S));
+
             builder.build();
+            List selectedPoints = builder.getSelectedPoints().stream().map(m -> integrator.removeInterventional(m)).collect(Collectors.toList());
+            int u = model.getExogenousParents(T)[0];
+/*
+            if(dataObs==null)
+                builder.getSelectedPoints().stream().forEach(m -> m.randomizeExoFactor(u, 5));
 
 
-            List selectedPoints = builder.getSelectedPoints();//.stream().map(m -> integrator.removeInterventional(m)).collect(Collectors.toList());
+            System.out.println("Intevals for exoparent of T:"+
+                    IntervalFactor.mergeBounds(builder.getSelectedPoints().stream().map(m -> new BayesianToInterval().apply(m.getFactor(u), u)).toArray(IntervalFactor[]::new))
+            );
 
-
+*/
             CausalMultiVE inf = new CausalMultiVE(selectedPoints);
-            VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(T, S, 1, 0);
+            //VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(G, S, female, male, survived, dead);
+            VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(T, S, drug, no_drug, survived, dead);
+
+            // P(survival_{G=female}, death_{G=male})
+            // P(survival_{drug}, death_{nodrug} )
+            //P(survival_{drug}, death_{nodrug} | )
+
             //System.out.println(description);
             double pns_u = Math.max(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
             double pns_l = Math.min(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
-            System.out.println(s);
             System.out.println("PNS=[" + pns_l + "," + pns_u + "]\t Datasets: " + description);
 
         }

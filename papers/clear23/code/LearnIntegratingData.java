@@ -45,7 +45,7 @@ import static ch.idsia.credici.utility.Assertion.assertTrue;
 /*
 
 Parameters CLI:
--w -cc -x 100 -m 500 -sc KL -th 0.0 --seed 0 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.uai
+-w -cc -x 10 -m 100 -sc KL -th 0.0 --seed 0 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_2.uai
 * */
 
 
@@ -99,7 +99,7 @@ public class LearnIntegratingData extends Terminal {
     double[] pnsValues;
     EMCredalBuilder builder = null;
 
-    HashMap results = new HashMap<String, String>();
+    HashMap<String, HashMap<String, String>> results = new HashMap<String, HashMap<String, String>>();
 
     @Override
     protected void checkArguments() {
@@ -114,9 +114,8 @@ public class LearnIntegratingData extends Terminal {
         init();
         buildIntegrationModel();
         learn();
-        makeInference();
-        //processResults();
-        //save();
+        processResults();
+        save();
 
 
     }
@@ -164,6 +163,10 @@ public class LearnIntegratingData extends Terminal {
         if(cause==effect)
             throw new IllegalArgumentException("Error setting cause/effect");
 
+
+
+
+
         // Sample interventional data
         TIntIntMap[] interventions = null;
         TIntIntMap[][] datasets = new TIntIntMap[2][];
@@ -173,17 +176,26 @@ public class LearnIntegratingData extends Terminal {
 
         // Build integrator objects
         integrators = new ArrayList<>();
-        integrators.add(DataIntegrator.of(model, data, interventions, datasets).compile());
-        integrators.add(DataIntegrator.of(model, data, new TIntIntMap[]{}, new TIntIntMap[][]{}).compile());
-        integrators.add(DataIntegrator.of(model, null, interventions, datasets).compile());
+        integrators.add(DataIntegrator.of(model, data, interventions, datasets).setDescription("all").compile());
+        integrators.add(DataIntegrator.of(model, data, new TIntIntMap[]{}, new TIntIntMap[][]{}).setDescription("obs").compile());
+        integrators.add(DataIntegrator.of(model, null, interventions, datasets).setDescription("int").compile());
 
         logger.info("Built data integrators");
-        for (DataIntegrator I : integrators) logger.debug(I.toString());
+        for (DataIntegrator I : integrators) {
+            results.put(I.getDescription(), new HashMap<String, String>());
+            logger.debug(I.toString());
+        }
+
+
 
         // Integration metric info
         IntegrationChecker checker = new IntegrationChecker(model, data, interventions, datasets);
-        logger.debug(checker.valuesStr());
-        logger.info("Integration metric: " + checker.getMetric());    // todo: save
+        double metric = checker.getMetric();
+        logger.info("Integration metric: " + metric);
+        addToAllResults("integration_metric", metric);
+        addToAllResults("LL_local_LL_global", checker.valuesStr().replace(",",";"));
+
+
 
     }
 
@@ -201,33 +213,31 @@ public class LearnIntegratingData extends Terminal {
                     .setStopCriteria(stopCriteria)
                     .build();
             List selectedPoints = builder.getSelectedPoints().stream().map(m -> I.removeInterventional(m)).collect(Collectors.toList());
-            inferences.add(new CausalMultiVE(selectedPoints));
+            int[] iter = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
+
+            CausalMultiVE inf = new CausalMultiVE(selectedPoints);
 
             Watch.stopAndLog(logger, "Finished learning in: ");
-        }
-        //addResults("time_learn", Watch.getTime());
+            addResults("time_learn", Watch.getTime(), I.getDescription());
 
-
-
-    }
-    public void makeInference() throws ExecutionControl.NotImplementedException, InterruptedException {
-
-        logger.info("Starting inference");
-
-        for(CausalInference inf : inferences) {
+            /// Inference
+            logger.info("Starting inference");
             Watch.start();
-
             pnsValues = ((CausalMultiVE) inf).getIndividualPNS(cause, effect, trueState, falseState);
-
             Watch.stopAndLog(logger, "Finished inference in: ");
-            addResults("time_pns", Watch.getTime());
+            addResults("time_pns", Watch.getTime(), I.getDescription());
+            for(int i=0; i<pnsValues.length; i++) {
+                addResults("pns_"+i, pnsValues[i], I.getDescription());
+                addResults("iter_"+i, iter[i], I.getDescription());
+
+            }
 
             pns_u = Doubles.max(pnsValues);
             pns_l = Doubles.min(pnsValues);
             logger.info("PNS interval = [" + pns_l + "," + pns_u + "]");
-
         }
     }
+
 
     public static void main(String[] args) {
         argStr = String.join(";", args);
@@ -297,56 +307,65 @@ public class LearnIntegratingData extends Terminal {
         info = infolist.get(0);
         logger.info("Loaded model information from: "+fullpath);
 
-        // initialize results
-        results = new HashMap<String,String>();
     }
 
 
 
-    private void addResults(String name, double value) { results.put(name, String.valueOf(value));}
-    private void addResults(String name, int value) { results.put(name, String.valueOf(value));}
-    private void addResults(String name, long value) { results.put(name, String.valueOf(value));};
-    private void addResults(String name, boolean value) { results.put(name, String.valueOf(value));};
+    private void addResults(String name, double value, String key) { results.get(key).put(name, String.valueOf(value));}
+    private void addResults(String name, int value, String key) { results.get(key).put(name, String.valueOf(value));}
+    private void addResults(String name, long value, String key) { results.get(key).put(name, String.valueOf(value));};
+    private void addResults(String name, boolean value, String key) { results.get(key).put(name, String.valueOf(value));};
+    private void addResults(String name, String value, String key) { results.get(key).put(name, value);};
 
+
+    private void addToAllResults(String name, double value) {
+        for(String key : results.keySet())
+            results.get(key).put(name, String.valueOf(value));
+    }
+    private void addToAllResults(String name, int value) {
+        for(String key : results.keySet())
+            results.get(key).put(name, String.valueOf(value));
+    }
+    private void addToAllResults(String name, long value) {
+        for(String key : results.keySet())
+            results.get(key).put(name, String.valueOf(value));
+    };
+    private void addToAllResults(String name, boolean value) {
+        for(String key : results.keySet())
+            results.get(key).put(name, String.valueOf(value));
+    };
+
+    private void addToAllResults(String name, String value) {
+        for(String key : results.keySet())
+            results.get(key).put(name, value);
+    };
 
     private void processResults(){
+        System.out.println();
 
-        results.put("modelPath", modelPath);
-        results.put("modelID", modelID);
-        results.put("infoPath", modelPath.replace(".uai","_info.csv"));
+        addToAllResults("modelPath", modelPath);
+        addToAllResults("modelID", modelID);
+        addToAllResults("infoPath", modelPath.replace(".uai","_info.csv"));
+        addToAllResults("datasize", data.length);
 
-
-
-        int[] iter = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
-        double avgTrajectorySize = Arrays.stream(iter).average().getAsDouble();
-        logger.info("Average trajectory size: "+avgTrajectorySize);
-
-        //Store trajectory sizes
-        for(int i=0; i<iter.length; i++) addResults("iter_"+i, iter[i]);
-        for(int i=0;i<pnsValues.length; i++) addResults("pns_"+i, pnsValues[i]);
-
-        // maximum possible log-likelihood
-        addResults("ll_max", Probability.maxLogLikelihood(model, data));
-        // Add individual log-likelihoods and ratios
-        List<StructuralCausalModel> selectedPoints = builder.getSelectedPoints();
-        for(int i=0; i<selectedPoints.size(); i++) {
-            addResults("ratio_"+i, selectedPoints.get(i).ratioLogLikelihood(data));
-            addResults("ll_"+i, selectedPoints.get(i).logLikelihood(data));
-        }
-
-        addResults("datasize", data.length);
-
-        results.put("stop_criteria", stopCriteria.toString());
-        addResults("threshold", threshold);
-        addResults("iter_max", maxIter);
+        addToAllResults("stop_criteria", stopCriteria.toString());
+        addToAllResults("threshold", threshold);
+        addToAllResults("iter_max", maxIter);
 
 
-        addResults("cause", cause);
-        addResults("effect", effect);
-        addResults("trueState", trueState);
-        addResults("falseState", falseState);
-        addResults("pns_u", pns_u);
-        addResults("pns_l", pns_l);
+        addToAllResults("cause", cause);
+        addToAllResults("effect", effect);
+        addToAllResults("trueState", trueState);
+        addToAllResults("falseState", falseState);
+        addToAllResults("cofounded_cause", cofoundedCause);
+
+        for(String k : results.keySet())
+            addResults("model_type", k, k);
+
+
+
+
+
     }
 
     private Path getTargetPath(){
@@ -356,7 +375,7 @@ public class LearnIntegratingData extends Terminal {
     private void save() throws IOException {
         String fullpath = this.wdir.resolve(getTargetPath()).toString();
         logger.info("Saving info at:" +fullpath);
-        DataUtil.toCSV(fullpath, List.of(results));
+        DataUtil.toCSV(fullpath, results.values().stream().collect(Collectors.toList()));
 
     }
 

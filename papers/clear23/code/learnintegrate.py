@@ -19,7 +19,7 @@ seed = int(sys.argv[2])
 modelset = "synthetic/s1/"
 
 
-print("Running generatemodels.py")
+print("Running learnintegrate.py")
 print(f"id={id}")
 print(f"seed={seed}")
 
@@ -48,7 +48,7 @@ def strtime():
 
 prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/")
 prj_path = Path(str(Path("../../../").resolve())+"/")
-exp_folder = Path(prj_path, "papers/journalEM/")
+exp_folder = Path(prj_path, "papers/clear23/")
 code_folder = Path(exp_folder, "code")
 res_folder = Path(exp_folder, "output")
 model_folder = Path(exp_folder, "models")
@@ -87,23 +87,23 @@ print(f"{len(MODELS)} models")
 # -x 100
 # -m 500 -sc KL -th 0.00001 -a EMCC -rw --seed 0 --output ./papers/journalEM/output/synthetic/sample_files/ ./papers/journalEM/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai
 
-def learnpns(method, model, weighted = True, rewrite = False, executions = 100, max_iter = 500, stop_criteria = "KL", th = 0.00001, output = "."):
+def learnintegrate(model, weighted = True, rewrite = False, executions = 100, max_iter = 500, stop_criteria = "KL", th = 0.0, cofounded_cause = True, output = "."):
 
     if stop_criteria == "LLratio": th = 1 - th
 
     args = ""
     if weighted: args += f"-w "
     if rewrite: args += f"-rw "
+    if cofounded_cause: args += f"-cc "
     args += f"-x {executions} "
     args += f"-m {max_iter} "
     args += f"-sc {stop_criteria} "
     args += f"-th {th} "
-    args += f"-a {method} "
     args += f"--seed {seed} "
     args += f"--output {output} "
     args += str(model)
 
-    javafile = Path(code_folder, "LearnAndCalculatePNS.java")
+    javafile = Path(code_folder, "LearnIntegratingData.java")
     print(javafile)
     runjava(javafile, args_str=args, heap_gbytes=64)
 
@@ -113,10 +113,6 @@ for m in MODELS:
     modelpath = Path(model_folder, modelset, m)
     outputpath = Path(res_folder, modelset)
 
-    learnpns("CCVE", modelpath, output=outputpath)
-    learnpns("CCALP", modelpath, output=outputpath)
+    learnintegrate(modelpath, output=outputpath, cofounded_cause = True, executions = 5, max_iter = 10)
+    learnintegrate(modelpath, output=outputpath, cofounded_cause = False, executions = 5, max_iter = 10)
 
-
-for th in [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]:
-        for criteria in ["LLratio", "KL"]:
-            learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath)

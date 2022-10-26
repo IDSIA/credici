@@ -9,7 +9,7 @@ echo ${seed}
 
 for i in $(seq 0 ${SLURM_NTASKS}); do
   id=$[init_id+i]
-  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u learnpns.py $id $seed 2> /dev/null &
+  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u learnintegrate.py $id $seed 2> /dev/null &
 done
 
 
@@ -18,4 +18,4 @@ wait
 
 
 
-## usage: sbatch --export=init_id=0,seed=6 -n 20 learnpns.sbs
+## usage: sbatch --export=init_id=0,seed=6 -n 20 learnintegrate.sbs

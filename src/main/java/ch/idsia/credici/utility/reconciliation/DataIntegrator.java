@@ -12,7 +12,6 @@ import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
-import jdk.jshell.spi.ExecutionControl;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,6 +28,7 @@ public class DataIntegrator {
     private StructuralCausalModel obsModel;
     private StructuralCausalModel extendedModel;
     boolean compiled = false;
+    String description = "";
 
 
     public DataIntegrator(StructuralCausalModel observationalModel) {
@@ -222,10 +222,20 @@ public class DataIntegrator {
         return interventionOrder;
     }
 
+    public DataIntegrator setDescription(String description) {
+        this.description = description;
+        return this;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
     @Override
     public String toString() {
-        return "DataIntegrator{" +
-                "datasets=" + datasets.size() +
+        return "DataIntegrator{"+
+                description+
+                " datasets=" + datasets.size() +
                 ", interventionOrder=" + interventionOrder +
                 ", obsModel=" + hasObservational()+
                 ", compiled=" + compiled +

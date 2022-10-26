@@ -113,6 +113,6 @@ for m in MODELS:
     modelpath = Path(model_folder, modelset, m)
     outputpath = Path(res_folder, modelset)
 
-    learnintegrate(modelpath, output=outputpath, cofounded_cause = True, executions = 5, max_iter = 10)
-    learnintegrate(modelpath, output=outputpath, cofounded_cause = False, executions = 5, max_iter = 10)
+    learnintegrate(modelpath, output=outputpath, cofounded_cause = True)
+    learnintegrate(modelpath, output=outputpath, cofounded_cause = False)
 

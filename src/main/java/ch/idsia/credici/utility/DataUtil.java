@@ -106,7 +106,7 @@ public class DataUtil {
 				throw new IllegalArgumentException("Overlapping domains");
 		BayesianFactor joint = getCounts(data, left.concat(right));
 		BayesianFactor jointRight = getCounts(data, right);
-		return joint.divide(jointRight);
+		return joint.divide(jointRight).replaceNaN(0.0);
 	}
 
 
@@ -260,6 +260,14 @@ public class DataUtil {
 		return Arrays.stream(data).map(d -> DataUtil.select(d, keys)).toArray(TIntIntMap[]::new);
 	}
 
+	public static TIntIntMap[] selectByValue(TIntIntMap[] data, TIntIntMap selection){
+		return Arrays.stream(data).filter( s -> {
+				for(int k: selection.keys())
+					if(selection.get(k)!=s.get(k)) return false;
+				return true;
+			}
+		).toArray(TIntIntMap[]::new);
+	}
 
 	public static TIntIntMap[] removeColumns(TIntIntMap[] data, int... keys){
 		return Arrays.stream(data).map(d -> DataUtil.remove(d, keys)).toArray(TIntIntMap[]::new);

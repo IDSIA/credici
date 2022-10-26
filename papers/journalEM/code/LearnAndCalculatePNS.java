@@ -10,7 +10,6 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.model.tools.CausalGraphTools;
-import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
@@ -20,9 +19,7 @@ import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.io.uai.UAIParser;
 import ch.idsia.crema.utility.RandomUtil;
-import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
@@ -33,7 +30,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -199,7 +195,7 @@ public class LearnAndCalculatePNS extends Terminal {
 
     public static void main(String[] args) {
         argStr = String.join(";", args);
-        CommandLine.run(new LearnAndCalculatePNS(), args);
+        CommandLine.run(new LearnIntegratingData(), args);
         if(errMsg!="")
             System.exit(-1);
         System.exit(0);

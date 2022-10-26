@@ -1,17 +1,13 @@
 package examples;
 
-import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
-import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
-import ch.idsia.credici.utility.FactorUtil;
-import ch.idsia.credici.utility.apps.DataIntegrator;
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.credici.utility.reconciliation.DataIntegrator;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.RandomUtil;
 import com.opencsv.exceptions.CsvException;

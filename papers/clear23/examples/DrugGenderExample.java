@@ -2,7 +2,6 @@ package examples;
 
 import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CausalMultiVE;
-import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
@@ -10,10 +9,8 @@ import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
-import ch.idsia.credici.utility.apps.DataIntegrator;
+import ch.idsia.credici.utility.reconciliation.DataIntegrator;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.convert.BayesianToInterval;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.RandomUtil;
 import com.opencsv.exceptions.CsvException;
@@ -22,7 +19,6 @@ import jdk.jshell.spi.ExecutionControl;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -59,7 +55,7 @@ public class DrugGenderExample {
         RandomUtil.setRandomSeed(seed);
         // Conservative SCM
         StructuralCausalModel model = (StructuralCausalModel) IO.read(folder+"/models/literature/consPearl.uai");
-        //model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
+        model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
 
         // Define counts and data
 
@@ -71,6 +67,13 @@ public class DrugGenderExample {
         ///
         TIntIntMap[] interventions= null;
         TIntIntMap[][] datasets = null;
+
+        interventions = new TIntIntMap[]{};
+        datasets = new TIntIntMap[][]{};
+        //calculateExactPNS("CCVE Observational", model, dataObs, interventions, datasets);
+       // for(int i=0; i<5; i++)
+       //     calculatePNS("Observational["+i+"] = "+dataObs[i]+"", model, new TIntIntMap[]{dataObs[i]}, interventions, datasets);
+
 
 
         interventions = new TIntIntMap[]{};
@@ -230,12 +233,12 @@ public class DrugGenderExample {
             if(dataObs==null)
                 builder.getSelectedPoints().stream().forEach(m -> m.randomizeExoFactor(u, 5));
 
-*/
+
             System.out.println("Intevals for exoparent of T:"+
                     IntervalFactor.mergeBounds(builder.getSelectedPoints().stream().map(m -> new BayesianToInterval().apply(m.getFactor(u), u)).toArray(IntervalFactor[]::new))
             );
 
-
+*/
             CausalMultiVE inf = new CausalMultiVE(selectedPoints);
             //VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(G, S, female, male, survived, dead);
             VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(T, S, drug, no_drug, survived, dead);

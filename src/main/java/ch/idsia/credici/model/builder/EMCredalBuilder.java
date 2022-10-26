@@ -98,8 +98,8 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.data = data;
 		this.trainableVars = causalModel.getExogenousVars();
 
-		this.inputGenDist = causalModel.getEmpiricalMap(false);
-		setTargetGenDist();
+		//this.inputGenDist = causalModel.getEmpiricalMap(false);
+		//setTargetGenDist();
 
 	}
 
@@ -112,8 +112,8 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.trainableVars = causalModel.getExogenousVars();
 
 
-		this.inputGenDist = genDist;
-		setTargetGenDist();
+		//this.inputGenDist = genDist;
+		//setTargetGenDist();
 
 	}
 

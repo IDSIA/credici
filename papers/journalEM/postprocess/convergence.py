@@ -3,24 +3,45 @@ from functools import partial
 from scipy.stats import beta as beta_dist
 from scipy.special import hyp2f1
 from scipy.special import beta as beta_func
-from scipy.integrate import dblquad
+from scipy.integrate import dblquad, nquad, quad
+
+def error(a, b, astar, bstar) :
+    return np.sqrt()
 
 
-def fit_beta(samples, eps):
-    ''' Fit a beta distribution on the rescaled data and 
-        return the estimated α and β 
+
+def double_integral(func, a, b, gfun, hfun, args=(), epsabs=1.49e-8, epsrel=1.49e-8):
+    ''' 
+    custom integral to support larger subdivisions 
+    func(y, x) from x = a..b and y = gfun(x)..hfun(x).
+    '''
+    def temp_ranges(*args):
+        return [gfun(args[0]) if callable(gfun) else gfun,
+                hfun(args[0]) if callable(hfun) else hfun]
+
+    return nquad(func, [temp_ranges, [a, b]], args=args,
+            opts={"epsabs": epsabs, "epsrel": epsrel}) #, 'limit':100
+
+
+
+def fit_beta(samples, eps, precision):
+    ''' 
+    Fit a beta distribution on the rescaled data and 
+    return the estimated α and β 
     '''
     L = max(samples) - min(samples)
 
-    pos = max(0, min(samples) - eps * L)
-    scale = min(L + 2 * eps * L, 1 - pos)
+    pos = max(-precision, min(samples) - eps * L)
+    scale = min(L + 2 * eps * L, 1 - pos - precision)
     
     params = beta_dist.fit(samples, floc = pos, fscale = scale)
     return params[0:2]
 
 
+
 def _pjoint(x, y, L, alpha, beta, n):
-    ''' Helper function for the computation of the convergence probability
+    ''' 
+    Helper function for the computation of the convergence probability
     '''
     return (
         (
@@ -32,28 +53,58 @@ def _pjoint(x, y, L, alpha, beta, n):
     ) ** n
 
 
-def p_eps_convergence(samples, eps, approx = 1e-30):
+def p_eps_convergence(samples, eps):
     """ 
     Evaluation probability that the epsilon reduced true interval is 
     within the interval defined by the provided samples.
     """
+    
     k = len(samples)
     a = min(samples)
     b = max(samples) 
     L = b - a
     
-    delta = eps * 2 * L
+    precision = eps *  L * 0.01
 
+    epsL_a = eps * L
     if a - eps * L < 0:
-        a = eps*L 
+        epsL_a = a 
 
-    if b + eps*L > 1: 
-        b = 1 - eps*L
+    epsL_b = eps * L
+    if b + eps * L > 1: 
+        epsL_b = 1 - b
+     
+    alpha, beta = fit_beta(samples, eps, precision)
 
-    alpha, beta = fit_beta(samples, eps)
-    f = partial(_pjoint, L = L, alpha = alpha, beta = beta, n = k)
+    
+    full_f = lambda x, y: _pjoint(x,y, L, alpha, beta, k)
 
-    num, e1 = dblquad(f, 0, delta / 2, lambda y: 0, lambda y: delta / 2, epsabs=approx)
-    den, e2 = dblquad(f, 0,  a + (1 - b), lambda y: 0, lambda y: a + (1 - b) - y, epsabs=approx)
+    if (epsL_a < precision) & (epsL_b < precision): # both bounds are degenerate then we are certain that we have the correct value
+        return 1, 1, 1, 0, 0
+
+    if epsL_a < precision : # assume a == 0
+        f = lambda y: _pjoint(0, y, L, alpha, beta, k)
+        num, e1 = quad(f, 0, epsL_b)
+
+    elif epsL_b < precision : # assume b == 1
+        f = lambda x: _pjoint(x, 0, L, alpha, beta, k)
+        num, e1 = quad(f, 0, epsL_a)
+
+    else: 
+        #func(y, x) from x = a..b and y = gfun(x)..hfun(x).
+        num, e1 = double_integral(full_f, 0, epsL_b, lambda y: 0, lambda y: epsL_a)
+
+    den, e2 = double_integral(full_f, 0,  a + (1 - b), lambda y: 0, lambda y: a + (1 - b) - y)
     
     return num / den, num, den, e1, e2
+
+
+def p_unif_convergence(data, eps):
+    a = min(data)
+    b = max(data)
+    n = len(data)
+    L = b - a
+    
+    num = (1 + (1 + 2*eps)**(2 - n) - 2 * (1+ eps) ** (2-n)) 
+    den = (1 - L ** (n - 2) - (n - 2) * (1 - L) * L ** (n - 2))
+    return num/den

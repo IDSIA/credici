@@ -29,6 +29,8 @@ public class CalculatePNS extends Terminal {
 
 	/*
 	--cause 9 --effect 0 --descr triangolo_ ./papers/journalEM/output/triangolo/1000/
+
+
 	 */
 
 	@CommandLine.Parameters(description = "Folder with a set of model or a single model path in UAI format.")

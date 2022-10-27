@@ -17,6 +17,7 @@ print(sys.argv)
 id = int(sys.argv[1])
 seed = int(sys.argv[2])
 modelset = "synthetic/s1/"
+outputModelSet = "synthetic/s1b/"
 
 
 print("Running learnintegrate.py")
@@ -87,7 +88,7 @@ print(f"{len(MODELS)} models")
 # -x 100
 # -m 500 -sc KL -th 0.00001 -a EMCC -rw --seed 0 --output ./papers/journalEM/output/synthetic/sample_files/ ./papers/journalEM/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai
 
-def learnintegrate(model, weighted = True, rewrite = False, executions = 100, max_iter = 500, stop_criteria = "KL", th = 0.0, cofounded_cause = True, output = "."):
+def learnintegrate(model, weighted = True, rewrite = False, executions = 200, max_iter = 500, stop_criteria = "KL", th = 0.0, cofounded_cause = True, output = "."):
 
     if stop_criteria == "LLratio": th = 1 - th
 
@@ -111,7 +112,7 @@ def learnintegrate(model, weighted = True, rewrite = False, executions = 100, ma
 
 for m in MODELS:
     modelpath = Path(model_folder, modelset, m)
-    outputpath = Path(res_folder, modelset)
+    outputpath = Path(res_folder, outputModelSet)
 
     learnintegrate(modelpath, output=outputpath, cofounded_cause = True)
     learnintegrate(modelpath, output=outputpath, cofounded_cause = False)

@@ -99,19 +99,19 @@ public class DrugGender2varsExample {
 
         interventions = new TIntIntMap[]{DataUtil.observe(T,drug)};
         datasets = new TIntIntMap[][]{dataDoDrug};
-        calculatePNS("do(drug)", model, null, interventions, datasets);
+        //calculatePNS("do(drug)", model, null, interventions, datasets);
 
         interventions = new TIntIntMap[]{DataUtil.observe(T,no_drug)};
         datasets = new TIntIntMap[][]{dataDoNoDrug};
-        calculatePNS("do(no_drug)", model, null, interventions, datasets);
+        //calculatePNS("do(no_drug)", model, null, interventions, datasets);
 
         interventions = new TIntIntMap[]{DataUtil.observe(T,drug)};
         datasets = new TIntIntMap[][]{dataDoDrug};
-        calculatePNS("Observational + do(drug)", model, dataObs, interventions, datasets);
+        //calculatePNS("Observational + do(drug)", model, dataObs, interventions, datasets);
 
         interventions = new TIntIntMap[]{DataUtil.observe(T,no_drug)};
         datasets = new TIntIntMap[][]{dataDoNoDrug};
-        calculatePNS("Observational + do(no_drug)", model, dataObs, interventions, datasets);
+        //calculatePNS("Observational + do(no_drug)", model, dataObs, interventions, datasets);
     }
 
     private static void dataFromPaper(StructuralCausalModel model, TIntIntMap selection, int[] selectColumns) throws IOException {
@@ -186,7 +186,7 @@ public class DrugGender2varsExample {
         TIntIntMap[] dataExt = integrator.getExtendedData();
         StructuralCausalModel modelExt = integrator.getExtendedModel();
 
-        System.out.println(integrator);
+        //System.out.println(integrator);
 
         //System.out.println("datasize: "+dataExt.length);
         //System.out.println("model size: "+modelExt.getVariables().length);
@@ -198,10 +198,10 @@ public class DrugGender2varsExample {
             //        EMCredalBuilder builder = EMCredalBuilder.of(model, dataObs)
                     .setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
                     .setThreshold(0.0)
-                    .setNumTrajectories(20)
+                    .setNumTrajectories(200)
                     .setWeightedEM(true)
                     .setVerbose(false)
-                    .setMaxEMIter(200);
+                    .setMaxEMIter(500);
 
             //if(dataObs==null)
             //    builder.setTrainableVars(model.getExogenousParents(G,S));

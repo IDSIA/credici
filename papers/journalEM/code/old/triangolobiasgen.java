@@ -1,4 +1,4 @@
-package code;
+package code.old;
 
 import ch.idsia.credici.IO;
 import ch.idsia.credici.model.StructuralCausalModel;

@@ -12,21 +12,22 @@ from pathlib import Path
 
 #### Parameter experiments
 
-print(sys.argv)
 
-
-MODELS = ["triangolo_bias_0110", "triangolo_bias_0111", "triangolo_bias_0001"]
+modelname = "triangolo" # party triangolo
 sizes = [1000]
+resampling = False
 run_em = True
 
-max_iter, EM_SEEDS=[10, 0]
+
+max_iter, EM_SEEDS = 10,[0]
 max_iter = int(sys.argv[1])
 EM_SEEDS = [int(sys.argv[2])]
 
 
 print("Running triangololearn.py")
-print(MODELS)
+print(modelname)
 print(sizes)
+print(f"resampling={resampling}")
 print(f"runEM={run_em}")
 print(f"max_iter={max_iter}")
 print(f"SEEDS={EM_SEEDS}")
@@ -56,17 +57,18 @@ def strtime():
 
 
 
+prj_path = Path("/")
 
-prj_path = Path(str(Path("../../../").resolve())+"/")
+prj_path = Path(str(Path("../../../../").resolve()) + "/")
 exp_folder = Path(prj_path, "papers/journalEM/")
 code_folder = Path(exp_folder, "code")
-res_folder = Path(exp_folder, "output_test")
+res_folder = Path(exp_folder, "output")
 model_folder = Path(exp_folder, "models")
 data_folder = Path(exp_folder, "data")
 
 
 jar_file = Path(prj_path, "target/credici-0.1.3-jar-with-dependencies.jar")
-#java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
+java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
 java = "java"
 
 
@@ -78,16 +80,14 @@ print(model_folder)
 print(jar_file)
 
 
-def runEMbias(model, datafile, output, seed=0, maxiter=200):
+def runEM(model, datafile, output, seed=0, maxiter=200):
     args = ""
     args += f"--maxiter {maxiter} " 
-    args += f"-w -b "
+    args += f"-w "
     args += f"--seed {seed} "
     args += f"--output {output} "
     args += f"-d {datafile} "
-    args += "--debug "
     args += f"{model} "
-
     
     javafile = Path(code_folder, "RunSingleEM.java")
 
@@ -95,15 +95,45 @@ def runEMbias(model, datafile, output, seed=0, maxiter=200):
     print(cmd)
     exec_bash_print(cmd) 
 
+def sampler(model, datafile, datasize=500, seed=0):
+
+    args = ""
+    args += f"-d {datasize} "
+    args += f"--seed {seed} "
+    args += f"-o {datafile} "
+    args += f"{model}"
+
+    javafile = Path(code_folder, "Sampler.java")
+
+
+    cmd = f"{java} -Xmx64g -cp {jar_file} {javafile} {args}"
+    print(cmd)
+    exec_bash_print(cmd) 
+    
+    
+# Check files
+model_causal = f"{model_folder}/{modelname}_causal.uai"
+model_empirical = f"{model_folder}/{modelname}_empirical.uai"
+
+if(not os.path.isfile(model_causal) or not os.path.isfile(model_empirical)):
+    raise ValueError("Model not found")
+    
+    
+# Data sampling
+
+if resampling:
+    for datasize in sizes:
+        datafile = f"{data_folder}/{modelname}_data_d{datasize}.csv"
+        print(datafile)
+        sampler(model_empirical, datafile, datasize)
+    
 # EM
 if run_em:
     for s in EM_SEEDS:
         for datasize in sizes:
-            for modelname in MODELS:
-                output = f"{res_folder}/{modelname}/{datasize}"
-                if not os.path.exists(output):
-                    os.makedirs(output)
-                model_causal = f"{model_folder}/{modelname}.uai"
+            output = f"{res_folder}/{modelname}/{datasize}"
+            if not os.path.exists(output):
+                os.makedirs(output)
 
-                datafile = f"{data_folder}/triangolo_data_d{datasize}.csv"
-                runEMbias(model_causal, datafile, output, seed=s, maxiter=max_iter)
+            datafile = f"{data_folder}/{modelname}_data_d{datasize}.csv"
+            runEM(model_causal, datafile, output, seed=s, maxiter=max_iter)

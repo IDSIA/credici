@@ -1,4 +1,4 @@
-package code;
+package code.old;
 
 import ch.idsia.credici.IO;
 import ch.idsia.credici.learning.FrequentistCausalEM;
@@ -6,13 +6,10 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.utility.DataUtil;
-import ch.idsia.credici.utility.Probability;
 import ch.idsia.credici.utility.apps.SelectionBias;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
-import ch.idsia.crema.data.WriterCSV;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;

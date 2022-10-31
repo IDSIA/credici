@@ -62,7 +62,7 @@ def strtime():
 
 from pathlib import Path
 
-prj_path = Path(str(Path("../../../").resolve())+"/")
+prj_path = Path(str(Path("../../../../").resolve()) + "/")
 exp_folder = Path(prj_path, "papers/journalEM/")
 code_folder = Path(exp_folder, "code")
 res_folder = Path(exp_folder, "output")

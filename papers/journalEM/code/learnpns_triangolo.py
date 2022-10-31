@@ -14,25 +14,26 @@ from pathlib import Path
 
 print(sys.argv)
 
+mode_client = "pydevconsole" in sys.argv[0]
 
-id,seed=8,0
-id = int(sys.argv[1])
-seed = int(sys.argv[2])
 
-modelset = "synthetic/s1/"
-#modelset = "triangolo/"
+seed=5
+if not mode_client:
+    seed = int(sys.argv[1])
+
+modelset = "triangolo/"
 modelsetOutput = modelset
-filterbyid = True
-CAUSE_EFFECT = []
+
+CAUSE_EFFECT = [(3,0),(7,0),(9,0)]
 heapGB = 64
-TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
-#TH = [0.0, 0.00000001]
-SCRITERIA = ["LLratio", "KL"]
+#TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
+TH = [0.0, 0.00000001]
+TH = [0.0001]
+
+SCRITERIA = ["KL"]
 
 
 
-print("Running generatemodels.py")
-print(f"id={id}")
 print(f"seed={seed}")
 
 
@@ -50,16 +51,18 @@ def gen_exec(cmd, check_return: bool = False):
 
 def exec_bash(cmd: str, check_return: bool = False):
     return [s for s in gen_exec(cmd.split(), check_return)]
-
+    
 def exec_bash_print(cmd: str, check_return: bool = False):
     for path in gen_exec(cmd.split(), check_return):
         print(path, end="")
-
+        
 def strtime():
     return datetime.now().strftime("%y%m%d_%H%M%S")
 
-prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/")
-prj_path = Path(str(Path("../../../").resolve())+"/")
+if mode_client:
+    prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/")
+else:
+    prj_path = Path(str(Path("../../../").resolve())+"/")
 exp_folder = Path(prj_path, "papers/journalEM/")
 code_folder = Path(exp_folder, "code")
 res_folder = Path(exp_folder, "output")
@@ -90,21 +93,17 @@ def runjava(javafile, args_str, heap_gbytes=None):
 ## Get models
 
 end_pattern = ".uai"
-if filterbyid: f"_{id}"+end_pattern
 MODELS = [f for f in os.listdir(Path(model_folder, modelset)) if f.endswith(end_pattern)]
 
 print(MODELS)
 print(f"{len(MODELS)} models")
 
 
-# -w
-# -x 100
-# -m 500 -sc KL -th 0.00001 -a EMCC -rw --seed 0 --output ./papers/journalEM/output/synthetic/sample_files/ ./papers/journalEM/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai
-
 def learnpns(method, model, weighted = True,
              rewrite = False,
              executions = 100,
              max_iter = 500,
+             init_index = None,
              stop_criteria = "KL", th = 0.00001,
              output = ".", cause=None, effect=None, seed = 0):
 
@@ -113,8 +112,8 @@ def learnpns(method, model, weighted = True,
     args = ""
     if weighted: args += f"-w "
     if rewrite: args += f"-rw "
+    if init_index: args += f"-ii {init_index} "
     args += f"-x {executions} "
-    args += f"-ii {init_index} "
     args += f"-m {max_iter} "
     args += f"-sc {stop_criteria} "
     args += f"-th {th} "
@@ -138,8 +137,11 @@ for m in MODELS:
     outputpath = Path(res_folder, modelsetOutput)
 
     for c,e in CAUSE_EFFECT:
-        #learnpns("CCVE", modelpath, output=outputpath, cause=c, effect=e)
-        #learnpns("CCALP", modelpath, output=outputpath, cause=c, effect=e)
         for th in TH:
-            for criteria in SCRITERIA:
-                learnpns("EMCC", modelpath, stop_criteria=criteria, th=th, output=outputpath, cause=c, effect=e)
+                for criteria in SCRITERIA:
+                    learnpns("EMCC", modelpath,
+                             stop_criteria=criteria, th=th,
+                             executions=1,
+                             #max_iter=1,
+                             init_index=seed,
+                             output=outputpath, cause=c, effect=e, seed=seed)

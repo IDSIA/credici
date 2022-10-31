@@ -45,7 +45,7 @@ def strtime():
 
 
 
-prj_path = Path(str(Path("../../../").resolve())+"/")
+prj_path = Path(str(Path("../../../../").resolve()) + "/")
 exp_folder = Path(prj_path, "papers/journalEM/")
 code_folder = Path(exp_folder, "code")
 res_folder = Path(exp_folder, "output")
@@ -75,7 +75,7 @@ def calculatePNS(path, cause, effect, description):
     args += f"{path} "
 
     
-    javafile = Path(code_folder, "CalculatePNS.java")
+    javafile = Path(code_folder, "../CalculatePNS.java")
 
     cmd = f"{java} -Xmx64g -cp {jar_file} {javafile} {args}"
     print(cmd)
@@ -83,14 +83,14 @@ def calculatePNS(path, cause, effect, description):
 
 
 #where Y is "Death" (0) and X is Awareness_Patient (9) or Awareness_Famility (3) or Triangolo (7)
-calculatePNS("../output/triangolo/1000/", cause=9, effect=0, description="triangolo_PAwareness")
-calculatePNS("../output/triangolo/1000/", cause=3, effect=0, description="triangolo_FAwareness")
-calculatePNS("../output/triangolo/1000/", cause=7, effect=0, description="triangolo_Triangolo")
+calculatePNS("../../output/triangolo/1000/", cause=9, effect=0, description="triangolo_PAwareness")
+calculatePNS("../../output/triangolo/1000/", cause=3, effect=0, description="triangolo_FAwareness")
+calculatePNS("../../output/triangolo/1000/", cause=7, effect=0, description="triangolo_Triangolo")
 
-calculatePNS("../output/triangolo_biassoft/1000/", cause=9, effect=0, description="triangolo_biassoft_PAwareness")
-calculatePNS("../output/triangolo_biassoft/1000/", cause=3, effect=0, description="triangolo_biassoft_FAwareness")
-calculatePNS("../output/triangolo_biassoft/1000/", cause=7, effect=0, description="triangolo_biassoft_Triangolo")
+calculatePNS("../../output/triangolo_biassoft/1000/", cause=9, effect=0, description="triangolo_biassoft_PAwareness")
+calculatePNS("../../output/triangolo_biassoft/1000/", cause=3, effect=0, description="triangolo_biassoft_FAwareness")
+calculatePNS("../../output/triangolo_biassoft/1000/", cause=7, effect=0, description="triangolo_biassoft_Triangolo")
 
-calculatePNS("../output/triangolo_biashard/1000/", cause=9, effect=0, description="triangolo_biashard_PAwareness")
-calculatePNS("../output/triangolo_biashard/1000/", cause=3, effect=0, description="triangolo_biashard_FAwareness")
-calculatePNS("../output/triangolo_biashard/1000/", cause=7, effect=0, description="triangolo_biashard_Triangolo")
+calculatePNS("../../output/triangolo_biashard/1000/", cause=9, effect=0, description="triangolo_biashard_PAwareness")
+calculatePNS("../../output/triangolo_biashard/1000/", cause=3, effect=0, description="triangolo_biashard_FAwareness")
+calculatePNS("../../output/triangolo_biashard/1000/", cause=7, effect=0, description="triangolo_biashard_Triangolo")

@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH --time=3-00:00:00
+#SBATCH -o /mnt/beegfs/rcabanas/dev/credici/papers/journalEM/logs/%x.%j.out
+
+
+
+echo ${init_seed}
+echo ${step}
+
+
+for i in $(seq 0 ${SLURM_NTASKS}); do
+  seed=$[init_seed+i]
+  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u learnpns.py 0 $seed 2> /dev/null &
+done
+
+
+
+wait
+
+
+
+## usage: sbatch --export=init_seed=0 -n 20 learnpns_triangolo.sbs

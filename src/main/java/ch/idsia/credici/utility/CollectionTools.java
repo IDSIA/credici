@@ -25,7 +25,9 @@ public class CollectionTools {
 		return list.stream().mapToInt(x-> (int)x).toArray();
 	}
 
-
+	public static double[] toDoubleArray(List<Double> list){
+		return list.stream().mapToDouble(x-> (double)x).toArray();
+	}
 
 	/**
 	 * Round non zero values such as the sum is equal to the target.

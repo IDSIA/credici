@@ -15,8 +15,8 @@ import pandas as pd
 
 
 print(sys.argv)
-folder = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/synthetic/s1/"
-folder = sys.argv[1]
+folder = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/synthetic/s2/"
+#folder = sys.argv[1]
 
 
 info = pd.concat([pd.read_csv(Path(folder, f)) for f in os.listdir(folder) if f.endswith("info.csv")])

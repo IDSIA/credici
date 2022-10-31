@@ -10,16 +10,16 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.model.tools.CausalGraphTools;
-import ch.idsia.credici.utility.DAGUtil;
-import ch.idsia.credici.utility.DataUtil;
-import ch.idsia.credici.utility.FactorUtil;
-import ch.idsia.credici.utility.Probability;
+import ch.idsia.credici.model.tools.CausalOps;
+import ch.idsia.credici.utility.*;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.io.uai.UAIParser;
 import ch.idsia.crema.utility.RandomUtil;
+import com.google.common.collect.Iterables;
 import com.google.common.primitives.Doubles;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
@@ -30,6 +30,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -41,7 +42,10 @@ import static ch.idsia.credici.utility.EncodingUtil.getRandomSeqIntMask;
 
 Parameters CLI:
 -w -x 20 -a CCVE --seed 0 ./papers/journalEM/models/synthetic/s1/set4/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai
--w -x 100 -m 500 -sc LLratio -th 0.999999 -a EMCC --seed 0 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
+-w -x 2 -m 500 -sc LLratio -th 0.999999 -a EMCC --seed 0 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
+-w -rw -x 2 -ii 100 -m 500 -sc LLratio -th 0.999999 -a EMCC --debug --seed 0 --cause 4 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
+-w -rw -x 1 -ii 5 -m 500 -sc LLratio -th 0.5 -a EMCC --debug --seed 5 --cause 3 --effect 0 ./papers/journalEM/models/triangolo/triangolo_causal.uai
+-w -rw -x 1 -ii 5 -m 1 -sc LLratio -th 0.5 -a EMCC --debug --seed 5 --cause 3 --effect 0 /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo/triangolo_causal.uai
 * */
 
 
@@ -66,11 +70,19 @@ public class LearnAndCalculatePNS extends Terminal {
     @CommandLine.Option(names = {"-x", "--executions"}, description = "Number independent EM runs. Only for EM-based methods. Default to 40")
     private int executions = 40;
 
+    @CommandLine.Option(names = {"-ii", "--initindex"}, description = "Initial index for the results. Default to 0")
+    private int initIndex = 0;
+
     @CommandLine.Option(names = {"-th", "--threshold"}, description = "KL threshold for stopping EM execution. Default to 0.0")
     private double threshold = 0.0;
 
     @CommandLine.Option(names = {"-a", "--algorithm"}, description = "Learning and inference algorithm: ${COMPLETION-CANDIDATES}")
     private algorithms alg = algorithms.CCVE;
+
+    @CommandLine.Option(names = {"-c", "--cause"}, description = "Cause in the PNS query. Default to the 1st node in the topological order.")
+    private int inputCause = -1;
+    @CommandLine.Option(names = {"-e", "--effect"}, description = "Effect in the PNS query. Default to the last node in the topological order.")
+    private int inputEffect = -1;
 
 
     @CommandLine.Option(names = {"-sc", "--stopcriteria"}, description = "Stopping criteria: ${COMPLETION-CANDIDATES}")
@@ -93,7 +105,7 @@ public class LearnAndCalculatePNS extends Terminal {
 
     String modelID = "";
 
-    int cause, effect;
+    int cause = -1, effect = -1;
     int trueState = 0, falseState = 1;
 
     CausalInference inf = null;
@@ -162,12 +174,9 @@ public class LearnAndCalculatePNS extends Terminal {
     public void makeInference() throws ExecutionControl.NotImplementedException, InterruptedException {
 
         logger.info("Starting inference");
-        int[] order = DAGUtil.getTopologicalOrder(model.getNetwork(), model.getEndogenousVars());
-        cause = order[0];
-        effect = order[order.length-1];
-        logger.info("Determining query: cause="+cause+", effect="+effect);
-        Watch.start();
+        getCauseEffect();
 
+        Watch.start();
         if(inf instanceof CausalMultiVE)
             pnsValues = ((CausalMultiVE) inf).getIndividualPNS(cause, effect, trueState, falseState);
         else{
@@ -193,9 +202,30 @@ public class LearnAndCalculatePNS extends Terminal {
 
     }
 
+    private void getCauseEffect() {
+
+        int[] order = DAGUtil.getTopologicalOrder(model.getNetwork(), model.getEndogenousVars());
+        if(inputCause<0) {
+            cause = order[0];
+            logger.info("Determining cause=" + cause);
+        }else{
+            cause = inputCause;
+            logger.info("From arguments cause=" + cause);
+        }
+        if(inputEffect<0) {
+            effect = order[order.length - 1];
+            logger.info("Determining effect=" + effect);
+        }else{
+            effect = inputEffect;
+            logger.info("From arguments effect=" + effect);
+        }
+        logger.info("Determining query: cause=" + cause + ", effect=" + effect);
+    }
+
+
     public static void main(String[] args) {
         argStr = String.join(";", args);
-        CommandLine.run(new LearnIntegratingData(), args);
+        CommandLine.run(new LearnAndCalculatePNS(), args);
         if(errMsg!="")
             System.exit(-1);
         System.exit(0);
@@ -218,6 +248,11 @@ public class LearnAndCalculatePNS extends Terminal {
             str += "_x" + this.executions;
 
         }
+        if(inputCause>=0) str += "_c"+inputCause;
+        if(inputEffect>=0) str += "_e"+inputEffect;
+
+
+
         if(alg != algorithms.CCVE) {
             str += "_" + this.seed;
         }
@@ -263,11 +298,12 @@ public class LearnAndCalculatePNS extends Terminal {
 
 
         fullpath = wdir.resolve(modelPath.replace(".uai","_info.csv")).toString();
-        List<HashMap<String, String>> infolist = DataUtil.fromCSVtoStrMap(fullpath);
-        if(infolist.size()!=1) throw new IllegalArgumentException("Wrong size for the info file");
-        info = infolist.get(0);
-        logger.info("Loaded model information from: "+fullpath);
-
+        if(new File(fullpath).exists()) {
+            List<HashMap<String, String>> infolist = DataUtil.fromCSVtoStrMap(fullpath);
+            if (infolist.size() != 1) throw new IllegalArgumentException("Wrong size for the info file");
+            info = infolist.get(0);
+            logger.info("Loaded model information from: " + fullpath);
+        }
         // initialize results
         results = new HashMap<String,String>();
     }
@@ -279,6 +315,12 @@ public class LearnAndCalculatePNS extends Terminal {
     private void addResults(String name, long value) { results.put(name, String.valueOf(value));};
     private void addResults(String name, boolean value) { results.put(name, String.valueOf(value));};
 
+    private void addResults(String name, int[] values){
+        for(int i=0; i<values.length; i++) addResults(name+(i+initIndex), values[i]);
+    }
+    private void addResults(String name, double[] values){
+        for(int i=0; i<values.length; i++) addResults(name+(i+initIndex), values[i]);
+    }
 
     private void processResults(){
 
@@ -309,18 +351,26 @@ public class LearnAndCalculatePNS extends Terminal {
             logger.info("Average trajectory size: "+avgTrajectorySize);
 
             //Store trajectory sizes
-            for(int i=0; i<iter.length; i++) addResults("iter_"+i, iter[i]);
-            for(int i=0;i<pnsValues.length; i++) addResults("pns_"+i, pnsValues[i]);
+            addResults("iter_", iter);
+            addResults("pns_", pnsValues);
 
             // maximum possible log-likelihood
             addResults("ll_max", Probability.maxLogLikelihood(model, data));
             // Add individual log-likelihoods and ratios
             List<StructuralCausalModel> selectedPoints = builder.getSelectedPoints();
-            for(int i=0; i<selectedPoints.size(); i++) {
-                addResults("ratio_"+i, selectedPoints.get(i).ratioLogLikelihood(data));
-                addResults("ll_"+i, selectedPoints.get(i).logLikelihood(data));
-            }
+            List ratios = new ArrayList();
+            List ll = new ArrayList();
 
+            for(int i=0; i<selectedPoints.size(); i++) {
+                try {
+                    ratios.add(selectedPoints.get(i).ratioLogLikelihood(data));
+                    ll.add(selectedPoints.get(i).logLikelihood(data));
+                }catch (Exception e) {
+                    logger.warn("Cannot calculate the Likelihood for this model");
+                }
+            }
+            addResults("ratio_", CollectionTools.toDoubleArray(ratios));
+            addResults("ll_", CollectionTools.toDoubleArray(ll));
             addResults("datasize", data.length);
 
             results.put("stop_criteria", stopCriteria.toString());

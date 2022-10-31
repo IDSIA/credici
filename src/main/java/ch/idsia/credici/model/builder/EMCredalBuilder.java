@@ -81,10 +81,10 @@ public class EMCredalBuilder extends CredalBuilder{
 	public EMCredalBuilder(StructuralCausalModel causalModel){
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
-		this.inputGenDist = causalModel.getEmpiricalMap(false);
+		//this.inputGenDist = causalModel.getEmpiricalMap(false);
 		this.trainableVars = causalModel.getExogenousVars();
 
-		setTargetGenDist();
+		//setTargetGenDist();
 
 	}
 	public static EMCredalBuilder of(StructuralCausalModel causalModel){

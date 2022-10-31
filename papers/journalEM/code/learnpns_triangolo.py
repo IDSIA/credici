@@ -26,9 +26,9 @@ modelsetOutput = modelset
 
 CAUSE_EFFECT = [(3,0),(7,0),(9,0)]
 heapGB = 64
-#TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
-TH = [0.0, 0.00000001]
-TH = [0.0001]
+TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
+#TH = [0.0, 0.00000001]
+#TH = [0.0001]
 
 SCRITERIA = ["KL"]
 
@@ -136,8 +136,8 @@ for m in MODELS:
     modelpath = Path(model_folder, modelset, m)
     outputpath = Path(res_folder, modelsetOutput)
 
-    for c,e in CAUSE_EFFECT:
-        for th in TH:
+    for th in TH:
+        for c,e in CAUSE_EFFECT:
                 for criteria in SCRITERIA:
                     learnpns("EMCC", modelpath,
                              stop_criteria=criteria, th=th,

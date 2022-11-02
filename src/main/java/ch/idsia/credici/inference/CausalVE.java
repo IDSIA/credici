@@ -9,9 +9,11 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
+import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
@@ -87,9 +89,15 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
 
 
     public BayesianFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
+        return probNecessityAndSufficiency(cause, effect, trueState, falseState, trueState, falseState);
+    }
+    public BayesianFactor probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException, ExecutionControl.NotImplementedException {
+        return probNecessityAndSufficiency(cause, effect, causeTrue, causeFalse, effectTrue, effectFalse, null);
+    }
+    private BayesianFactor probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse, TIntIntMap evidence) throws InterruptedException, ExecutionControl.NotImplementedException {
         StructuralCausalModel reality = this.getModel();
-        StructuralCausalModel doTrue = (StructuralCausalModel)this.causalQuery().setIntervention(cause, trueState).getInferenceModel(false);
-        StructuralCausalModel doFalse = (StructuralCausalModel)this.causalQuery().setIntervention(cause, falseState).getInferenceModel(false);
+        StructuralCausalModel doTrue = (StructuralCausalModel)this.causalQuery().setIntervention(cause, causeTrue).getInferenceModel(false);
+        StructuralCausalModel doFalse = (StructuralCausalModel)this.causalQuery().setIntervention(cause, causeFalse).getInferenceModel(false);
 
         StructuralCausalModel pns_model = (StructuralCausalModel) CausalOps.merge(reality, doTrue, doFalse);
 
@@ -100,8 +108,18 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         for(int x: CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
 
         CausalVE infInternal =  new CausalVE(pns_model);
-        BayesianFactor prob = (BayesianFactor) infInternal.causalQuery().setTarget(target).run();
-        return (BayesianFactor) FactorUtil.filter(FactorUtil.filter(prob, target[0], trueState), target[1], falseState);
+        Query q =  infInternal.causalQuery().setTarget(target);
+ /*
+        if(evidence != null){
+
+            int[] obsVars = Ints.concat(map.getEquivalentVars(1, evidence.keys()), map.getEquivalentVars(2, evidence.keys()));
+            int [] values = Ints.concat(evidence.values(), evidence.values());
+            TIntIntMap newEvidence = ObservationBuilder.observe(obsVars, values);
+
+        }
+ */
+        BayesianFactor prob = (BayesianFactor) q.run();
+        return (BayesianFactor) FactorUtil.filter(FactorUtil.filter(prob, target[0], effectTrue), target[1], effectFalse);
     }
 
 

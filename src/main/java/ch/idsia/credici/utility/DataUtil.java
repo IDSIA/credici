@@ -106,7 +106,7 @@ public class DataUtil {
 				throw new IllegalArgumentException("Overlapping domains");
 		BayesianFactor joint = getCounts(data, left.concat(right));
 		BayesianFactor jointRight = getCounts(data, right);
-		return joint.divide(jointRight);
+		return joint.divide(jointRight).replaceNaN(0.0);
 	}
 
 
@@ -260,6 +260,14 @@ public class DataUtil {
 		return Arrays.stream(data).map(d -> DataUtil.select(d, keys)).toArray(TIntIntMap[]::new);
 	}
 
+	public static TIntIntMap[] selectByValue(TIntIntMap[] data, TIntIntMap selection){
+		return Arrays.stream(data).filter( s -> {
+				for(int k: selection.keys())
+					if(selection.get(k)!=s.get(k)) return false;
+				return true;
+			}
+		).toArray(TIntIntMap[]::new);
+	}
 
 	public static TIntIntMap[] removeColumns(TIntIntMap[] data, int... keys){
 		return Arrays.stream(data).map(d -> DataUtil.remove(d, keys)).toArray(TIntIntMap[]::new);
@@ -309,6 +317,37 @@ public class DataUtil {
 
 		if(isComp) return data;
 		return null;
+	}
+
+	public static TIntIntMap[] renameVars(TIntIntMap[]data, int[] oldVars, int[] newVars){
+		final TIntIntMap map = ObservationBuilder.observe(oldVars, newVars);
+		return Arrays.stream(data).map(t -> {
+			TIntIntMap newTuple = new TIntIntHashMap();
+			for(int v : map.keys())
+				newTuple.put(map.get(v), t.get(v));
+			return newTuple;
+		}).toArray(TIntIntMap[]::new);
+	}
+
+	public static TIntIntMap[] vconcatBinary(TIntIntMap[] data1, TIntIntMap[] data2){
+		return Stream.concat(Stream.of(data1), Stream.of(data2)).toArray(TIntIntMap[]::new);
+	}
+	public static TIntIntMap[] vconcat(TIntIntMap[]...datasets){
+		TIntIntMap[] out = datasets[0];
+		for(int i=1; i<datasets.length; i++)
+			out = vconcatBinary(out, datasets[i]);
+		return out;
+	}
+
+
+	public static ObservationBuilder observe(int...varsAndValues){
+		if(varsAndValues.length % 2 != 0)
+			throw new IllegalArgumentException("Number of arguments should be pair");
+
+		return ObservationBuilder.observe(
+				IntStream.range(0, varsAndValues.length).filter(i -> i%2==0).map(i -> varsAndValues[i]).toArray(),
+				IntStream.range(0, varsAndValues.length).filter(i -> i%2==1).map(i -> varsAndValues[i]).toArray()
+		);
 	}
 
 	public static void main(String[] args) throws IOException {

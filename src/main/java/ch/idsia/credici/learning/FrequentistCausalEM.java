@@ -227,19 +227,19 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
             BayesianFactor p = null;
             switch (this.inferenceVariation){
-                case 0: p = inferenceVariation0(query, filteredObs); break;
-                case 1: p = inferenceVariation1(query, filteredObs); break;
-                case 2: p = inferenceVariation2(query, filteredObs, hash); break;
-                case 3: p = inferenceVariation3(query, filteredObs); break;
-                case 4: p = inferenceVariation4(query, filteredObs, hash); break;
+                case 0: p = inferenceVariation0(query, obs); break;
+                case 1: p = inferenceVariation1(query, obs); break;
+                case 2: p = inferenceVariation2(query, obs, hash); break;
+                case 3: p = inferenceVariation3(query, obs); break;
+                case 4: p = inferenceVariation4(query, obs, hash); break;
 
             }
+
             if(usePosteriorCache)
                 posteriorCache.put(hash, p);
             else
                 return p;
         }
-
         return posteriorCache.get(hash);
 
     }

@@ -7,6 +7,7 @@ import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -125,6 +126,25 @@ public class CausalGraphTools {
                 .stream()
                 .map(c -> IntStream.of(c).filter(v -> isEndogenous(dag, v)).toArray())
                 .collect(Collectors.toList());
+    }
+
+    public static boolean isCofounded(SparseDirectedAcyclicGraph dag, int x){
+        for(int u : getExogenousParents(dag, x)){
+            if(getEndogenousChildren(dag, u).length>1)
+                return true;
+        }
+        return false;
+    }
+    public static boolean isNotCofounded(SparseDirectedAcyclicGraph dag, int x) {
+        return !isCofounded(dag, x);
+    }
+
+    public static int[] getCofoundedVars(SparseDirectedAcyclicGraph dag){
+       return IntStream.of(getEndogenous(dag)).filter( x -> isCofounded(dag, x)).toArray();
+    }
+
+    public static int[] getNonCofoundedVars(SparseDirectedAcyclicGraph dag){
+        return ArraysUtil.difference(getEndogenous(dag), getCofoundedVars(dag));
     }
 
     public static void main(String[] args) {

@@ -45,7 +45,7 @@ Parameters CLI:
 -w -x 2 -m 500 -sc LLratio -th 0.999999 -a EMCC --seed 0 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
 -w -rw -x 2 -ii 100 -m 500 -sc LLratio -th 0.999999 -a EMCC --debug --seed 0 --cause 4 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
 -w -rw -x 1 -ii 5 -m 500 -sc LLratio -th 0.5 -a EMCC --debug --seed 5 --cause 3 --effect 0 ./papers/journalEM/models/triangolo/triangolo_causal.uai
--w -rw -x 1 -ii 5 -m 1 -sc LLratio -th 0.5 -a EMCC --debug --seed 5 --cause 3 --effect 0 /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo/triangolo_causal.uai
+-w -rw -x 1 -ii 5 -m 1 -sc KL -th 0.0 -a EMCC --debug --seed 5 --cause 3 --effect 0 /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo/triangolo_causal.uai
 * */
 
 
@@ -369,6 +369,10 @@ public class LearnAndCalculatePNS extends Terminal {
                     logger.warn("Cannot calculate the Likelihood for this model");
                 }
             }
+
+            if(ratios.size()>0)
+                logger.debug("Average ratio: "+ Arrays.stream(CollectionTools.toDoubleArray(ratios)).average().getAsDouble());
+
             addResults("ratio_", CollectionTools.toDoubleArray(ratios));
             addResults("ll_", CollectionTools.toDoubleArray(ll));
             addResults("datasize", data.length);

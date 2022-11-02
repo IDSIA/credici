@@ -473,6 +473,22 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return ch.idsia.credici.model.tools.CausalOps.intervention(this, var, state, true);
 	}
 
+	public StructuralCausalModel intervention(int var, int state, boolean removeDisconnected){
+		return ch.idsia.credici.model.tools.CausalOps.intervention(this, var, state, removeDisconnected);
+	}
+
+	public StructuralCausalModel intervention(TIntIntMap obs) {
+		StructuralCausalModel out = this.copy();
+		for(int v : obs.keys())
+			out = out.intervention(v, obs.get(v));
+		return out;
+	}
+	public StructuralCausalModel intervention(TIntIntMap obs, boolean removeDisconnected) {
+		StructuralCausalModel out = this.copy();
+		for(int v : obs.keys())
+			out = out.intervention(v, obs.get(v), removeDisconnected);
+		return out;
+	}
 
 	/**
 	 * Prints a summary of the SCM
@@ -896,19 +912,25 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		if(this.exoConnectComponents().stream().filter(c -> ArraysUtil.equals(exoVars, c, true, true)).count() != 1)
 			throw new IllegalArgumentException("Wrong exogenous variables.");
 
-		int[] chU = DAGUtil.getTopologicalOrder(this.getNetwork(), this.getEndogenousChildren(exoVars));
-
 		List domains = new ArrayList();
 
-		for(int k = 0; k<chU.length; k++) {
-			HashMap dom = new HashMap();
-			int x = chU[k];
-			int[] previous = IntStream.range(0, k).map(i -> chU[i]).toArray();
-			int[] right = ArraysUtil.unionSet(previous, this.getEndegenousParents(ArraysUtil.append(previous, x)));
-			dom.put("left", x);
-			dom.put("right", right);
-			//System.out.println(x+"|"+ Arrays.toString(right));
-			domains.add(dom);
+		int[] chU = this.getEndogenousChildren(exoVars);
+
+		if(chU.length>0) {
+			chU = DAGUtil.getTopologicalOrder(this.getNetwork(), chU);
+
+
+			for (int k = 0; k < chU.length; k++) {
+				HashMap dom = new HashMap();
+				int x = chU[k];
+				int[] finalChU = chU;
+				int[] previous = IntStream.range(0, k).map(i -> finalChU[i]).toArray();
+				int[] right = ArraysUtil.unionSet(previous, this.getEndegenousParents(ArraysUtil.append(previous, x)));
+				dom.put("left", x);
+				dom.put("right", right);
+				//System.out.println(x+"|"+ Arrays.toString(right));
+				domains.add(dom);
+			}
 		}
 		return domains;
 	}
@@ -1365,6 +1387,43 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public double logLikelihood(TIntIntMap[] data){
 		return Probability.logLikelihood(this.getCFactorsSplittedMap(),
 				DataUtil.getCFactorsSplittedMap(this, data), data.length);
+	}
+
+	public void removeDisconnected(){
+		for(int v : this.getDisconnected())
+			this.removeVariable(v);
+	}
+
+	public int[] intervenedVars(){
+		return IntStream.of(this.getEndogenousVars()).filter(x -> this.getExogenousParents(x).length==0).toArray();
+	}
+
+	public void fixIntervened(){
+		this.removeDisconnected();
+		for(int v : intervenedVars()){
+			int card = this.getDomain(v).getCombinations();
+			int u = this.addVariable(card, true);
+			BayesianFactor pu = this.getFactor(v).renameDomain(u);
+			this.addParent(v,u);
+			BayesianFactor fv = BayesianFactor.deterministic(this.getDomain(v), this.getDomain(u), IntStream.range(0,card).toArray());
+			this.setFactor(v,fv);
+			this.setFactor(u,pu);
+		}
+	}
+	public StructuralCausalModel getWithFixedIntervened(){
+		StructuralCausalModel out = this.copy();
+		out.fixIntervened();
+		return out;
+	}
+
+	public StructuralCausalModel subModel(int... variables){
+		StructuralCausalModel subModel = this.copy();
+		for(int v : subModel.getVariables())
+			if(!ArraysUtil.contains(v,variables)) {
+				subModel.removeVariable(v);
+			}
+
+		return subModel;
 	}
 
 }

@@ -112,8 +112,8 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.trainableVars = causalModel.getExogenousVars();
 
 
-		this.inputGenDist = genDist;
-		setTargetGenDist();
+		//this.inputGenDist = genDist;
+		//setTargetGenDist();
 
 	}
 
@@ -398,6 +398,7 @@ public class EMCredalBuilder extends CredalBuilder{
 			em = new WeightedCausalEM(startingModel).setRegularization(0.0)
 					.setStopCriteria(stopCriteria)
 					.setThreshold(threshold)
+					//.setInferenceVariation(0)
 					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
 		}else{

@@ -6,6 +6,7 @@ import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.factor.convert.BayesianToVertex;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
@@ -108,6 +109,10 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
         int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
         for(int x:CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
 
+        for(int v: pns_model.getVariables()){
+            if (pns_model.getFactor(v) instanceof BayesianFactor)
+                pns_model.setFactor(v, new BayesianToVertex().apply((BayesianFactor) pns_model.getFactor(v), v));
+        }
         CausalInference infInternal =  new CredalCausalVE(pns_model);
         VertexFactor prob = (VertexFactor) infInternal.causalQuery().setTarget(target).run();
         return (VertexFactor) FactorUtil.filter(FactorUtil.filter(prob, target[0], trueState), target[1], falseState);

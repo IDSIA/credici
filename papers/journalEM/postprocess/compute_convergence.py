@@ -63,6 +63,10 @@ if __name__ == "__main__":
     logger.info(f"will process {r} {eps}")
     logger.info(f"loading {ns.datafile}")
     d = pd.read_pickle(ns.datafile)
+    
+    if r > 0:
+        logger.info(f"Limiting to {r} samples")
+        d[column] = d[column].apply(lambda row: row[0:r])
 
     if ns.duplicate:
         d[column] = d.apply(lambda row: np.concatenate((row[column], row[column])), axis=1)

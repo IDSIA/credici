@@ -20,17 +20,30 @@ import java.util.stream.Collectors;
 
 public class DataIntegrator {
 
+    /** Map of datasets (with the initial variable indexes): intervention -> data **/
     private HashMap<TIntIntMap, TIntIntMap[]> datasets;
+
+    /** Map of datasets (with the variable indexes in de extended model): intervention -> data **/
     private HashMap<TIntIntMap, TIntIntMap[]> mappedDatasets;
+
+    /** Order in which interventions are considered */
     private List<TIntIntMap> interventionOrder;
 
-
+    /** Observational model */
     private StructuralCausalModel obsModel;
+
+    /** Final extended model */
     private StructuralCausalModel extendedModel;
+
+    /** Indicates if the extended model is built */
     boolean compiled = false;
+
     String description = "";
 
-
+    /**
+     * Constructor
+     * @param observationalModel
+     */
     public DataIntegrator(StructuralCausalModel observationalModel) {
         this.obsModel = observationalModel;
         datasets = new HashMap<>();
@@ -38,10 +51,23 @@ public class DataIntegrator {
 
     }
 
+    /**
+     * Builder from the observational model
+     * @param observationalModel
+     * @return
+     */
     public static DataIntegrator of(StructuralCausalModel observationalModel){
         return new DataIntegrator(observationalModel);
     }
 
+    /**
+     * Builder from the observational data and different interventional data
+     * @param model
+     * @param dataObs
+     * @param interventions
+     * @param datasets
+     * @return
+     */
     public static DataIntegrator of(StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets)  {
 
         DataIntegrator integrator = DataIntegrator.of(model);
@@ -57,21 +83,34 @@ public class DataIntegrator {
     }
 
 
-
+    /**
+     * Get the extended model for doing inference
+     * @return
+     */
     public StructuralCausalModel getExtendedModel() {
         requireCompiled();
         return extendedModel;
     }
 
+    /** Get the datasets with the original index variables */
     public HashMap<TIntIntMap, TIntIntMap[]> getOriginalDatasets() {
         return datasets;
     }
 
+    /** Set the observational data */
     public DataIntegrator setObservationalData(TIntIntMap[] data){
+        // Observational data is stored together with the rest of datasets and its key is an empty intervention: {} -> obsData
         setData(new TIntIntHashMap(), data);
         return this;
     }
 
+    /**
+     * Set the data associated to an intervention
+     *
+     * @param intervention
+     * @param data
+     * @return
+     */
     public DataIntegrator setData(TIntIntMap intervention, TIntIntMap[] data){
         for(int v : intervention.keys())
             if (!ArraysUtil.contains(v, this.obsModel.getEndogenousVars()))
@@ -85,11 +124,18 @@ public class DataIntegrator {
 
     }
 
+    /** Get the concatenated dataset from a set of interventions (with the indexes in the extended model)
+     *
+     * @param intervention
+     * @return
+     */
     public TIntIntMap[] getMappedData(TIntIntMap... intervention){
         requireCompiled();
         return DataUtil.vconcat(Arrays.stream(intervention).map(inter -> mappedDatasets.get(inter)).toArray(TIntIntMap[][]::new));
     }
 
+    /**
+     */
     public StructuralCausalModel subModel(TIntIntMap intervention){
 
         StructuralCausalModel subModel = this.getExtendedModel().copy();

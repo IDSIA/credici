@@ -34,6 +34,7 @@ import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
@@ -476,6 +477,17 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public StructuralCausalModel intervention(int var, int state, boolean removeDisconnected){
 		return ch.idsia.credici.model.tools.CausalOps.intervention(this, var, state, removeDisconnected);
 	}
+
+	// todo (David): unkown intervetion where the intervened X var is set with a uniform. Disconnected nodes are removed.
+	public StructuralCausalModel intervention(int var){
+		throw new NotImplementedException("not implemented yet");
+	}
+
+	// todo (David): unkown intervetion where the intervened X var is set with a uniform.
+	public StructuralCausalModel intervention(int var, boolean removeDisconnected){
+		throw new NotImplementedException("not implemented yet");
+	}
+
 
 	public StructuralCausalModel intervention(TIntIntMap obs) {
 		StructuralCausalModel out = this.copy();

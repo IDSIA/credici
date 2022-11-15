@@ -7,10 +7,8 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 public class IntegrationChecker {
 
@@ -37,7 +35,7 @@ public class IntegrationChecker {
         DataIntegrator Ig = DataIntegrator.of(obsModel);
         Ig.setObservationalData(obsData);
         for(int i = 0; i< interventions.length; i++)
-            Ig.setData(interventions[i], intDatasets[i]);
+            Ig.setData(intDatasets[i], interventions[i]);
 
         integrators.add(Ig.compile());
 
@@ -50,7 +48,7 @@ public class IntegrationChecker {
                 data = obsData;
             else
                 data = intDatasets[i-1];
-            Il.setData(this.interventions.get(i), data);
+            Il.setData(data, this.interventions.get(i));
             integrators.add(Il.compile());
         }
 

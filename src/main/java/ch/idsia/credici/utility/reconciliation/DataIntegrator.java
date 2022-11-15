@@ -12,11 +12,13 @@ import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class DataIntegrator {
 
@@ -75,7 +77,7 @@ public class DataIntegrator {
             integrator.setObservationalData(dataObs);
 
         for(int i = 0; i< interventions.length; i++)
-            integrator.setData(interventions[i], datasets[i]);
+            integrator.setData(datasets[i], interventions[i]);
 
         return integrator;
 
@@ -100,18 +102,31 @@ public class DataIntegrator {
     /** Set the observational data */
     public DataIntegrator setObservationalData(TIntIntMap[] data){
         // Observational data is stored together with the rest of datasets and its key is an empty intervention: {} -> obsData
-        setData(new TIntIntHashMap(), data);
+        setData(data, new TIntIntHashMap());
         return this;
     }
 
     /**
      * Set the data associated to an intervention
      *
-     * @param intervention
      * @param data
+     * @param intervention
      * @return
      */
-    public DataIntegrator setData(TIntIntMap intervention, TIntIntMap[] data){
+    public DataIntegrator setData(TIntIntMap[] data, TIntIntMap intervention , int... intervenedVars){
+
+
+        if(intervenedVars.length>0)
+            throw new NotImplementedException("Not implemented yet");   // todo: remove when unknown interventions are ready.
+
+        // Transform the unkown variabels
+        for (int v: intervenedVars) {
+            if (intervention.containsKey(v)) throw new IllegalArgumentException("Wrong intervention");
+            intervention.put(v, -1);
+        }
+
+        if(isApplicableIntervention(intervention)) throw new IllegalArgumentException("Wrong intervention");
+
         for(int v : intervention.keys())
             if (!ArraysUtil.contains(v, this.obsModel.getEndogenousVars()))
                 throw new IllegalArgumentException("Wrong intervention due to variable: "+v);
@@ -121,8 +136,38 @@ public class DataIntegrator {
 
         return this;
 
+    }
+
+    /**
+     *  Set the data associated to an unknown intervention
+     * @param intervenedVars
+     * @return
+     */
+    public DataIntegrator setData(TIntIntMap[] data, int... intervenedVars) {
+        if(intervenedVars.length==0) throw new IllegalArgumentException("Wrong number of interventions");
+        setData(data, new TIntIntHashMap(), intervenedVars);
+        return this;
+    }
+
+    private boolean isApplicableIntervention(TIntIntMap intervention){
+        // todo: an intervention is not applicable if match on the states except for those that are -1
+        for(TIntIntMap i : this.interventionOrder){
+            if(ArraysUtil.equals(i.keys(), intervention.keys(), true, false)){
+                boolean notApplicable_i = IntStream.of(i.keys()).allMatch(v -> {
+                    int val1 = i.get(v);
+                    int val2 = intervention.get(v);
+                    return val1==val2 || val1==-1 || val2==-1;
+                });
+
+                if(notApplicable_i)
+                    return false;
+
+            }
+        }
+        return true;
 
     }
+
 
     /** Get the concatenated dataset from a set of interventions (with the indexes in the extended model)
      *
@@ -135,6 +180,9 @@ public class DataIntegrator {
     }
 
     /**
+     * Get the sub-model associated to an intervention
+     * @param intervention
+     * @return
      */
     public StructuralCausalModel subModel(TIntIntMap intervention){
 
@@ -146,8 +194,13 @@ public class DataIntegrator {
             }
 
         return subModel;
-
     }
+
+
+    /**
+     * Get the dataset with the exten
+     * @return
+     */
     public TIntIntMap[] getExtendedData(){
         requireCompiled();
         return getMappedData(datasets.keySet().toArray(TIntIntMap[]::new));
@@ -315,8 +368,8 @@ public class DataIntegrator {
 
         DataIntegrator integrator = DataIntegrator.of(model)
                 //.setObservationalData(obsData)
-                .setData(inter0, interData0)
-                .setData(inter1, interData1)
+                .setData(interData0, inter0)
+                .setData(interData1, inter1)
                 .compile();
 
         System.out.println(integrator.getExtendedModel());

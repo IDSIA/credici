@@ -1,6 +1,5 @@
 package ch.idsia.credici.utility;
 
-import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.experiments.AsynIsCompatible;
 import ch.idsia.crema.data.ReaderCSV;
@@ -12,7 +11,6 @@ import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.InvokerWithTimeout;
 import com.opencsv.*;
 import com.opencsv.exceptions.CsvException;
-import com.opencsv.exceptions.CsvValidationException;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -20,7 +18,6 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -350,6 +347,40 @@ public class DataUtil {
 		);
 	}
 
+	public static List<HashMap<String, String>> removeWithKey(List<HashMap<String, String>> data, String key){
+		return data.stream().map(t -> {t.remove(key); return t;}).collect(Collectors.toList());
+	}
+
+	public static Set getDomain(List<HashMap<String, String>> data, String var){
+		return data.stream().map(t -> ((HashMap)t).get(var)).collect(Collectors.toSet());
+	}
+
+
+	public static HashMap<String, List> getDomains(List<HashMap<String, String>> data, String...vars){
+		HashMap<String, List> map = new HashMap();
+		for(String var : vars)
+			map.put(var, (List) getDomain(data, var).stream().collect(Collectors.toList()));
+		return map;
+	}
+
+	public static List<TIntIntMap> dataToNumeric(List<HashMap<String, String>> data,  String[] vars){
+		HashMap <String, List> domains = DataUtil.getDomains(data, vars);
+		List newData = new ArrayList();
+		for(HashMap t : (List<HashMap<String, String>>)data) {
+			TIntIntMap tNew = new TIntIntHashMap();
+			for(String var : (Set<String>)t.keySet()) {
+				String state = (String) t.get(var);
+				int varNum = Arrays.stream(vars).collect(Collectors.toList()).indexOf(var);
+				int stateNum = ((List) domains.get(var)).indexOf(state);
+				tNew.put(varNum, stateNum);
+			}
+			newData.add(tNew);
+		}
+		return newData;
+	}
+
+
+
 	public static void main(String[] args) throws IOException {
 
 		List<String[]> data = new ArrayList<>();
@@ -359,6 +390,7 @@ public class DataUtil {
 		toCSV("test_ig.csv", data.toArray(String[][]::new));
 
 	}
+
 
 
 }

@@ -12,7 +12,7 @@ def _compute_array(row, column, eps) :
     try:
         import warnings
         with warnings.catch_warnings(record=True) as w:
-            row[f"P_{r}_{eps}"],row[f"num_{r}_{eps}"],row[f"den_{r}_{eps}"],_,_ = convergence.p_eps_convergence(rho, eps)
+            row[f"P_{r}_{eps}"],row[f"num_{r}_{eps}"],row[f"den_{r}_{eps}"],_,_,_,_ = convergence.p_eps_convergence(rho, eps)
             row["warnings"] = len(w)
     except Exception as e:
         print(rho)

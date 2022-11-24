@@ -18,6 +18,7 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
+import ch.idsia.crema.model.Domain;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
@@ -478,14 +479,23 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return ch.idsia.credici.model.tools.CausalOps.intervention(this, var, state, removeDisconnected);
 	}
 
-	// todo (David): unkown intervetion where the intervened X var is set with a uniform. Disconnected nodes are removed.
+	/**
+	 * Intervention without making the intervened CPT deterministic
+	 */
 	public StructuralCausalModel intervention(int var){
-		throw new NotImplementedException("not implemented yet");
+		return intervention(var, true);
 	}
 
-	// todo (David): unkown intervetion where the intervened X var is set with a uniform.
 	public StructuralCausalModel intervention(int var, boolean removeDisconnected){
-		throw new NotImplementedException("not implemented yet");
+		StructuralCausalModel sm = ch.idsia.credici.model.tools.CausalOps.intervention(this, var, 0, removeDisconnected);
+		BayesianFactor bf = sm.getFactor(var);
+		Strides dom = bf.getDomain();
+		double p = 1.0 / dom.getCardinality(var);
+		double[] data = new double[dom.getCombinations()];
+		Arrays.fill(data, p);
+		bf.setData(data);
+		sm.setFactor(var, bf);
+		return sm;
 	}
 
 

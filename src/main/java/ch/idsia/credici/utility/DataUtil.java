@@ -320,10 +320,18 @@ public class DataUtil {
 		final TIntIntMap map = ObservationBuilder.observe(oldVars, newVars);
 		return Arrays.stream(data).map(t -> {
 			TIntIntMap newTuple = new TIntIntHashMap();
-			for(int v : map.keys())
-				newTuple.put(map.get(v), t.get(v));
+			for(int v : t.keys()) {
+				if(map.containsKey(v))
+					newTuple.put(map.get(v), t.get(v));
+				else
+					newTuple.put(v, t.get(v));
+			}
 			return newTuple;
 		}).toArray(TIntIntMap[]::new);
+	}
+
+	public static TIntIntMap[] renameVar(TIntIntMap[] data, int oldVar, int newVar) {
+		return renameVars(data, new int[]{oldVar}, new int[]{newVar});
 	}
 
 	public static TIntIntMap[] vconcatBinary(TIntIntMap[] data1, TIntIntMap[] data2){
@@ -377,6 +385,10 @@ public class DataUtil {
 			newData.add(tNew);
 		}
 		return newData;
+	}
+
+	public static TIntIntMap[] deepCopy(TIntIntMap[] data) {
+		return Arrays.stream(data).map(t -> new TIntIntHashMap(t)).toArray(TIntIntMap[]::new);
 	}
 
 

@@ -5,7 +5,9 @@ import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.Probability;
+import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -14,9 +16,7 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -29,7 +29,7 @@ public class DataIntegrator {
     private HashMap<TIntIntMap, TIntIntMap[]> mappedDatasets;
 
     /** Order in which interventions are considered */
-    private List<TIntIntMap> interventionOrder;
+    private List<TIntIntMap> interventionOrder = new ArrayList<>();
 
     /** Observational model */
     private StructuralCausalModel obsModel;
@@ -42,14 +42,23 @@ public class DataIntegrator {
 
     String description = "";
 
+    int[] studySpecificExoVars = null;
+
+    Set<Integer> studies;
+
+    private int studyVar = -1;
+
     /**
      * Constructor
      * @param observationalModel
      */
-    public DataIntegrator(StructuralCausalModel observationalModel) {
+    public DataIntegrator(StructuralCausalModel observationalModel, int... studySpecificExoVars) {
         this.obsModel = observationalModel;
         datasets = new HashMap<>();
         mappedDatasets = new HashMap<>();
+        studies = new HashSet<>();
+
+        this.studySpecificExoVars = studySpecificExoVars;
 
     }
 
@@ -58,8 +67,8 @@ public class DataIntegrator {
      * @param observationalModel
      * @return
      */
-    public static DataIntegrator of(StructuralCausalModel observationalModel){
-        return new DataIntegrator(observationalModel);
+    public static DataIntegrator of(StructuralCausalModel observationalModel, int... studySpecificExoVars){
+        return new DataIntegrator(observationalModel, studySpecificExoVars);
     }
 
     /**
@@ -100,9 +109,9 @@ public class DataIntegrator {
     }
 
     /** Set the observational data */
-    public DataIntegrator setObservationalData(TIntIntMap[] data){
+    public DataIntegrator setObservationalData(TIntIntMap[] data, int... study){
         // Observational data is stored together with the rest of datasets and its key is an empty intervention: {} -> obsData
-        setData(data, new TIntIntHashMap());
+        setData(data, new TIntIntHashMap(), new int[]{}, study);
         return this;
     }
 
@@ -113,29 +122,58 @@ public class DataIntegrator {
      * @param intervention
      * @return
      */
-    public DataIntegrator setData(TIntIntMap[] data, TIntIntMap intervention , int... intervenedVars){
+    public DataIntegrator setData(TIntIntMap[] data, TIntIntMap intervention, int... study){
+        return setData(data, intervention, new int[]{}, study);
+    }
 
+    /**
+     * Set the data associated to an intervention
+     *
+     * @param data
+     * @param intervention
+     * @return
+     */
+    public DataIntegrator setData(TIntIntMap[] data, TIntIntMap intervention , int [] intervenedVars, int... study){
 
-        if(intervenedVars.length>0)
-            throw new NotImplementedException("Not implemented yet");   // todo: remove when unknown interventions are ready.
+        if((!hasStudySpecificExoVars() && study.length>0) || (hasStudySpecificExoVars() && study.length !=1))
+            throw new IllegalArgumentException("Wrong value for study");
 
-        // Transform the unkown variabels
+        data = DataUtil.deepCopy(data);
+
+        // record the study
+        if(study.length>0) {
+            studies.add(study[0]);
+            data = Arrays.stream(data).map(t -> {
+                if(t.containsKey(-1)) throw new IllegalArgumentException("Input data cannot contain key -1");
+                t.put(-1, study[0]);
+                return t;
+            }).toArray(TIntIntMap[]::new);
+        }
+
+        // Transform the unknown variables
         for (int v: intervenedVars) {
             if (intervention.containsKey(v)) throw new IllegalArgumentException("Wrong intervention");
             intervention.put(v, -1);
         }
 
-        if(isApplicableIntervention(intervention)) throw new IllegalArgumentException("Wrong intervention");
+        if(!isApplicableIntervention(intervention)) throw new IllegalArgumentException("Wrong intervention");
 
         for(int v : intervention.keys())
             if (!ArraysUtil.contains(v, this.obsModel.getEndogenousVars()))
                 throw new IllegalArgumentException("Wrong intervention due to variable: "+v);
 
-        datasets.put(intervention, data);
+
+        putDatasets(intervention, data);
         compiled = false;
 
         return this;
 
+    }
+
+    private void putDatasets(TIntIntMap intervention, TIntIntMap[] data) {
+        if(datasets.containsKey(intervention))
+            data = DataUtil.vconcat(datasets.get(intervention), data);
+        datasets.put(intervention, data);
     }
 
     /**
@@ -143,9 +181,9 @@ public class DataIntegrator {
      * @param intervenedVars
      * @return
      */
-    public DataIntegrator setData(TIntIntMap[] data, int... intervenedVars) {
+    public DataIntegrator setData(TIntIntMap[] data, int[] intervenedVars, int... study) {
         if(intervenedVars.length==0) throw new IllegalArgumentException("Wrong number of interventions");
-        setData(data, new TIntIntHashMap(), intervenedVars);
+        setData(data, new TIntIntHashMap(), intervenedVars, study);
         return this;
     }
 
@@ -210,6 +248,12 @@ public class DataIntegrator {
     }
 
     private TIntIntMap[] transformData(TIntIntMap intervention, TIntIntMap[] data){
+
+        // transform study variable
+        if(hasStudySpecificExoVars()){
+            data = DataUtil.renameVar(data, -1, studyVar);
+        }
+
         if(intervention.size()==0)
             return data;
 
@@ -271,6 +315,22 @@ public class DataIntegrator {
                 .toArray(StructuralCausalModel[]::new);
 
         extendedModel = obsModel.merge(interModels);
+
+        if(hasStudySpecificExoVars()) {
+            int numStudies = Collections.max(studies) + 1;
+            if(numStudies<2)
+                throw new IllegalArgumentException("Number of studies must be greater than 1");
+            studyVar = extendedModel.addVariable(numStudies, false);
+            double[] values = IntStream.range(0,numStudies).mapToDouble(i->1.0/numStudies).toArray();
+            BayesianFactor pS = new BayesianFactor(extendedModel.getDomain(studyVar), values);
+            extendedModel.setFactor(studyVar, pS);
+            for(int u: obsModel.getExogenousVars()) {
+                extendedModel.addParent(u, studyVar);
+            }
+
+
+        }
+
     }
 
     public DataIntegrator compile(){
@@ -330,6 +390,14 @@ public class DataIntegrator {
         return description;
     }
 
+    public boolean hasStudySpecificExoVars() {
+        return studySpecificExoVars.length>0;
+    }
+
+    public int getStudyVar() {
+        return studyVar;
+    }
+
     @Override
     public String toString() {
         return "DataIntegrator{"+
@@ -337,6 +405,7 @@ public class DataIntegrator {
                 " datasets=" + datasets.size() +
                 ", interventionOrder=" + interventionOrder +
                 ", obsModel=" + hasObservational()+
+                ", studySpecific=" + hasStudySpecificExoVars() +
                 ", compiled=" + compiled +
                 '}';
     }

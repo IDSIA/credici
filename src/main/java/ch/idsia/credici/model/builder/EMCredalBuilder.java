@@ -94,7 +94,7 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public EMCredalBuilder(StructuralCausalModel causalModel, TIntIntMap[] data){
 		this.causalmodel = causalModel;
-		this.endogJointProbs = causalModel.endogenousBlanketProb();
+		//this.endogJointProbs = causalModel.endogenousBlanketProb();
 		this.data = data;
 		this.trainableVars = causalModel.getExogenousVars();
 
@@ -392,8 +392,9 @@ public class EMCredalBuilder extends CredalBuilder{
 		ExpectationMaximization em = null;
 		Collection stepArgs = null;
 		if(this.data==null) {
-			em = new BayesianCausalEM(startingModel).setKlthreshold(threshold).setRegularization(0.0);
-			stepArgs = (Collection) endogJointProbs.values();
+			throw new IllegalArgumentException("No data provided");
+			//em = new BayesianCausalEM(startingModel).setKlthreshold(threshold).setRegularization(0.0);
+			//stepArgs = (Collection) endogJointProbs.values();
 		}else if(weightedEM) {
 			em = new WeightedCausalEM(startingModel).setRegularization(0.0)
 					.setStopCriteria(stopCriteria)

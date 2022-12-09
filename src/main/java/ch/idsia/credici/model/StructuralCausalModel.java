@@ -1040,10 +1040,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public TIntIntMap[] samples(int N, int... vars) {
 		return IntStream.range(0, N).mapToObj(i -> sample(vars)).toArray(TIntIntMap[]::new);
 	}
+
 	public TIntIntMap[] samples(TIntIntMap[] observations, int... vars) {
 		return Stream.of(observations).map(obs -> this.sample(obs, vars)).toArray(TIntIntMap[]::new);
 	}
-
 
 
 
@@ -1051,9 +1051,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return IntStream.range(0, N).mapToObj(i -> this.sample(obs, vars)).toArray(TIntIntMap[]::new);
 	}
 
+
+
 	public TIntIntMap sample(int... vars) {
 		return sample(new TIntIntHashMap(), vars);
 	}
+
 	public TIntIntMap sample(TIntIntMap obs, int... vars){
 		for(int v : DAGUtil.getTopologicalOrder(this.getNetwork())){
 			if(!obs.containsKey(v)) {
@@ -1086,6 +1089,16 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				obs.remove(v);
 
 		return obs;
+	}
+
+	public TIntIntMap[] samplesIntervened(int N, int doVar, int... vars) {
+
+		TIntIntMap[] data = new TIntIntMap[]{};
+		for(int s=0;  s<this.getDomain(doVar).getCombinations(); s++){
+			TIntIntMap[] d = this.intervention(doVar, s, false).samples(N, vars);
+			data = DataUtil.vconcat(data, d);
+		}
+		return data;
 	}
 
 	public Strides endogenousMarkovBlanket(int v){
@@ -1448,6 +1461,11 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			}
 
 		return subModel;
+	}
+
+	public StructuralCausalModel subModel(TIntIntMap[] data){
+		int[] endoVars = DataUtil.variables(data);
+		return subModel(Ints.concat(endoVars, this.getExogenousParents(endoVars)));
 	}
 
 }

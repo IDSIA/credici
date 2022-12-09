@@ -20,11 +20,93 @@ import java.util.stream.IntStream;
 
 public class CausalOps {
 
+    public static StructuralCausalModel plateau(StructuralCausalModel model,  int N, int... globalVars){
+        if(N<2)
+            throw new IllegalArgumentException("Wrong plateau size");
+        StructuralCausalModel[] models = IntStream.range(0,N-1).mapToObj(n -> model.copy()).toArray(StructuralCausalModel[]::new);
+        return mergeOn(globalVars, model, models);
+    }
+
+
     /**
      * Merge the a SCM with other equivalent ones to create a counterfactual model.
+     * @param globalVars
      * @param models
      * @return
      */
+    public static StructuralCausalModel mergeOn(int[] globalVars, StructuralCausalModel m0, StructuralCausalModel... models) {
+
+        for(StructuralCausalModel m : models){
+            if (!Arrays.equals(m0.getExogenousVars(), m.getExogenousVars()) ||
+                    !Arrays.equals(m0.getEndogenousVars(), m.getEndogenousVars()))
+                throw new IllegalArgumentException("Error: models cannot be merged");
+        }
+
+        // Global vars must be root
+        for(int v: globalVars){
+            if(m0.getParents(v).length!=0)
+                throw new IllegalArgumentException("Error: global variables must be root");
+        }
+
+        //Indexes of variables should be consecutive
+        if(m0.getVariables().length != Ints.max(m0.getVariables())+1){
+            throw new IllegalArgumentException("Indexes of variables must be consecutive");
+        }
+
+        int[] localVars = ArraysUtil.difference(m0.getVariables(), globalVars);
+
+        // get the new variables
+        int[] merged_vars = IntStream.range(0, m0.getVariables().length + models.length* localVars.length).toArray();
+
+        //counterfactual mapping
+        WorldMapping map = new WorldMapping(merged_vars);
+
+
+
+        // add variables of world 0 (reality)
+        StructuralCausalModel merged = m0.copy();
+        IntStream.of(localVars)
+                .forEach(v->map.set(v,0,v));
+        IntStream.of(globalVars)
+                .forEach(v->map.set(v, WorldMapping.ALL,v));
+
+
+        int w = 1;
+        //StructuralCausalModel m = models[0];
+        for(StructuralCausalModel m: models){
+            // Add all the local variables
+            for(int x_0: localVars) {
+                int x_w = merged.addVariable(m.getSize(x_0), m.isExogenous(x_0));
+                map.set(x_w,w,x_0);
+            }
+            // add arcs into new local variables
+            for(int x_0: localVars) {
+                int x_w = map.getEquivalentVars(w,x_0);
+                for(int pa_0: m.getParents(x_0)) {
+                    int pa_w = pa_0;
+                    if(ArraysUtil.contains(pa_0, localVars))
+                        pa_w = map.getEquivalentVars(w, pa_0);
+                    merged.addParent(x_w, pa_w);
+                }
+                // Set the factor with the new domain
+                BayesianFactor f = m.getFactor(x_0);
+                f = f.renameDomain(map.getEquivalentVars(w,f.getDomain().getVariables()));
+                merged.setFactor(x_w, f);
+            }
+            w++;
+        }
+
+        // set the map
+        map.setModel(merged);
+        return merged;
+    }
+
+
+        /**
+         * Merge the a SCM with other equivalent ones to create a counterfactual model.
+         * @param models
+         * @return
+         */
     public static StructuralCausalModel merge(StructuralCausalModel reality, StructuralCausalModel... models) {
         for(StructuralCausalModel m : models){
             if (!Arrays.equals(reality.getExogenousVars(), m.getExogenousVars()) ||

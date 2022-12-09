@@ -392,6 +392,9 @@ public class DataUtil {
 	}
 
 
+	public static int[] variables(TIntIntMap[] data){
+		return Arrays.stream(data).map(d -> d.keys()).flatMapToInt(k -> Arrays.stream(k)).distinct().sorted().toArray();
+	}
 
 	public static void main(String[] args) throws IOException {
 

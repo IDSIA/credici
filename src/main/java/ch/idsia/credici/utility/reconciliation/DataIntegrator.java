@@ -2,6 +2,8 @@ package ch.idsia.credici.utility.reconciliation;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
+import ch.idsia.credici.model.counterfactual.WorldMapping;
+import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
@@ -36,6 +38,8 @@ public class DataIntegrator {
 
     /** Final extended model */
     private StructuralCausalModel extendedModel;
+
+    private StructuralCausalModel extendedMultiStudy = null;
 
     /** Indicates if the extended model is built */
     boolean compiled = false;
@@ -98,9 +102,19 @@ public class DataIntegrator {
      * Get the extended model for doing inference
      * @return
      */
-    public StructuralCausalModel getExtendedModel() {
+    public StructuralCausalModel getExtendedModel(boolean removeStudyVar) {
         requireCompiled();
-        return extendedModel;
+        if(!removeStudyVar)
+            return extendedModel;
+        return extendedMultiStudy;
+    }
+
+    /**
+     * Get the extended model for doing inference
+     * @return
+     */
+    public StructuralCausalModel getExtendedModel() {
+        return getExtendedModel(false);
     }
 
     /** Get the datasets with the original index variables */
@@ -239,9 +253,40 @@ public class DataIntegrator {
      * Get the dataset with the exten
      * @return
      */
-    public TIntIntMap[] getExtendedData(){
+
+    public TIntIntMap[] getExtendedData() {
+        return getExtendedData(false);
+    }
+
+    /**
+     * Get the dataset with the exten
+     * @return
+     */
+
+    public TIntIntMap[] getExtendedData(boolean removeStudyVar){
         requireCompiled();
-        return getMappedData(datasets.keySet().toArray(TIntIntMap[]::new));
+        TIntIntMap[] extData = getMappedData(datasets.keySet().toArray(TIntIntMap[]::new));
+        if(!removeStudyVar)
+            return extData;
+
+        WorldMapping map = extendedMultiStudy.getMap();
+        int S = this.getStudyVar();
+        TIntIntMap[] extDataMultiStudy =
+                Arrays.stream(extData).map(t -> {
+                    if(!t.containsKey(S))
+                        return t;
+                    TIntIntMap new_t = new TIntIntHashMap();
+                    int s = t.get(S);
+                    for(int v:t.keys()){
+                        if(v != S)
+                            new_t.put(map.getEquivalentVars(s, v), t.get(v));
+                    }
+                    return new_t;
+                }).toArray(TIntIntMap[]::new);
+
+        return extDataMultiStudy;
+
+
     }
     public TIntIntMap[] getObservationalData(){
         return datasets.get(new TIntIntHashMap());
@@ -261,7 +306,7 @@ public class DataIntegrator {
         int index = getInterventionIndex(intervention);
         if(!hasObservational()) index++;
         int[] newVars = extendedModel.getMap().getEquivalentVars(index, obsModel.getEndogenousVars());
-        return DataUtil.renameVars(datasets.get(intervention), obsModel.getEndogenousVars(), newVars);
+        return DataUtil.renameVars(data, obsModel.getEndogenousVars(), newVars);
 
     }
     private int getInterventionIndex(TIntIntMap inter){
@@ -271,6 +316,20 @@ public class DataIntegrator {
                return i;
        throw new IllegalArgumentException("Wrong intervention");
     }
+
+    public int getInterventionPosition(TIntIntMap inter){
+        int index = getInterventionIndex(inter);
+        if(!hasObservational()) index++;
+        return index;
+    }
+
+    public int getInterventionPosition(int var){
+        int index = getInterventionIndex(ObservationBuilder.observe(var, -1));
+        if(!hasObservational()) index++;
+        return index;
+    }
+
+
 
     public boolean hasObservational(){
         try{
@@ -328,6 +387,14 @@ public class DataIntegrator {
                 extendedModel.addParent(u, studyVar);
             }
 
+            // Extended model without StudyVar
+
+            StructuralCausalModel m = extendedModel.copy();
+            int S = this.getStudyVar();
+            int N = m.getDomain(S).getCombinations();
+            m.removeVariable(S);
+            m.fillExogenousWithRandomFactors(2);
+            extendedMultiStudy = CausalOps.plateau(m, N, this.getNonStudySpecificExoVars());
 
         }
 
@@ -367,6 +434,20 @@ public class DataIntegrator {
         return out;
     }
 
+    public StructuralCausalModel removeInterventionalFromMultiStudy(StructuralCausalModel extModel, int study) {
+        StructuralCausalModel m = obsModel.copy();
+        WorldMapping map = extendedMultiStudy.getMap();
+
+        for(int u: m.getExogenousVars()){
+            int u_ext = map.getEquivalentVars(study, u);
+            BayesianFactor f = new BayesianFactor(m.getDomain(u), extModel.getFactor(u_ext).getData());
+            m.setFactor(u, f);
+        }
+
+        return m;
+    }
+
+
     public double logLikelihoodAt(TIntIntMap inter, StructuralCausalModel fullModel){
         TIntIntMap[] data = this.getMappedData(inter);
         StructuralCausalModel subModel = fullModel.subModel(this.getVariablesAt(inter)).getWithFixedIntervened();
@@ -390,6 +471,14 @@ public class DataIntegrator {
         return description;
     }
 
+    public int[] getStudySpecificExoVars() {
+        return studySpecificExoVars;
+    }
+
+    public int[] getNonStudySpecificExoVars() {
+        return ArraysUtil.difference(this.obsModel.getExogenousVars(), getStudySpecificExoVars());
+    }
+
     public boolean hasStudySpecificExoVars() {
         return studySpecificExoVars.length>0;
     }
@@ -397,6 +486,23 @@ public class DataIntegrator {
     public int getStudyVar() {
         return studyVar;
     }
+
+    public Set<Integer> getStudies() {
+        return studies;
+    }
+
+    public StructuralCausalModel getObsModel() {
+        return obsModel;
+    }
+
+    public WorldMapping getMap(boolean removeStudyVar){
+        requireCompiled();
+        if(!removeStudyVar)
+            return this.extendedModel.getMap();
+        return this.extendedMultiStudy.getMap();
+    }
+
+
 
     @Override
     public String toString() {
@@ -408,6 +514,34 @@ public class DataIntegrator {
                 ", studySpecific=" + hasStudySpecificExoVars() +
                 ", compiled=" + compiled +
                 '}';
+    }
+
+    public void summary(){
+
+
+        boolean multiStudy = hasStudySpecificExoVars();
+
+        if(multiStudy){
+            System.out.println("Data integrator summary\n======================");
+            WorldMapping map = getMap(true);
+            StructuralCausalModel extModel = getExtendedModel(true);
+            int[] dataVars = DataUtil.variables(getExtendedData(true));
+            System.out.println("dataVars: "+Arrays.toString(dataVars));
+            for(int s : studies){
+                int[] vars = map.getVariablesIn(s);
+                System.out.println("Study "+s);
+                System.out.println(" - endo: "+Arrays.toString(ArraysUtil.intersection(vars, extModel.getEndogenousVars())));
+                System.out.println(" - exo: "+Arrays.toString(ArraysUtil.intersection(vars, extModel.getExogenousVars())));
+                System.out.println(" - dag: "+extModel.subModel(vars).getNetwork());
+            }
+        }else {
+            System.out.println(getExtendedModel(multiStudy));
+            System.out.println(DataUtil.variables(getExtendedData(multiStudy)));
+            //System.out.println(getMap(multiStudy));
+        }
+
+
+
     }
 
     public static void main(String[] args) {

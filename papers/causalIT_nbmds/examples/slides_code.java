@@ -66,8 +66,6 @@ public class slides_code {
 		hf.printLinearProblem();
 
 
-
-
 		// Intialize exact inference algorithm
 		CredalCausalVE cve = new CredalCausalVE(m, Arrays.asList(empProb));
 
@@ -87,7 +85,6 @@ public class slides_code {
 				.run();
 
 		System.out.println(counterfactualQuery.filter(4,0));
-
 
 
 	}

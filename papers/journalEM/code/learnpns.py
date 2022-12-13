@@ -19,11 +19,12 @@ id,seed=8,0
 id = int(sys.argv[1])
 seed = int(sys.argv[2])
 
-modelset = "synthetic/s1/"
+modelset = "synthetic/s12/"
 #modelset = "triangolo/"
 modelsetOutput = modelset
-modelsetOutput = "synthetic/s1d/"
+#modelsetOutput = "synthetic/s12/"
 
+EMruns = 1000
 filterbyid = True
 CAUSE_EFFECT = []
 heapGB = 64
@@ -144,5 +145,5 @@ for m in MODELS:
                 for criteria in SCRITERIA:
                     learnpns("EMCC", modelpath,
                              stop_criteria=criteria, th=th,
-                             executions=200,
+                             executions=EMruns,
                              output=outputpath, cause=c, effect=e, seed=seed)

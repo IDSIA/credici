@@ -9,7 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
-class Ace_Ext {
+public class Ace_Ext {
 
     // all varaibles from the BN
     private List<Variable> m_vars;

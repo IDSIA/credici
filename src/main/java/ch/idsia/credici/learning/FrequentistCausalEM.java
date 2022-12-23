@@ -232,6 +232,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 case 2: p = inferenceVariation2(query, obs, hash); break;
                 case 3: p = inferenceVariation3(query, obs); break;
                 case 4: p = inferenceVariation4(query, obs, hash); break;
+                case 5: p = inferenceVariationAce(query, filteredObs); break;
 
             }
 
@@ -242,6 +243,11 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         }
         return posteriorCache.get(hash);
 
+    }
+
+    private BayesianFactor inferenceVariationAce(int[] query, TIntIntMap filteredObs) {
+        
+        return null;
     }
 
     /*

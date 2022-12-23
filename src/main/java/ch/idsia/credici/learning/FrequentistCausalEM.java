@@ -48,6 +48,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private double threshold = 0.0;
 
+    private double smoothing = 0.0;
+
     public enum StopCriteria {
         KL,
         L1,
@@ -136,10 +138,19 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         updated = false;
         for (int var : trainableVars) {
             BayesianFactor countVar = counts.get(var);
+
+//            regularization = 1;
             if(regularization>0.0) {
                 BayesianFactor reg = posteriorModel.getFactor(var).scalarMultiply(regularization);
                 countVar = countVar.addition(reg);
             }
+
+            if(smoothing>0) {
+                double S = smoothing/posteriorModel.getDomain(var).getCombinations();
+                countVar.setData(Arrays.stream(countVar.getData()).map(v -> v+S).toArray());
+            }
+
+
             BayesianFactor f = countVar.divide(countVar.marginalize(var));
 
             // Store the previous factor and set the new one
@@ -179,6 +190,14 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         this.regularization = regularization;
         return this;
     }
+
+
+    public FrequentistCausalEM setSmoothing(double smoothing) {
+        this.smoothing = smoothing;
+        return this;
+    }
+
+
 
     public double getRegularization() {
         return regularization;

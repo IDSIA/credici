@@ -18,6 +18,7 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
@@ -960,15 +961,18 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		for(HashMap dom : this.getAllCFactorsSplittedDomains()){
 			int left = (int) dom.get("left");
 			int[] right = (int[]) dom.get("right");
+			System.out.println(left+"|"+Arrays.toString(right));
 			StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
-
+			//StructuralCausalModel infModel = this.copy();
 
 			VariableElimination inf = new FactorVariableElimination(infModel.getVariables());
 			inf.setFactors(infModel.getFactors());
 
 			BayesianFactor f = null;
-			if(!isMarkovianCC(left))
+			if(!isMarkovianCC(left)) {
 				f = (BayesianFactor) inf.conditionalQuery(left, right);
+
+			}
 			else{
 				int u = getExogenousParents(left)[0];
 				f = BayesianFactor.combineAll(this.getFactors(left, u)).marginalize(u);

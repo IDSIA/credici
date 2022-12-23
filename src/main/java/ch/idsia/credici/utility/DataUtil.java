@@ -147,6 +147,7 @@ public class DataUtil {
 			Strides leftDom = model.getDomain((int) dom.get("left"));
 			Strides rightDom = model.getDomain((int[]) dom.get("right"));
 			BayesianFactor f = DataUtil.getCondProb(data, leftDom, rightDom);
+			//System.out.println(left+"|"+Arrays.toString(right));
 			cfactors.put(left, f);
 		}
 		return cfactors;

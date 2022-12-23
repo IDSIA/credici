@@ -383,6 +383,7 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	private List<StructuralCausalModel> runEM() throws InterruptedException {
 
+		RandomUtil.setRandomSeed(1234);
 		StructuralCausalModel startingModel =
 				(StructuralCausalModel) BayesianFactor.randomModel(
 						causalmodel, 10, false
@@ -398,6 +399,7 @@ public class EMCredalBuilder extends CredalBuilder{
 			em = new WeightedCausalEM(startingModel).setRegularization(0.0)
 					.setStopCriteria(stopCriteria)
 					.setThreshold(threshold)
+					//.setSmoothing(1)
 					//.setInferenceVariation(0)
 					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
@@ -421,6 +423,7 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		if(verbose)
 			System.out.println(" calculated EM trajectory of "+(t.size()-1));
+
 
 		// Return the trajectories
 		return t;

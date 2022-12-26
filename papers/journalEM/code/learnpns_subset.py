@@ -23,12 +23,12 @@ N = int(sys.argv[4])
 
 
 
-modelset = "synthetic/s12/"
+modelset = "synthetic/s3/"
 #modelset = "triangolo/"
 modelsetOutput = modelset
 #modelsetOutput = "synthetic/s12/"
 
-EMruns = 1000
+EMruns = 200
 filterbyid = True
 CAUSE_EFFECT = []
 heapGB = 64
@@ -73,7 +73,7 @@ model_folder = Path(exp_folder, "models")
 data_folder = Path(exp_folder, "data")
 
 
-jar_file = Path(prj_path, "target/credici-0.1.3-jar-with-dependencies.jar")
+jar_file = Path(prj_path, "target/credici-0.1.5-dev-SNAPSHOT-jar-with-dependencies.jar")
 #java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
 java = "java"
 

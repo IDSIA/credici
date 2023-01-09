@@ -145,8 +145,8 @@ for m in MODELS:
     outputpath = Path(res_folder, modelsetOutput)
 
     for c,e in CAUSE_EFFECT:
-        #learnpns("CCVE", modelpath, output=outputpath, cause=c, effect=e)
-        #learnpns("CCALP", modelpath, output=outputpath, cause=c, effect=e)
+        learnpns("CCVE", modelpath, output=outputpath, cause=c, effect=e)
+        learnpns("CCALP", modelpath, output=outputpath, cause=c, effect=e)
         for th in TH:
                 for criteria in SCRITERIA:
                     learnpns("EMCC", modelpath,

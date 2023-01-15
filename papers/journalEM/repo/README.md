@@ -1,6 +1,6 @@
-# Bounding Counterfactuals under Selection Bias
+# On the Efficient Bounding of Counterfactual Queries
 
-This bundle contains the manuscript submited to the PGM2022 and entitled  "Bounding Counterfactuals under Selection Bias".
+This bundle contains the manuscript submitted to the _International Journal of Approximate Reasoning_ and entitled  "On the Efficient Bounding of Counterfactual Queries".
 The organisation  is the following:
 
 - _example_: code for replicating the examples in the paper and an additional toy example.

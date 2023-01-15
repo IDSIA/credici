@@ -383,7 +383,6 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	private List<StructuralCausalModel> runEM() throws InterruptedException {
 
-		RandomUtil.setRandomSeed(1234);
 		StructuralCausalModel startingModel =
 				(StructuralCausalModel) BayesianFactor.randomModel(
 						causalmodel, 10, false

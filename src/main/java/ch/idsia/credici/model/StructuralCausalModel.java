@@ -961,7 +961,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		for(HashMap dom : this.getAllCFactorsSplittedDomains()){
 			int left = (int) dom.get("left");
 			int[] right = (int[]) dom.get("right");
-			System.out.println(left+"|"+Arrays.toString(right));
+			//System.out.println(left+"|"+Arrays.toString(right));
 			StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
 			//StructuralCausalModel infModel = this.copy();
 

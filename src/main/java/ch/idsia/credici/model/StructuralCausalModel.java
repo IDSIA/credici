@@ -18,7 +18,6 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
-import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Domain;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
@@ -36,6 +35,7 @@ import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
@@ -476,8 +476,30 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public StructuralCausalModel intervention(int var, int state, boolean removeDisconnected){
-		return ch.idsia.credici.model.tools.CausalOps.intervention(this, var, state, removeDisconnected);
+		if(state>=0)
+			return ch.idsia.credici.model.tools.CausalOps.intervention(this, var, state, removeDisconnected);
+		return this.intervention(var, removeDisconnected);
 	}
+
+	/**
+	 * Intervention without making the intervened CPT deterministic
+	 */
+	public StructuralCausalModel intervention(int var){
+		return intervention(var, true);
+	}
+
+	public StructuralCausalModel intervention(int var, boolean removeDisconnected){
+		StructuralCausalModel sm = ch.idsia.credici.model.tools.CausalOps.intervention(this, var, 0, removeDisconnected);
+		BayesianFactor bf = sm.getFactor(var);
+		Strides dom = bf.getDomain();
+		double p = 1.0 / dom.getCardinality(var);
+		double[] data = new double[dom.getCombinations()];
+		Arrays.fill(data, p);
+		bf.setData(data);
+		sm.setFactor(var, bf);
+		return sm;
+	}
+
 
 	public StructuralCausalModel intervention(TIntIntMap obs) {
 		StructuralCausalModel out = this.copy();
@@ -1018,10 +1040,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public TIntIntMap[] samples(int N, int... vars) {
 		return IntStream.range(0, N).mapToObj(i -> sample(vars)).toArray(TIntIntMap[]::new);
 	}
+
 	public TIntIntMap[] samples(TIntIntMap[] observations, int... vars) {
 		return Stream.of(observations).map(obs -> this.sample(obs, vars)).toArray(TIntIntMap[]::new);
 	}
-
 
 
 
@@ -1029,9 +1051,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return IntStream.range(0, N).mapToObj(i -> this.sample(obs, vars)).toArray(TIntIntMap[]::new);
 	}
 
+
+
 	public TIntIntMap sample(int... vars) {
 		return sample(new TIntIntHashMap(), vars);
 	}
+
 	public TIntIntMap sample(TIntIntMap obs, int... vars){
 		for(int v : DAGUtil.getTopologicalOrder(this.getNetwork())){
 			if(!obs.containsKey(v)) {
@@ -1064,6 +1089,16 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				obs.remove(v);
 
 		return obs;
+	}
+
+	public TIntIntMap[] samplesIntervened(int N, int doVar, int... vars) {
+
+		TIntIntMap[] data = new TIntIntMap[]{};
+		for(int s=0;  s<this.getDomain(doVar).getCombinations(); s++){
+			TIntIntMap[] d = this.intervention(doVar, s, false).samples(N, vars);
+			data = DataUtil.vconcat(data, d);
+		}
+		return data;
 	}
 
 	public Strides endogenousMarkovBlanket(int v){
@@ -1426,6 +1461,11 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			}
 
 		return subModel;
+	}
+
+	public StructuralCausalModel subModel(TIntIntMap[] data){
+		int[] endoVars = DataUtil.variables(data);
+		return subModel(Ints.concat(endoVars, this.getExogenousParents(endoVars)));
 	}
 
 }

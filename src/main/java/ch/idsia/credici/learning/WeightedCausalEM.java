@@ -101,6 +101,7 @@ public class WeightedCausalEM extends FrequentistCausalEM {
                     // Case with missing data
                     BayesianFactor phidden_obs = posteriorInference(hidden, observation);
                     phidden_obs = phidden_obs.scalarMultiply(w);
+                    //System.out.println(phidden_obs);
                     counts.put(var, counts.get(var).addition(phidden_obs));
                 }else{
                     //fully-observable case

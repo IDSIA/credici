@@ -149,8 +149,8 @@ public class DataIntegrator {
      */
     public DataIntegrator setData(TIntIntMap[] data, TIntIntMap intervention , int [] intervenedVars, int... study){
 
-        if((!hasStudySpecificExoVars() && study.length>0) || (hasStudySpecificExoVars() && study.length !=1))
-            throw new IllegalArgumentException("Wrong value for study");
+        //if(//(!hasStudySpecificExoVars() && study.length>0) || (hasStudySpecificExoVars() && study.length !=1))
+        //    throw new IllegalArgumentException("Wrong value for study");
 
         data = DataUtil.deepCopy(data);
 
@@ -295,7 +295,7 @@ public class DataIntegrator {
     private TIntIntMap[] transformData(TIntIntMap intervention, TIntIntMap[] data){
 
         // transform study variable
-        if(hasStudySpecificExoVars()){
+        if(getNumStudies()>0){
             data = DataUtil.renameVar(data, -1, studyVar);
         }
 
@@ -375,7 +375,7 @@ public class DataIntegrator {
 
         extendedModel = obsModel.merge(interModels);
 
-        if(hasStudySpecificExoVars()) {
+        if(getNumStudies()>0) {
             int numStudies = Collections.max(studies) + 1;
             if(numStudies<2)
                 throw new IllegalArgumentException("Number of studies must be greater than 1");
@@ -491,6 +491,10 @@ public class DataIntegrator {
         return studies;
     }
 
+    public int getNumStudies(){
+        return studies.size();
+    }
+
     public StructuralCausalModel getObsModel() {
         return obsModel;
     }
@@ -519,7 +523,7 @@ public class DataIntegrator {
     public void summary(){
 
 
-        boolean multiStudy = hasStudySpecificExoVars();
+        boolean multiStudy = getNumStudies()>0;
 
         if(multiStudy){
             System.out.println("Data integrator summary\n======================");

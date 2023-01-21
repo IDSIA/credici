@@ -4,6 +4,7 @@ import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.CollectionTools;
+import ch.idsia.credici.utility.Combinatorial;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
@@ -78,28 +79,68 @@ public class SelectionBias {
 
 	public static TIntIntMap[] applySelector(TIntIntMap[] dataX, StructuralCausalModel model, int selectorVar){
 
-		int X[] = IntStream.of(model.getEndogenousVars()).filter(x -> x!=selectorVar).toArray();
 		int Xselecting[] = model.getEndegenousParents(selectorVar);
 		// Add the value of S
-		TIntIntMap[] data =  Stream.of(dataX).map(d -> {
+		return applyFunction(dataX, model.getFactor(selectorVar), Xselecting, selectorVar, true);
+
+	}
+	public static TIntIntMap[] applyFunction(TIntIntMap[] data, BayesianFactor fs, int[] Sparents, int selectorVar, boolean clean){
+		TIntIntMap[] dataS =  Stream.of(data).map(d -> {
+			if(ArraysUtil.intersection(d.keys(), Sparents).length==0)
+				return d;
 			TIntIntHashMap dnew = new TIntIntHashMap(d);
-			int valS = (int) model.getFactor(selectorVar).filter((TIntIntHashMap) DataUtil.select(d, Xselecting)).getData()[1];
+			int valS = (int) fs.filter((TIntIntHashMap) DataUtil.select(d, Sparents)).getData()[1];
 			dnew.put(selectorVar, valS);
 			return dnew;
 		}).toArray(TIntIntMap[]::new);
 
-
 		// Remove X values when  S=0
-		data =
-				Stream.of(data).map(d -> {
-					if(d.get(selectorVar)==0){
-						for(int x : X)
-							d.remove(x);
-					}
-					return d;
-				}).toArray(TIntIntMap[]::new);
-		return data;
+		if(clean) {
+			dataS =
+					Stream.of(dataS).map(d -> {
+						if (d.containsKey(selectorVar) && d.get(selectorVar) == 0) {
+							for (int x : d.keys())
+								if (x != selectorVar)
+									d.remove(x);
+						}
+						return d;
+					}).toArray(TIntIntMap[]::new);
+		}
+		return dataS;
 
+	}
+
+	public static double getAssignmentProbS1(TIntIntMap[] data, Strides SparentsDom, int... assignments){
+
+		int[] Sparents = SparentsDom.getVariables();
+
+		int S = Arrays.stream(Sparents).max().getAsInt()+1;
+		BayesianFactor fs = EquationBuilder.fromVector(
+				Strides.as(S,2),
+				SparentsDom,
+				assignments
+		);
+
+		TIntIntMap[] dataS = SelectionBias.applyFunction(data, fs, Sparents,  S,false);
+		return (double)Arrays.stream(dataS).filter(d -> d.get(S) == 1).count() / data.length;
+
+
+	}
+
+	public static int[] getClosestAssignment(TIntIntMap[] data , Strides SparentsDom, double target){
+		int[] best = null;
+		double minDiff = Double.POSITIVE_INFINITY;
+		int nCombPa = SparentsDom.getCombinations();
+		for(int[] assignments : Combinatorial.getCombinations(nCombPa, new int[]{0,1})){
+			double p1 = SelectionBias.getAssignmentProbS1(data, SparentsDom, assignments);
+			double diff = Math.abs(p1 - target);
+			if(diff < minDiff) {
+				best = assignments;
+				minDiff = diff;
+				if(diff==0) break;
+			}
+		}
+		return best;
 	}
 
 	public static int[] getAssignmentWithHidden(StructuralCausalModel model, int[] Sparents, int[]... hiddenConf){

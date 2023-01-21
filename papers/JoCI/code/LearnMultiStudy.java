@@ -111,7 +111,7 @@ public class LearnMultiStudy extends Terminal {
     @Override
     protected void entryPoint() throws Exception {
         init();
-        buildIntegrationModel();
+        buildAndLearn();
         learn();
         processResults();
         save();

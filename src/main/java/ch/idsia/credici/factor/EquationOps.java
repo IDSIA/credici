@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 public class EquationOps {
 	public static void setValue(BayesianFactor f, TIntIntHashMap exoPaValues, TIntIntHashMap endoPaValues, int var, int value){
@@ -330,5 +331,28 @@ public class EquationOps {
 			System.out.println(Arrays.toString(Y)+"="+Arrays.toString(yval));
 		}
 	}
+
+	public static int[] getAssignments(BayesianFactor f, int leftVar){
+		double[] values = f.getData();
+
+		if(f.getDomain().getVariables()[0]!=leftVar)
+			throw new IllegalArgumentException("The left variable should be the first in domain");
+
+		int paComb = values.length/f.getDomain().getCardinality(leftVar);
+
+
+
+		return Arrays.stream(ArraysUtil.reshape2d(values, paComb))
+				.mapToInt(v -> IntStream.range(0,v.length).filter(i->v[i]==1).findFirst().getAsInt())
+				.toArray();
+	}
+
+	public static BayesianFactor merge(int leftVar, int Dvar, BayesianFactor... eqs){
+		int[] newAssign = Stream.of(eqs).map(f -> EquationOps.getAssignments(f, leftVar)).flatMapToInt(Arrays::stream).toArray();
+		Strides leftDom = Strides.as(leftVar, eqs.length);
+		Strides newRightDom = DomainUtil.remove(eqs[0].getDomain(), leftVar).union(Strides.as(Dvar, eqs.length));
+		return EquationBuilder.fromVector(leftDom, newRightDom, newAssign);
+	}
+
 
 }

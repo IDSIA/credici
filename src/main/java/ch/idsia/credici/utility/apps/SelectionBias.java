@@ -6,6 +6,7 @@ import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.CollectionTools;
 import ch.idsia.credici.utility.Combinatorial;
 import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -198,4 +199,64 @@ public class SelectionBias {
 
 	}
 
+	public static TIntIntMap[] getDataVisible(TIntIntMap[] dataBiased, int selectVar){
+		return (TIntIntMap[]) Arrays.stream(DataUtil.removeColumns(dataBiased, selectVar)).filter(d->d.size()>0).toArray(TIntIntMap[]::new);
+	}
+
+	public static long getHiddenLen(TIntIntMap[] dataBiased, int selectVar) {
+		return Arrays.stream(DataUtil.removeColumns(dataBiased, selectVar)).filter(d->d.size()==0).count();
+	}
+	public static long getVisibleLen(TIntIntMap[] dataBiased, int selectVar) {
+		return Arrays.stream(DataUtil.removeColumns(dataBiased, selectVar)).filter(d->d.size()>1).count();
+	}
+
+	public static double logLikelihoodD1(StructuralCausalModel m, TIntIntMap[] dataBiased,  int selectVar){
+		TIntIntMap[] D1 = getDataVisible(dataBiased, selectVar);
+		if(ArraysUtil.contains(selectVar, m.getVariables())) {
+			m = m.copy();
+			m.removeVariable(selectVar);
+		}
+		return m.logLikelihood(D1);
+	}
+
+	public static double logLikelihoodD0(StructuralCausalModel modelBiased, TIntIntMap[] dataBiased,  int selectVar){
+
+		long lenD0 = Arrays.stream(DataUtil.removeColumns(dataBiased, selectVar)).filter(d->d.size()==0).count();
+		/*if(!ArraysUtil.contains(selectVar, modelBiased.getVariables()))
+			throw new IllegalStateException("Model should contain selection variable");
+
+		double p0 = modelBiased.getFactor(selectVar).filter(selectVar, 0).getData()[0];
+		*/
+
+		return lenD0 * Math.log(((double)lenD0/ dataBiased.length));
+		//return lenD0 * Math.log(p0);
+	}
+
+	public static double logLikelihood(StructuralCausalModel modelBiased, TIntIntMap[] dataBiased,  int selectVar){
+		return logLikelihoodD0(modelBiased,dataBiased, selectVar) + logLikelihoodD1(modelBiased, dataBiased, selectVar);
+	}
+
+
+	public static double maxLogLikelihood(StructuralCausalModel m, TIntIntMap[] dataBiased, int selectVar){
+		double llD0 = logLikelihoodD0(m, dataBiased, selectVar);
+		double maxLLD1 =  maxLogLikelihoodD1(m, dataBiased, selectVar);
+		double maxLL = maxLLD1;
+		if(!Double.isNaN(llD0))
+			maxLL += llD0;
+		return maxLL;
+	}
+
+	public static double maxLogLikelihoodD1(StructuralCausalModel m, TIntIntMap[] dataBiased, int selectVar){
+
+		TIntIntMap[] D1 = (TIntIntMap[]) Arrays.stream(DataUtil.removeColumns(dataBiased, selectVar)).filter(d->d.size()>0).toArray(TIntIntMap[]::new);
+		if(ArraysUtil.contains(selectVar, m.getVariables())) {
+			m = m.copy();
+			m.removeVariable(selectVar);
+		}
+		return Probability.logLikelihood(DataUtil.getCFactorsSplittedMap(m, D1), D1);
+	}
+
 }
+
+
+// tODO: CALCULATE maxloglikelihood for D1... now it's 0

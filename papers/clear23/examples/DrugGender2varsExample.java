@@ -1,5 +1,7 @@
 package examples;
 
+import ch.idsia.credici.factor.EquationBuilder;
+import ch.idsia.credici.factor.EquationOps;
 import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.FrequentistCausalEM;
@@ -9,11 +11,13 @@ import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.DomainUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.reconciliation.DataIntegrator;
 import ch.idsia.credici.utility.reconciliation.IntegrationChecker;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.RandomUtil;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
@@ -22,8 +26,10 @@ import jdk.jshell.spi.ExecutionControl;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 public class DrugGender2varsExample {
 
@@ -79,20 +85,19 @@ public class DrugGender2varsExample {
         IntegrationChecker checker = new IntegrationChecker(model, dataObs, interventions, datasets);
         System.out.println("Integration metric: "+checker.getMetric());
         //calculateExactPNS("CCVE Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets);
-        calculatePNS("Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets);
+        calculatePNS_2("Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets);
 
 
         interventions = new TIntIntMap[]{};
         datasets = new TIntIntMap[][]{};
         //calculateExactPNS("CCVE Observational", model, dataObs, interventions, datasets);
-        calculatePNS("Observational", model, dataObs, interventions, datasets);
-
+        //calculatePNS("Observational", model, dataObs, interventions, datasets);
 
 
         interventions = new TIntIntMap[]{DataUtil.observe(T,drug), DataUtil.observe(T,no_drug)};
         datasets = new TIntIntMap[][]{dataDoDrug, dataDoNoDrug};
         //calculateExactPNS("CCVE do(drug) + do(no_drug)", model, null, interventions, datasets);
-        calculatePNS("do(drug) + do(no_drug)", model, null, interventions, datasets);
+        calculatePNS_2("do(drug) + do(no_drug)", model, null, interventions, datasets);
 
         interventions = new TIntIntMap[]{DataUtil.observe(T,drug)};
         datasets = new TIntIntMap[][]{dataDoDrug};
@@ -164,6 +169,89 @@ public class DrugGender2varsExample {
 
     }
 
+
+    private static void calculatePNS_2(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws InterruptedException, ExecutionControl.NotImplementedException {
+
+        int Dcard = datasets.length;
+        if(dataObs !=null) Dcard +=1;
+
+
+        // Add the dataset variable
+        StructuralCausalModel extModel = model.copy();
+        int d = extModel.addVariable(Dcard, false);
+        int ud = extModel.addVariable(1, true);
+
+
+
+        int[] Dch = Arrays.stream(interventions).map(i -> i.keys()).flatMapToInt(Arrays::stream).distinct().toArray();
+
+        if(Dch.length>1)
+            throw new IllegalArgumentException("Method only available for one intervened variable");
+
+        int X = Dch[0];
+        extModel.addParent(X,d);
+
+        Strides left = model.getDomain(X);
+        Strides right = DomainUtil.remove(model.getFactor(X).getDomain(), X);
+        List eqs = Arrays.stream(interventions)
+                .map(i -> i.get(X)).map(v -> EquationBuilder.constant(left, right, v))
+                .collect(Collectors.toList());
+
+
+
+
+        int[] varOrder = ((BayesianFactor)eqs.get(0)).getDomain().getVariables();
+
+        if(dataObs !=null) eqs.add(0, model.getFactor(X).reorderDomain(varOrder));
+
+
+        BayesianFactor fnew = EquationOps.merge(X, d, (BayesianFactor[]) eqs.toArray(BayesianFactor[]::new));
+        extModel.setFactor(X,fnew);
+
+        // Set factor at D and UD
+        extModel.setFactor(ud , new BayesianFactor(extModel.getDomain(ud), new double[]{1.0}));
+        int finalDcard = Dcard;
+        extModel.setFactor(d, new BayesianFactor(extModel.getDomain(d,ud), IntStream.range(0,Dcard).mapToDouble(i -> 1.0/ finalDcard).toArray()));
+
+
+
+        TIntIntMap[][] datasetsExt = new TIntIntMap[Dcard][];
+        int i = 0;
+        if(dataObs!=null) {
+            datasetsExt[i] = DataUtil.addConstant(dataObs, d, 0);
+            i++;
+        }
+        for(TIntIntMap[] dataset_i : datasets){
+            datasetsExt[i] = DataUtil.addConstant(dataset_i, d, i);
+            i++;
+        }
+
+        TIntIntMap[] dataExt = DataUtil.vconcat(datasetsExt);
+
+
+
+        EMCredalBuilder builder = EMCredalBuilder.of(extModel, dataExt)
+                .setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
+                .setThreshold(0.0)
+                .setNumTrajectories(200)
+                .setWeightedEM(true)
+                .setVerbose(false)
+                .setMaxEMIter(300)
+                .setTrainableVars(model.getExogenousVars());
+
+
+        builder.build();
+
+        List selectedPoints = builder.getSelectedPoints();
+
+        CausalMultiVE inf = new CausalMultiVE(selectedPoints);
+        VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(T, S, drug, no_drug, survived, dead);
+
+        double pns_u = Math.max(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+        double pns_l = Math.min(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+        System.out.println("PNS=[" + pns_l + "," + pns_u + "]\t Datasets: " + description);
+
+    }
 
 
     private static void calculatePNS(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws InterruptedException, ExecutionControl.NotImplementedException {

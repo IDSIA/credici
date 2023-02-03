@@ -1422,8 +1422,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public double logLikelihood(TIntIntMap[] data){
-		return Probability.logLikelihood(this.getCFactorsSplittedMap(),
-				DataUtil.getCFactorsSplittedMap(this, data), data.length);
+		return Probability.logLikelihood(this.getCFactorsSplittedMap(), data, true);
 	}
 
 	public void removeDisconnected(){

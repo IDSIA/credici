@@ -481,6 +481,10 @@ public class EMCredalBuilder extends CredalBuilder{
 		return this;
 	}
 
+	public TIntIntMap[] getData() {
+		return data;
+	}
+
 	public static void main(String[] args) throws InterruptedException {
 
 		StructuralCausalModel m = null;

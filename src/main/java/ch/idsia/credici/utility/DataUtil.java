@@ -397,6 +397,10 @@ public class DataUtil {
 		return Arrays.stream(data).map(d -> d.keys()).flatMapToInt(k -> Arrays.stream(k)).distinct().sorted().toArray();
 	}
 
+	public static TIntIntMap[] addConstant(TIntIntMap[] data, int var, int value){
+		return Arrays.stream(data).map(d -> {d.put(var, value); return d;}).toArray(TIntIntMap[]::new);
+	}
+
 	public static void main(String[] args) throws IOException {
 
 		List<String[]> data = new ArrayList<>();
@@ -406,6 +410,7 @@ public class DataUtil {
 		toCSV("test_ig.csv", data.toArray(String[][]::new));
 
 	}
+
 
 
 

@@ -23,7 +23,7 @@ N = int(sys.argv[4])
 
 
 
-modelset = "synthetic/s1/"
+modelset = "synthetic/s12/"
 #modelset = "triangolo/"
 modelsetOutput = modelset
 #modelsetOutput = "synthetic/s12/"
@@ -106,13 +106,14 @@ MODELS = [MODELS[i] for i in range(len(MODELS)) if i%N==k]
 
 def learnintegrate(model, weighted = True, rewrite = False,
                    executions = 300, max_iter = 500, stop_criteria = "KL", th = 0.0,
-                   target_ps=0.25, output = "."):
+                   target_ps=0.25, localparams=True, output = "."):
 
     if stop_criteria == "LLratio": th = 1 - th
 
     args = ""
     if weighted: args += f"-w "
     if rewrite: args += f"-rw "
+    if localparams: args += "-lp "
     args += f"-x {executions} "
     args += f"-m {max_iter} "
     args += f"-sc {stop_criteria} "

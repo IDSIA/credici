@@ -173,10 +173,18 @@ public class EquationBuilder {
 
 
     public static BayesianFactor fromVector(Strides left, Strides right, int... assignments){
+        if(assignments.length==1) {
+            int val = assignments[0];
+            assignments = IntStream.range(0, right.getCombinations()).map(i-> val).toArray();
+        }
         return BayesianFactor.deterministic(left, right, assignments);
     }
 
-    public static BayesianFactor from2DArray(Strides left, Strides right, int[][] assignments) {
+    public static BayesianFactor constant(Strides left, Strides right, int value) {
+        return fromVector(left,right,value);
+    }
+
+        public static BayesianFactor from2DArray(Strides left, Strides right, int[][] assignments) {
         return fromVector(left, right, ArraysUtil.flattenInts(List.of(assignments)));
     }
 

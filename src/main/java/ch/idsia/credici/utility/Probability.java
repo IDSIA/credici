@@ -22,6 +22,7 @@ import com.opencsv.exceptions.CsvException;
 
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -41,9 +42,17 @@ public class Probability {
 		return L;
 	}
 
+	/// todo: check
 	public static double logLikelihood(BayesianFactor prob, BayesianFactor emp, int counts) {
 		if(!compareDomains(prob.getDomain(), emp.getDomain()))
 			throw new IllegalArgumentException("Wrong domains");
+
+		double s1 = Arrays.stream(prob.getData()).sum();
+		double s2 = Arrays.stream(emp.getData()).sum();
+
+		if(Math.abs(s1-1)>0.0001 || Math.abs(s2-1)>0.0001)
+			throw new IllegalArgumentException("Domains should be normalized");
+
 		double l = 0.0;
 		for(int i=0; i<prob.getDomain().getCombinations(); i++) {
 			if(prob.getValueAt(i) == 0){
@@ -56,6 +65,16 @@ public class Probability {
 		return l;
 	}
 
+	public static double logLikelihood(BayesianFactor prob, TIntIntMap[] data, boolean freqBased) {
+		if(freqBased)
+			return logLikelihood(prob, data);
+		double llk = 0;
+		for(TIntIntMap obs : data)
+			llk += logProb(prob, (TIntIntHashMap) obs);
+		return llk;
+	}
+
+	// todo Check
 	public static double logLikelihood(BayesianFactor prob, TIntIntMap[] data) {
 		Strides dom = prob.getDomain();
 		TIntIntMap[] D =  DataUtil.selectColumns(data, dom.getVariables());
@@ -95,11 +114,12 @@ public class Probability {
 
 	public static double logLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
 										 HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
-		double l = 0.0;
-		for(Set<Integer> k : emp.keySet())
-			l += Probability.logLikelihood((BayesianFactor) prob.get(k), (BayesianFactor)emp.get(k), counts);
-
-		return l;
+		double llk = 0.0;
+		for(Set<Integer> k : emp.keySet()) {
+			double l = Probability.logLikelihood((BayesianFactor) prob.get(k), (BayesianFactor) emp.get(k), counts);
+			llk += l;
+		}
+		return llk;
 	}
 
 	public static double logLikelihood(TIntObjectMap<BayesianFactor> prob,
@@ -112,16 +132,27 @@ public class Probability {
 
 	public static double logLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
 									   TIntIntMap[] data) {
-		double l = 0.0;
-		for(Set<Integer> k : prob.keySet())
-			l += Probability.logLikelihood((BayesianFactor) prob.get(k), data);
+		return logLikelihood(prob, data, true);
+	}
+	public static double logLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
+									   TIntIntMap[] data, boolean freqBased) {
+		double llk = 0.0;
+		for(Set<Integer> k : prob.keySet()) {
+			double l = Probability.logLikelihood((BayesianFactor) prob.get(k), data, freqBased);
+			llk += l;
+		}
 
-		return l;
+		return llk;
 	}
 
 	public static double logLikelihood(TIntObjectMap<BayesianFactor> prob,
 									   TIntIntMap[] data) {
 		return logLikelihood(FactorUtil.intMapToHashMap(prob), data);
+
+	}
+	public static double logLikelihood(TIntObjectMap<BayesianFactor> prob,
+									   TIntIntMap[] data, boolean freqBased) {
+		return logLikelihood(FactorUtil.intMapToHashMap(prob), data, freqBased);
 
 	}
 
@@ -163,9 +194,16 @@ public class Probability {
 	public static double maxLogLikelihood(TIntObjectMap<BayesianFactor> emp, int counts) {
 		return maxLogLikelihood(FactorUtil.intMapToHashMap(emp), counts);
 	}
-	public static double maxLogLikelihood(StructuralCausalModel model, TIntIntMap[] data){
-		TIntObjectMap<BayesianFactor> emp = DataUtil.getCFactorsSplittedMap(model, data);
-		return Probability.maxLogLikelihood(emp, data.length);
+
+	public static double maxLogLikelihood(StructuralCausalModel model, TIntIntMap[] data) {
+		return maxLogLikelihood(model, data, true);
+	}
+
+	public static double maxLogLikelihood(StructuralCausalModel model, TIntIntMap[] data, boolean freqBased){
+		//TIntObjectMap<BayesianFactor> emp = DataUtil.getCFactorsSplittedMap(model, data);
+		//return Probability.maxLogLikelihood(emp, data.length);
+		TIntObjectMap emp = DataUtil.getCFactorsSplittedMap(model, data);
+		return Probability.logLikelihood(emp, data, freqBased);
 	}
 
 
@@ -302,6 +340,9 @@ Probability.vertexInside(t.get(31).getFactor(4), (VertexFactor) this.trueCredalM
 	}
 
 
+	public static double logProb(BayesianFactor f, TIntIntHashMap obs){
+		return Math.log(FactorUtil.getValue(f, obs));
+	}
 
 
 

@@ -60,9 +60,11 @@ public class LearnMultiStudy extends Terminal {
     @CommandLine.Option(names={"-rw", "--rewrite"}, description = "If activated, results are rewritten. Otherwise, process is stopped if there are existing results.")
     boolean rewrite = false;
 
-
     @CommandLine.Option(names={"-o", "--output"}, description = "Output folder for the results. Default working dir.")
     String output = ".";
+
+    @CommandLine.Option(names={"-lp", "--localparam"}, description = "One of the exogenous variables is set as local parameter")
+    boolean localparam = false;
 
     @CommandLine.Option(names = {"-x", "--executions"}, description = "Number independent EM runs. Only for EM-based methods. Default to 40")
     private int executions = 40;
@@ -107,6 +109,7 @@ public class LearnMultiStudy extends Terminal {
         logger.info("Checking arguments");
         assertTrue(maxIter > 0, " Wrong value for maxIter: " + maxIter);
         assertTrue(executions > 0, " Wrong value for maxIter: " + executions);
+        assertTrue(localparam, "Not implemented for with all global parameters");
 
     }
 
@@ -330,6 +333,7 @@ public class LearnMultiStudy extends Terminal {
         str += "_mIter" + this.maxIter;
         str += "_w" + this.weighted;
         str += "_x" + this.executions;
+        str += "_lp" + this.localparam;
         str += "_tps"+String.valueOf(targetPS).replace(".","");
         str += "_" + this.seed;
 
@@ -427,6 +431,7 @@ public class LearnMultiStudy extends Terminal {
         addToAllResults("effect", effect);
         addToAllResults("trueState", trueState);
         addToAllResults("falseState", falseState);
+        addToAllResults("localparam", localparam);
 
         addToAllResults("target_ps1", targetPS);
         addToAllResults("ps1", pS1);

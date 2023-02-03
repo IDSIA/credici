@@ -311,7 +311,7 @@ public class ModelDataGenerator extends Terminal {
 		List<String[]> dataRes = new ArrayList<>();
 		dataRes.add(new String[]{"data_based", "cause", "effect",  "ace_l", "ace_u","pns_l", "pns_u"});
 
-
+		//"data_based", "cause", "effect",  "ace_l", "ace_u","pns_l", "pns_u"
 
 		// Queries data based
 

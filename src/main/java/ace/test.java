@@ -52,7 +52,7 @@ class Test {
 
 	// create an ace_ext object
 	String dire_net = dire + "/rbn.net";
-	Ace_Ext myObj = new Ace_Ext(dire_net, vars);
+	AceExt myObj = new AceExt(dire_net, vars, "src/resources/ace");
 
 	// prepare for the evidence and query nodes
 	List<String>query_nodes = Arrays.asList(vars);

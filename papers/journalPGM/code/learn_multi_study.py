@@ -125,7 +125,7 @@ def learnintegrate(model, weighted = True, rewrite = False,
 
     javafile = Path(code_folder, "LearnMultiStudy.java")
     print(javafile)
-    runjava(javafile, args_str=args, heap_gbytes=64)
+    runjava(javafile, args_str=args, heap_gbytes=128)
 
 ####
 

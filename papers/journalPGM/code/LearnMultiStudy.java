@@ -109,7 +109,7 @@ public class LearnMultiStudy extends Terminal {
         logger.info("Checking arguments");
         assertTrue(maxIter > 0, " Wrong value for maxIter: " + maxIter);
         assertTrue(executions > 0, " Wrong value for maxIter: " + executions);
-        assertTrue(localparam, "Not implemented for with all global parameters");
+        //assertTrue(localparam, "Not implemented for with all global parameters");
 
     }
 
@@ -168,6 +168,8 @@ public class LearnMultiStudy extends Terminal {
         learnMultiStudyModelbiased(data, null, dataInterXb, "Dobs+Dxb");
         learnMultiStudyModelbiased(null, dataInterX, dataInterXb, "Dx+Dxb");
         learnMultiStudyModelbiased(null, null, dataInterXb, "Dxb");
+        learnMultiStudyModelbiased(null, dataInterX, null, "Dx");
+
     }
 
 
@@ -185,7 +187,10 @@ public class LearnMultiStudy extends Terminal {
         boolean biased = false;
         DataIntegrator integrator = null;
         if(numDatasets>1) {
-            integrator = DataIntegrator.of(model, model.getExogenousParents(locaVar)[0]);
+            if(localparam)
+                integrator = DataIntegrator.of(model, model.getExogenousParents(locaVar)[0]);
+            else
+                integrator = DataIntegrator.of(model);
             int s = 0;
             if (dataObs != null) {
                 integrator.setObservationalData(dataObs, s);

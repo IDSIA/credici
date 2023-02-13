@@ -114,6 +114,23 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 				.toArray();
 	}
 
+	public double[] getIndividualPNS(int cause, int effect, int trueState, int falseState, int effectTrue, int effectFalse){
+		return this.getInferenceList()
+				.stream()
+				.mapToDouble( i -> {
+					try {
+						return i.probNecessityAndSufficiency(cause, effect, trueState, falseState, effectTrue, effectFalse).getValue(0);
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+						return Double.NaN;
+					} catch (ExecutionControl.NotImplementedException e) {
+						e.printStackTrace();
+						return Double.NaN;
+					}
+				})
+				.toArray();
+	}
+
 	@Override
 	public GenericFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
 

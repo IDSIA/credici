@@ -97,10 +97,10 @@ public class simpleExample {
   //          learnSingleStudyModel(dataObs, null, X, "Dobs");
   //          learnSingleStudyModel(null, dataInterX, X, "Dx");
 
-//            learnMultiStudyModelbiased(dataObs, null, dataInterXb, "PNS2':     Dobs + Dxb");
-//            learnMultiStudyModelbiased(null, dataInterX, dataInterXb, "PNS2:    Dx + Dxb");
+            learnMultiStudyModelbiased(dataObs, null, dataInterXb, "PNS2':     Dobs + Dxb");
+            learnMultiStudyModelbiased(null, dataInterX, dataInterXb, "PNS2:    Dx + Dxb");
 
-//            learnMultiStudyModelbiased(dataObs, dataInterX, dataInterXb, "PNS3: Dobs + Dx + Dxb ");
+            learnMultiStudyModelbiased(dataObs, dataInterX, dataInterXb, "PNS3: Dobs + Dx + Dxb ");
             //learnMultiStudyModelbiased(dataObs, dataInterX, null, "Dobs + Dx");
 
             //    learnSingleStudyModelbiased(null, null, dataInterXb, "Dxb");
@@ -132,8 +132,8 @@ public class simpleExample {
         int[] Sparents = new int[]{X,Y,W};
 
 
-        DataIntegrator integrator = DataIntegrator.of(model, model.getExogenousParents(locaVar)[0]);
-        //DataIntegrator integrator = DataIntegrator.of(model);
+        //DataIntegrator integrator = DataIntegrator.of(model, model.getExogenousParents(locaVar)[0]);
+        DataIntegrator integrator = DataIntegrator.of(model);
 
         //integrator.setData(dataInterX2, new int[]{X}, 0);
         int s = 0;

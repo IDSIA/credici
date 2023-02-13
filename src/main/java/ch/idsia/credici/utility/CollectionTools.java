@@ -3,6 +3,7 @@ package ch.idsia.credici.utility;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 
 import java.math.BigDecimal;
@@ -15,12 +16,19 @@ public class CollectionTools {
 	public static List<Integer> asList(int[] elements) {
 		return Arrays.stream(elements).boxed().collect(Collectors.toList());
 	}
+	public static List<Double> asList(double[] elements) {
+		return Arrays.stream(elements).boxed().collect(Collectors.toList());
+	}
 	public static int[] shuffle(int[] elements){
 		List aux = asList(elements);
 		Collections.shuffle(aux, RandomUtil.getRandom());
 		return Ints.toArray(aux);
 	}
-
+	public static double[] shuffle(double[] elements){
+		List aux = asList(elements);
+		Collections.shuffle(aux, RandomUtil.getRandom());
+		return Doubles.toArray(aux);
+	}
 	public static int[] toIntArray(List<Integer> list){
 		return list.stream().mapToInt(x-> (int)x).toArray();
 	}
@@ -116,5 +124,8 @@ public class CollectionTools {
 		return IntStream.range(0,n).map(i -> finalElements[i]).toArray();
 	}
 
-
+	public static double[] choice(int n, double... elements){
+		double[] finalElements =  CollectionTools.shuffle(elements);
+		return IntStream.range(0,n).mapToDouble(i -> finalElements[i]).toArray();
+	}
 }

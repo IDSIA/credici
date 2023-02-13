@@ -133,5 +133,5 @@ for tps in [0.25, 0.75]:
     for m in MODELS:
         modelpath = Path(model_folder, modelset, m)
         outputpath = Path(res_folder, modelsetOutput)
-        learnintegrate(modelpath, output=outputpath, target_ps=tps)
+        learnintegrate(modelpath, output=outputpath, target_ps=tps, localparams=False)
 

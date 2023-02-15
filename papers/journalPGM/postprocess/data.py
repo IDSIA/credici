@@ -1,24 +1,23 @@
-from unittest import case
+import pandas as pd
+import glob
+import numpy as np
 
 
-def load_data(folders, filter="", exact="", root="./"):
-    import pandas as pd
-    import glob
-    import numpy as np
-
+def load_data(folders, filter=""):
     d = pd.DataFrame()
     for folder in np.array([folders]).flatten():
         files = glob.glob(f"{folder}/*{filter}.csv")
         for f in files:
             d1 = pd.read_csv(f)
             d1["file"] = f
-            add_info(d1, f, root)
+            add_info(d1, f)
             d = pd.concat((d, d1))
-
+    
+    d = d.copy()
+    #d["modelFile"] = d["modelPath"].str.split("/").str[-1]
     return d.reset_index()
 
-def add_info(data, filename:str, root:str):
-
+def add_info(data, filename:str):
     # random_mc2_n11_mid3_d1000_05_mr098_r10_74_uai_emcc_llratio_th09999_mIter500_wtrue_x100_0
 
     parts = filename.split("/")[-1].split(".")[0].split("_")

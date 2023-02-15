@@ -10,10 +10,13 @@ import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.apps.SelectionBias;
 import ch.idsia.credici.utility.reconciliation.DataIntegrator;
+import ch.idsia.credici.utility.reconciliation.SimpleIntegrator;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
@@ -26,6 +29,9 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class DrugGenderExampleHybrid {
+
+    static int numruns = 300;
+    static int maxiter = 300;
 
     // T = 0, S = 1, G = 2
     static int T = 0;  //  Treatment
@@ -44,7 +50,8 @@ public class DrugGenderExampleHybrid {
     public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException, IOException, CsvException {
 
         //for(int seed=0;seed<10; seed++)
-        runEvol(0);
+        //runEvol(0);
+        run(0);
 
 
         // todo: extend
@@ -62,7 +69,9 @@ public class DrugGenderExampleHybrid {
 
         // Define counts and data
 
-        dataFromPaper(model);
+        //dataFromPaper(model);
+        //dataFromPaper(model, ObservationBuilder.observe(G,female), model.getEndogenousVars());
+        dataFromPaper(model, ObservationBuilder.observe(G,male), model.getEndogenousVars());
 
 
         ///
@@ -112,12 +121,18 @@ public class DrugGenderExampleHybrid {
         StructuralCausalModel model = (StructuralCausalModel) IO.read(folder+"/models/literature/consPearl.uai");
         //model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
 
-        // Define counts and data
 
+
+
+
+        // Define counts and data
         dataFromPaper(model);
+        //dataFromPaper(model, ObservationBuilder.observe(G,female), model.getEndogenousVars());
+        //dataFromPaper(model, ObservationBuilder.observe(G,male), model.getEndogenousVars());
         //dataRandom(model);
         //dataFromObservational(model);
 
+        System.out.println(DataUtil.getCFactorsSplittedMap(model, dataObs));
 
         ///
         TIntIntMap[] interventions= null;
@@ -125,10 +140,6 @@ public class DrugGenderExampleHybrid {
 
         interventions = new TIntIntMap[]{};
         datasets = new TIntIntMap[][]{};
-        //calculateExactPNS("CCVE Observational", model, dataObs, interventions, datasets);
-       // for(int i=0; i<5; i++)
-       //     calculatePNS("Observational["+i+"] = "+dataObs[i]+"", model, new TIntIntMap[]{dataObs[i]}, interventions, datasets);
-
 
 
         interventions = new TIntIntMap[]{};
@@ -146,36 +157,26 @@ public class DrugGenderExampleHybrid {
         int[] Sassig = SelectionBias.getAssignmentWithHidden(model, new int[]{T,S,G}, hidden);
         calculatePNS("Observational", model, dataObs, interventions, datasets, Sassig);
 
+        interventions = new TIntIntMap[]{DataUtil.observe(T,drug), DataUtil.observe(T,no_drug)};
+        datasets = new TIntIntMap[][]{dataDoDrug, dataDoNoDrug};
+        TIntIntMap[] datasetX = DataUtil.vconcat(dataDoDrug, dataDoNoDrug);
+
+        //calculatePNS("Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets, null);
+        //calculatePNS("Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets, Sassig);
+        //calculatePNS("Observational + do(drug, no_drug)", model, dataObs, datasetX, null);
+        //calculatePNS("Observational + do(drug, no_drug)", model, dataObs, datasetX, Sassig);
+
+
+        //calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, null, 0);
+        //calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, Sassig, 0);
+        //calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, null, 1);
+        //calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, Sassig, 1);
 
         interventions = new TIntIntMap[]{DataUtil.observe(T,drug), DataUtil.observe(T,no_drug)};
         datasets = new TIntIntMap[][]{dataDoDrug, dataDoNoDrug};
-        //calculateExactPNS("CCVE Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets);
-        calculatePNS("Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets, null);
-        calculatePNS("Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets, Sassig);
+        //calculatePNS("do(drug) + do(no_drug)", model, null, interventions, datasets, null);
+        //calculatePNS("do(drug, no_drug)", model, null, datasetX, null);
 
-
-        interventions = new TIntIntMap[]{DataUtil.observe(T,drug), DataUtil.observe(T,no_drug)};
-        datasets = new TIntIntMap[][]{dataDoDrug, dataDoNoDrug};
-        //calculateExactPNS("CCVE do(drug) + do(no_drug)", model, null, interventions, datasets);
-        calculatePNS("do(drug) + do(no_drug)", model, null, interventions, datasets, null);
-
-        interventions = new TIntIntMap[]{DataUtil.observe(T,drug)};
-        datasets = new TIntIntMap[][]{dataDoDrug};
-//        calculatePNS("do(drug)", model, null, interventions, datasets);
-
-        interventions = new TIntIntMap[]{DataUtil.observe(T,no_drug)};
-        datasets = new TIntIntMap[][]{dataDoNoDrug};
- //       calculatePNS("do(no_drug)", model, null, interventions, datasets);
-
-
-
-        interventions = new TIntIntMap[]{DataUtil.observe(T,drug)};
-        datasets = new TIntIntMap[][]{dataDoDrug};
-//        calculatePNS("Observational + do(drug)", model, dataObs, interventions, datasets);
-
-        interventions = new TIntIntMap[]{DataUtil.observe(T,no_drug)};
-        datasets = new TIntIntMap[][]{dataDoNoDrug};
- //       calculatePNS("Observational + do(no_drug)", model, dataObs, interventions, datasets);
 
 
 
@@ -204,6 +205,12 @@ public class DrugGenderExampleHybrid {
     }
 
     private static void dataFromPaper(StructuralCausalModel model) throws IOException {
+        dataFromPaper(model, null, model.getEndogenousVars());
+    }
+
+
+
+    private static void dataFromPaper(StructuralCausalModel model, TIntIntMap selection, int[] selectColumns) throws IOException {
         //// Observational data
         BayesianFactor countsObs = new BayesianFactor(model.getDomain(T,G,S));
         FactorUtil.setValue(countsObs, DataUtil.observe(T,drug, G,female, S,survived), 378);
@@ -216,8 +223,6 @@ public class DrugGenderExampleHybrid {
         FactorUtil.setValue(countsObs, DataUtil.observe(T,no_drug, G,male, S,dead), 180);
 
         dataObs = DataUtil.dataFromCounts(countsObs);
-        DataUtil.toCSV(folder+"/models/literature/dataPearlObs.csv", dataObs);
-        System.out.println("obs:\t"+DataUtil.getCFactorsSplittedMap(model, dataObs));;
 
         //// Interventional data do(T=drug)
         BayesianFactor countsDoDrug = new BayesianFactor(model.getDomain(T,G,S));
@@ -227,7 +232,8 @@ public class DrugGenderExampleHybrid {
         FactorUtil.setValue(countsDoDrug, DataUtil.observe(T,drug, G,male, S,dead), 510);
 
         dataDoDrug = DataUtil.dataFromCounts(countsDoDrug);
-        DataUtil.toCSV(folder+"/models/literature/dataPearlDoDrug.csv", dataDoDrug);
+
+
         System.out.println("do_drug\t"+DataUtil.getCFactorsSplittedMap(model, dataDoDrug));;
 
 
@@ -239,14 +245,25 @@ public class DrugGenderExampleHybrid {
         FactorUtil.setValue(countsDoNoDrug, DataUtil.observe(T,no_drug, G,male, S,dead), 790);
 
         dataDoNoDrug = DataUtil.dataFromCounts(countsDoNoDrug);
-        DataUtil.toCSV(folder+"/models/literature/dataPearlDoNoDrug.csv", dataDoNoDrug);
-        System.out.println("do_nodrug:\t"+DataUtil.getCFactorsSplittedMap(model, dataDoNoDrug));;
 
-        TIntIntMap[] dataAll = DataUtil.vconcat(dataObs, dataDoDrug, dataDoNoDrug);
-        System.out.println("obs+do_drug+do_nodrug:\t"+DataUtil.getCFactorsSplittedMap(model, dataAll));;
+        DataUtil.toCSV("./papers/journalPGM/data/dataObs.csv", dataObs);
+        DataUtil.toCSV("./papers/journalPGM/data/dataDoDrug.csv", dataDoDrug);
+        DataUtil.toCSV("./papers/journalPGM/data/dataDoNoDrug.csv", dataDoNoDrug);
 
-        TIntIntMap[] dataAllDo = DataUtil.vconcat(dataDoDrug, dataDoNoDrug);
-        System.out.println("do_drug+do_nodrug:\t"+DataUtil.getCFactorsSplittedMap(model, dataAllDo));;
+
+
+        if(selection != null && selection.size()>0) {
+            dataObs = DataUtil.selectByValue(dataObs, selection);
+            dataDoDrug = DataUtil.selectByValue(dataDoDrug, selection);
+            dataDoNoDrug = DataUtil.selectByValue(dataDoNoDrug, selection);
+        }
+        if(selectColumns.length>0){
+            dataObs = DataUtil.selectColumns(dataObs, selectColumns);
+            dataDoDrug = DataUtil.selectColumns(dataDoDrug, selectColumns);
+            dataDoNoDrug = DataUtil.selectColumns(dataDoNoDrug, selectColumns);
+        }
+
+
 
 
     }
@@ -263,8 +280,6 @@ public class DrugGenderExampleHybrid {
     }
 
     private static double[] calculatePNS(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets, int[] Sassig) throws InterruptedException, ExecutionControl.NotImplementedException {
-
-//        System.out.println("\n\n===="+description+"======");
 
         double ps1 = 1;
 
@@ -289,7 +304,6 @@ public class DrugGenderExampleHybrid {
 
             int N0 = (int) Arrays.stream(dataExt).filter(d -> d.containsKey(S) && d.get(S)==0).count();
             int N1 = (int) Arrays.stream(dataExt).filter(d -> d.containsKey(S) && d.get(S)==1).count();
-            //System.out.println("N0: "+N0+" N1: "+N1);
 
             ps1 = (double)(N1)/(N0+N1);
 
@@ -305,36 +319,25 @@ public class DrugGenderExampleHybrid {
             //        EMCredalBuilder builder = EMCredalBuilder.of(model, dataObs)
                     .setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
                     .setThreshold(0.0)
-                    .setNumTrajectories(300)
+                    .setNumTrajectories(numruns)
                     .setWeightedEM(true)
                     .setVerbose(false)
-                    .setMaxEMIter(300);
+                    .setMaxEMIter(maxiter);
 
-            //if(dataObs==null)
-            //    builder.setTrainableVars(model.getExogenousParents(G,S));
 
             builder.build();
             List selectedPoints = builder.getSelectedPoints().stream().map(m -> m.subModel(model.getVariables())).collect(Collectors.toList());
             int u = model.getExogenousParents(T)[0];
-/*
-            if(dataObs==null)
-                builder.getSelectedPoints().stream().forEach(m -> m.randomizeExoFactor(u, 5));
 
+            StructuralCausalModel m = (StructuralCausalModel) selectedPoints.get(0);
+            SimpleIntegrator si = new SimpleIntegrator(m, dataObs, interventions, datasets);
+            double llk = si.getExtendedModel().logLikelihood(si.getExtendedData());
+            System.out.println(llk);
 
-            System.out.println("Intevals for exoparent of T:"+
-                    IntervalFactor.mergeBounds(builder.getSelectedPoints().stream().map(m -> new BayesianToInterval().apply(m.getFactor(u), u)).toArray(IntervalFactor[]::new))
-            );
-
-*/
             CausalMultiVE inf = new CausalMultiVE(selectedPoints);
-            //VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(G, S, female, male, survived, dead);
             VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(T, S, drug, no_drug, survived, dead);
 
-            // P(survival_{G=female}, death_{G=male})
-            // P(survival_{drug}, death_{nodrug} )
-            //P(survival_{drug}, death_{nodrug} | )
 
-            //System.out.println(description);
             double pns_u = Math.max(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
             double pns_l = Math.min(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
             System.out.println("PNS=[" + pns_l + "," + pns_u + "]\t Datasets: " + description+" ps1 = " + ps1);
@@ -344,7 +347,227 @@ public class DrugGenderExampleHybrid {
     }
 
 
+    private static double[] calculatePNS(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] datasetX, int[] Sassig) throws InterruptedException, ExecutionControl.NotImplementedException {
 
+        double ps1 = 1;
+
+        DataIntegrator integrator = DataIntegrator.of(model);
+        if(dataObs != null)
+            integrator.setObservationalData(dataObs);
+
+        if(datasetX!=null)
+            integrator.setData(datasetX, new int[] {T});
+
+
+        TIntIntMap[] dataExt = integrator.getExtendedData();
+        StructuralCausalModel modelExt = integrator.getExtendedModel();
+
+
+
+        if(Sassig != null) {
+            // Integrate selection bias
+            modelExt = SelectionBias.addSelector(modelExt, new int[]{T,S,G}, Sassig);
+            int S = SelectionBias.findSelector(modelExt);
+            dataExt = SelectionBias.applySelector(dataExt, modelExt, S);
+
+            int N0 = (int) Arrays.stream(dataExt).filter(d -> d.containsKey(S) && d.get(S)==0).count();
+            int N1 = (int) Arrays.stream(dataExt).filter(d -> d.containsKey(S) && d.get(S)==1).count();
+
+            ps1 = (double)(N1)/(N0+N1);
+
+
+        }
+
+
+
+
+        RandomUtil.setRandomSeed(0);
+
+        EMCredalBuilder builder = EMCredalBuilder.of(modelExt, dataExt)
+                //        EMCredalBuilder builder = EMCredalBuilder.of(model, dataObs)
+                .setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
+                .setThreshold(0.0)
+                .setNumTrajectories(numruns)
+                .setWeightedEM(true)
+                .setVerbose(false)
+                .setMaxEMIter(maxiter);
+
+
+        builder.build();
+        List selectedPoints = builder.getSelectedPoints().stream().map(m -> m.subModel(model.getVariables())).collect(Collectors.toList());
+        int u = model.getExogenousParents(T)[0];
+
+
+        CausalMultiVE inf = new CausalMultiVE(selectedPoints);
+        VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(T, S, drug, no_drug, survived, dead);
+
+
+        double pns_u = Math.max(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+        double pns_l = Math.min(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+        System.out.println("PNS=[" + pns_l + "," + pns_u + "]\t Datasets: " + description+" ps1 = " + ps1);
+
+
+        return Doubles.concat(new double[]{ps1}, inf.getIndividualPNS(T, S, drug, no_drug, survived, dead));
+    }
+
+    private static double[] calculatePNSlocal(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] datasetX, int[] Sassig, int localState) throws InterruptedException, ExecutionControl.NotImplementedException {
+
+
+
+        double ps1 = 1;
+        int localVar = G;
+
+        DataIntegrator integrator = DataIntegrator.of(model, model.getExogenousParents(G)[0]);
+
+        int study = 0;
+        if(dataObs != null) {
+            integrator.setObservationalData(dataObs, study);
+            study++;
+        }
+        if(datasetX!=null) {
+            integrator.setData(datasetX, new int[]{T}, study);
+            study++;
+        }
+
+        TIntIntMap[] dataExt = integrator.getExtendedData(true);
+        StructuralCausalModel modelExt = integrator.getExtendedModel(true);
+
+        //System.out.println(Arrays.toString(DataUtil.variables(dataExt)));
+        //Arrays.stream(dataExt).forEach();
+
+
+        if(Sassig != null) {
+            // Integrate selection bias
+            modelExt = SelectionBias.addSelector(modelExt, new int[]{T,S,G}, Sassig);
+            int S = SelectionBias.findSelector(modelExt);
+            dataExt = SelectionBias.applySelector(dataExt, modelExt, S);
+
+            int N0 = (int) Arrays.stream(dataExt).filter(d -> d.containsKey(S) && d.get(S)==0).count();
+            int N1 = (int) Arrays.stream(dataExt).filter(d -> d.containsKey(S) && d.get(S)==1).count();
+
+            ps1 = (double)(N1)/(N0+N1);
+
+
+        }
+
+
+
+        modelExt = modelExt.subModel(dataExt);
+
+
+        RandomUtil.setRandomSeed(0);
+
+        //System.out.println(modelExt.getExogenousVars().length+" exo vars");
+
+        EMCredalBuilder builder = EMCredalBuilder.of(modelExt, dataExt)
+                //        EMCredalBuilder builder = EMCredalBuilder.of(model, dataObs)
+                .setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
+                .setThreshold(0.0)
+                .setNumTrajectories(numruns)
+                .setWeightedEM(true)
+                .setVerbose(false)
+                .setMaxEMIter(maxiter);
+
+
+        builder.build();
+        List selectedPoints = builder.getSelectedPoints().stream().map(
+                //m -> m.subModel(model.getVariables())
+                m -> integrator.removeInterventionalFromMultiStudy(m,localState)
+        ).collect(Collectors.toList());
+        int u = model.getExogenousParents(T)[0];
+
+
+        CausalMultiVE inf = new CausalMultiVE(selectedPoints);
+        VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(T, S, drug, no_drug, survived, dead);
+
+
+        double pns_u = Math.max(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+        double pns_l = Math.min(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+
+        String localtheta = "theta_I";
+        if(localState==0) localtheta="theta_O";
+        System.out.println("PNS=[" + pns_l + "," + pns_u + "]\t Datasets: " + description+" ps1 = " + ps1+"\t "+localtheta);
+
+
+        return Doubles.concat(new double[]{ps1}, inf.getIndividualPNS(T, S, drug, no_drug, survived, dead));
+    }
+
+/*
+    private static double[] calculatePNSlocal(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets, int[] Sassig, int localState) throws InterruptedException, ExecutionControl.NotImplementedException {
+
+        double ps1 = 1;
+        int localVar = G;
+
+        DataIntegrator integrator = DataIntegrator.of(model, localVar);
+        if(dataObs != null)
+            integrator.setObservationalData(dataObs);
+
+        for(int i = 0; i< interventions.length; i++)
+            integrator.setData(datasets[i], interventions[i]);
+
+
+        TIntIntMap[] dataExt = integrator.getExtendedData();
+        StructuralCausalModel modelExt = integrator.getExtendedModel();
+
+
+
+        if(Sassig != null) {
+            // Integrate selection bias
+            modelExt = SelectionBias.addSelector(modelExt, new int[]{T,S,G}, Sassig);
+            int S = SelectionBias.findSelector(modelExt);
+            dataExt = SelectionBias.applySelector(dataExt, modelExt, S);
+
+            int N0 = (int) Arrays.stream(dataExt).filter(d -> d.containsKey(S) && d.get(S)==0).count();
+            int N1 = (int) Arrays.stream(dataExt).filter(d -> d.containsKey(S) && d.get(S)==1).count();
+            ps1 = (double)(N1)/(N0+N1);
+        }
+
+
+
+
+        RandomUtil.setRandomSeed(0);
+
+        EMCredalBuilder builder = EMCredalBuilder.of(modelExt, dataExt)
+                //        EMCredalBuilder builder = EMCredalBuilder.of(model, dataObs)
+                .setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
+                .setThreshold(0.0)
+                .setNumTrajectories(numruns)
+                .setWeightedEM(true)
+                .setVerbose(false)
+                .setMaxEMIter(maxiter);
+
+        //if(dataObs==null)
+        //    builder.setTrainableVars(model.getExogenousParents(G,S));
+
+        builder.build();
+        List selectedPoints = builder.getSelectedPoints().stream().map(
+                m -> integrator.removeInterventionalFromMultiStudy(m,localState)
+        ).collect(Collectors.toList());
+        int u = model.getExogenousParents(T)[0];
+
+        StructuralCausalModel m = (StructuralCausalModel) selectedPoints.get(0);
+        SimpleIntegrator si = new SimpleIntegrator(m, dataObs, interventions, datasets);
+        double llk = si.getExtendedModel().logLikelihood(si.getExtendedData());
+        System.out.println(llk);
+
+        CausalMultiVE inf = new CausalMultiVE(selectedPoints);
+        VertexFactor res_obs = (VertexFactor) inf.probNecessityAndSufficiency(T, S, drug, no_drug, survived, dead);
+
+
+        double pns_u = Math.max(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+        double pns_l = Math.min(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
+
+        String localtheta = "theta_I";
+        if(localState==0) localtheta="theta_O";
+
+
+        System.out.println("PNS=[" + pns_l + "," + pns_u + "]\t Datasets: " + description+" ps1 = " + ps1+"\t "+localtheta);
+
+
+        return Doubles.concat(new double[]{ps1}, inf.getIndividualPNS(T, S, drug, no_drug, survived, dead));
+    }
+
+*/
     private static void calculateExactPNS(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws InterruptedException, ExecutionControl.NotImplementedException {
 
 
@@ -371,8 +594,6 @@ public class DrugGenderExampleHybrid {
         double pns_u = Math.max(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
         double pns_l = Math.min(res_obs.getData()[0][0][0], res_obs.getData()[0][1][0]);
         System.out.println("PNS=[" + pns_l + "," + pns_u + "]\t Datasets: " + description);
-
-
 
     }
 

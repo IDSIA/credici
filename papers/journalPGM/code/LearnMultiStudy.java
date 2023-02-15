@@ -15,6 +15,7 @@ import ch.idsia.credici.utility.apps.SelectionBias;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.credici.utility.reconciliation.DataIntegrator;
+import ch.idsia.credici.utility.reconciliation.SimpleIntegrator;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -276,6 +277,8 @@ public class LearnMultiStudy extends Terminal {
                 .setStopCriteria(stopCriteria)
                 .build();
 
+
+
         int[] iter = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
         int finalS = numDatasets;
         DataIntegrator finalIntegrator = integrator;
@@ -290,6 +293,10 @@ public class LearnMultiStudy extends Terminal {
                         .collect(Collectors.toList());
 
         Watch.stopAndLog(logger, "Finished learning in: ");
+
+
+
+
         addResults("time_learn", Watch.getTime(), integrator.getDescription());
 
         /// Inference

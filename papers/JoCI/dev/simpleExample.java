@@ -43,8 +43,6 @@ public class simpleExample {
 
     public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException, IOException, CsvException {
 
-
-
         String endoArcs = "(0,1),(1,2),(2,3)";
         SparseDirectedAcyclicGraph endoDag = DAGUtil.build(endoArcs);
         SparseDirectedAcyclicGraph exoDAG = endoDag.copy();

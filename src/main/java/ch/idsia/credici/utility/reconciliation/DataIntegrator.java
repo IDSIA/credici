@@ -93,8 +93,6 @@ public class DataIntegrator {
             integrator.setData(datasets[i], interventions[i]);
 
         return integrator;
-
-
     }
 
 

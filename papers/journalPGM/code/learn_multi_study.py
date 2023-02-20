@@ -73,6 +73,8 @@ data_folder = Path(exp_folder, "data")
 
 
 jar_file = Path(prj_path, "target/credici.jar")
+jar_file = Path(prj_path, "target/credici-0.1.5-dev-SNAPSHOT-jar-with-dependencies.jar")
+
 #java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
 java = "java"
 

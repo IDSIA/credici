@@ -50,3 +50,8 @@ print(info.markovianity.groupby(info.markovianity).count())
 
 print(info.num_vars.groupby(info.num_vars).count())
 print(info.num_endo_vars.groupby(info.num_endo_vars).count())
+
+info.shape
+
+info.describe()["datasize"]
+info.describe()["num_endo_vars"]

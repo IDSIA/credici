@@ -17,6 +17,7 @@ import ch.idsia.credici.utility.reconciliation.DataIntegrator;
 import ch.idsia.credici.utility.reconciliation.IntegrationChecker;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.RandomUtil;
 import com.opencsv.exceptions.CsvException;
@@ -116,6 +117,12 @@ public class DrugGender2varsExampleHybrid {
         //calculatePNS("Observational + do(no_drug)", model, dataObs, interventions, datasets);
     }
 
+    private static void dataFromPaper(StructuralCausalModel model) throws IOException {
+        dataFromPaper(model, null, model.getEndogenousVars());
+    }
+
+
+
     private static void dataFromPaper(StructuralCausalModel model, TIntIntMap selection, int[] selectColumns) throws IOException {
         //// Observational data
         BayesianFactor countsObs = new BayesianFactor(model.getDomain(T,G,S));
@@ -152,6 +159,12 @@ public class DrugGender2varsExampleHybrid {
 
         dataDoNoDrug = DataUtil.dataFromCounts(countsDoNoDrug);
 
+        DataUtil.toCSV("./papers/journalPGM/data/dataObs.csv", dataObs);
+        DataUtil.toCSV("./papers/journalPGM/data/dataDoDrug.csv", dataDoDrug);
+        DataUtil.toCSV("./papers/journalPGM/data/dataDoNoDrug.csv", dataDoNoDrug);
+
+
+
         if(selection != null && selection.size()>0) {
             dataObs = DataUtil.selectByValue(dataObs, selection);
             dataDoDrug = DataUtil.selectByValue(dataDoDrug, selection);
@@ -163,13 +176,10 @@ public class DrugGender2varsExampleHybrid {
             dataDoNoDrug = DataUtil.selectColumns(dataDoNoDrug, selectColumns);
         }
 
-        dataAll = DataUtil.vconcat(dataObs, dataDoDrug, dataDoNoDrug);
 
 
 
     }
-
-
     private static void calculatePNS_2(String description, StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws InterruptedException, ExecutionControl.NotImplementedException {
 
         int Dcard = datasets.length;

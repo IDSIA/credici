@@ -128,10 +128,10 @@ def learnintegrate(model, weighted = True, rewrite = False,
     runjava(javafile, args_str=args, heap_gbytes=128)
 
 ####
-
-for tps in [0.25, 0.75]:
-    for m in MODELS:
-        modelpath = Path(model_folder, modelset, m)
-        outputpath = Path(res_folder, modelsetOutput)
-        learnintegrate(modelpath, output=outputpath, target_ps=tps, localparams=False)
+for lp in [True, False]:
+    for tps in [0.25, 0.75]:
+        for m in MODELS:
+            modelpath = Path(model_folder, modelset, m)
+            outputpath = Path(res_folder, modelsetOutput)
+            learnintegrate(modelpath, output=outputpath, target_ps=tps, localparams=lp)
 

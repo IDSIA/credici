@@ -25,8 +25,8 @@ N = int(sys.argv[4])
 
 modelset = "synthetic/s12/"
 #modelset = "triangolo/"
-modelsetOutput = modelset
-#modelsetOutput = "synthetic/s12/"
+#modelsetOutput = modelset
+modelsetOutput = "synthetic/s12b/"
 
 filterbyid = True
 CAUSE_EFFECT = []

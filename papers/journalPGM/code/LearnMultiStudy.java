@@ -143,7 +143,7 @@ public class LearnMultiStudy extends Terminal {
 
     }
 
-    public void buildAndLearn() throws InterruptedException, ExecutionControl.NotImplementedException {
+    public void buildAndLearn_old() throws InterruptedException, ExecutionControl.NotImplementedException {
 
         selectCauseEffect();
         logger.info("Set cause="+cause+" effect="+effect+" Z="+Z+" W="+W);
@@ -174,6 +174,43 @@ public class LearnMultiStudy extends Terminal {
     }
 
 
+    public void buildAndLearn() throws InterruptedException, ExecutionControl.NotImplementedException {
+
+        selectCauseEffect();
+        logger.info("Set cause="+cause+" effect="+effect+" Z="+Z+" W="+W);
+        boolean isCofounded = CausalGraphTools.isCofounded(model.getNetwork(), cause);
+        boolean dseparated = DAGUtil.dseparated(model.getNetwork(), model.getExogenousParents(cause)[0], effect);
+        if(!isCofounded || dseparated)
+            throw new IllegalArgumentException("Error setting cause/effect");
+
+
+        if(!List.of(cause,effect,Z,W).stream().sequential().allMatch(new HashSet<>()::add))
+            throw new IllegalArgumentException("Error setting cause/effect");
+
+
+        Random r = RandomUtil.getRandom();
+        RandomUtil.setRandomSeed(0);
+        // Data sampling
+        TIntIntMap[] dataInterX = model.samplesIntervened(data.length / 2, cause, model.getEndogenousVars());
+        TIntIntMap[] dataInterZb = model.samplesIntervened(data.length / 2, Z, model.getEndogenousVars());
+
+        RandomUtil.setRandom(r);
+
+
+        learnMultiStudyModelbiasedXZ(data, dataInterX, dataInterZb, "Dobs+Dx+Dzb ");
+        learnMultiStudyModelbiasedXZ(data, null, dataInterZb, "Dobs+Dzb ");
+        learnMultiStudyModelbiasedXZ(data, null, null, "Dobs ");
+
+
+
+        // Learn all the models
+/*        learnMultiStudyModelbiased(data, dataInterX, dataInterXb, "Dobs+Dx+Dxb ");
+        learnMultiStudyModelbiased(data, null, dataInterXb, "Dobs+Dxb");
+        learnMultiStudyModelbiased(null, dataInterX, dataInterXb, "Dx+Dxb");
+        learnMultiStudyModelbiased(null, null, dataInterXb, "Dxb");
+        learnMultiStudyModelbiased(null, dataInterX, null, "Dx");
+*/
+    }
 
     private void learnMultiStudyModelbiased(TIntIntMap[] dataObs, TIntIntMap[] dataInterX, TIntIntMap[] dataInterXb, String descr) throws InterruptedException, ExecutionControl.NotImplementedException {
 
@@ -321,7 +358,156 @@ public class LearnMultiStudy extends Terminal {
 
     }
 
+    private void learnMultiStudyModelbiasedXZ(TIntIntMap[] dataObs, TIntIntMap[] dataInterX, TIntIntMap[] dataInterZb, String descr) throws InterruptedException, ExecutionControl.NotImplementedException {
 
+
+        int locaVar = W;
+        int[] Sparents = new int[]{cause, effect, W};
+
+        logger.info("Preparing model: "+descr);
+        results.put(descr, new HashMap<String, String>());
+
+        int numDatasets = (int) Stream.of(dataObs, dataInterX, dataInterZb).filter(d -> d != null).count();
+        boolean biased = false;
+        DataIntegrator integrator = null;
+        if(numDatasets>1) {
+            if(localparam)
+                integrator = DataIntegrator.of(model, model.getExogenousParents(locaVar)[0]);
+            else
+                integrator = DataIntegrator.of(model);
+            int s = 0;
+            if (dataObs != null) {
+                integrator.setObservationalData(dataObs, s);
+                s++;
+            }
+
+            if (dataInterX != null) {
+                integrator.setData(dataInterX, new int[]{cause}, s);
+                s++;
+            }
+
+            if (dataInterZb != null) {
+                biased = true;
+                integrator.setData(dataInterZb, new int[]{Z}, s);
+                s++;
+            }
+
+
+        }else{
+            integrator = DataIntegrator.of(model);
+            if (dataObs != null)
+                integrator.setObservationalData(dataObs);
+
+
+
+            if (dataInterX != null)
+                integrator.setData(dataInterX, new int[]{cause});
+            if (dataInterZb != null) {
+                biased = true;
+                integrator.setData(dataInterZb, new int[]{Z});
+            }
+
+        }
+
+        integrator.setDescription(descr);
+        integrator.compile();
+
+        logger.debug("Built integrator model: "+integrator);
+
+        StructuralCausalModel extModel = integrator.getExtendedModel(numDatasets>1);
+        TIntIntMap[] extData = integrator.getExtendedData(numDatasets>1);
+        //integrator.summary();
+
+
+        if(biased){
+            int[] extVars = extModel.getEndogenousVars();
+            int[] endoVarsb = IntStream.range(extVars.length-model.getEndogenousVars().length, extVars.length)
+                    .map(i -> extVars[i])
+                    .toArray();
+
+            int[] SparentsExt = ArraysUtil.slice(endoVarsb, Sparents);
+            int[] Sassig = SelectionBias.getClosestAssignment(dataInterZb, model.getDomain(Sparents), targetPS);
+
+
+
+            // Integrate selection bias
+            extModel = SelectionBias.addSelector(extModel, SparentsExt, Sassig);
+            Svar = SelectionBias.findSelector(extModel);
+            extData = SelectionBias.applySelector(extData, extModel, Svar);
+
+            int N0 = (int) Arrays.stream(extData).filter(d -> d.containsKey(Svar) && d.get(Svar)==0).count();
+            int N1 = (int) Arrays.stream(extData).filter(d -> d.containsKey(Svar) && d.get(Svar)==1).count();
+            pS1 = (double) N1 / (N0+N1);
+            logger.info("Built biased dataset with P(S=1)="+pS1);
+
+        }
+
+        // Simplify
+        if(numDatasets>1)
+            extModel = extModel.subModel(extData);
+        //System.out.println(extModel.getNetwork());
+
+
+        int[] trainable = extModel.getExogenousVars();
+        if(biased){
+            int USvar = extModel.getExogenousParents(Svar)[0];
+            trainable = Arrays.stream(extModel.getExogenousVars()).filter(v -> v != USvar).toArray();
+        }
+
+
+        Watch.start();
+        builder = EMCredalBuilder.of(extModel, extData)
+                .setMaxEMIter(maxIter)
+                .setNumTrajectories(executions)
+                .setWeightedEM(weighted)
+                .setTrainableVars(trainable)
+                .setThreshold(threshold)
+                .setStopCriteria(stopCriteria)
+                .build();
+
+
+
+        int[] iter = builder.getTrajectories().stream().mapToInt(t -> t.size()-1).toArray();
+        int finalS = numDatasets;
+        DataIntegrator finalIntegrator = integrator;
+        List selectedPoints =
+                builder.getSelectedPoints().stream()
+                        .map(m -> {
+                                    //if(numDatasets>1)
+                                    //    return finalIntegrator.removeInterventionalFromMultiStudy(m, 0);
+                                    return m.subModel(model.getVariables());    // The local parameters from the observational
+                                }
+                        )
+                        .collect(Collectors.toList());
+
+        Watch.stopAndLog(logger, "Finished learning in: ");
+
+
+
+
+        addResults("time_learn", Watch.getTime(), integrator.getDescription());
+
+        /// Inference
+        logger.info("Starting inference");
+        Watch.start();
+        CausalMultiVE inf = new CausalMultiVE(selectedPoints);
+        VertexFactor res = (VertexFactor) inf.probNecessityAndSufficiency(cause, effect);
+
+        pnsValues = ((CausalMultiVE) inf).getIndividualPNS(cause, effect, trueState, falseState);
+        Watch.stopAndLog(logger, "Finished inference in: ");
+        addResults("time_pns", Watch.getTime(), integrator.getDescription());
+        for(int i=0; i<pnsValues.length; i++) {
+            addResults("pns_"+i, pnsValues[i], integrator.getDescription());
+            addResults("iter_"+i, iter[i], integrator.getDescription());
+
+        }
+
+        pns_u = Doubles.max(pnsValues);
+        pns_l = Doubles.min(pnsValues);
+        logger.info("PNS interval = [" + pns_l + "," + pns_u + "]");
+
+
+    }
 
 
     public static void main(String[] args) {

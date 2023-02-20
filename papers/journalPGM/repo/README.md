@@ -104,8 +104,6 @@ System.out.println(resBiased);
 
 ```
 
-
-
 ## Running causal queries from hybrid data
 
 Here we illustrate how to run learn a causal model from observational and interventional data. The full code 
@@ -158,15 +156,10 @@ System.out.println(resHybrid);
 
 ```
 
-
-
-
-
 ## Experiments with the synthetic models
 
 The experiemnts has been conducted with the code  in `experiments/LearnSelectBias.java` and `experiments/LearnMultiStudy.java`. 
 For details about its usage, run:
-
 
 ```bash
 java -cp lib/credici.jar experiments/LearnSelectBias.java --help 

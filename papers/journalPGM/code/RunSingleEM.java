@@ -115,7 +115,7 @@ public class RunSingleEM extends Terminal {
 		logger.info("Trainable variables: "+ Arrays.toString(trainableVars));
 
 		Watch.start();
-/*
+
 		EMCredalBuilder builder = new EMCredalBuilder(model, data)
 				.setMaxEMIter(maxIter)
 				.setWeightedEM(weighted)
@@ -126,15 +126,15 @@ public class RunSingleEM extends Terminal {
 				.setVerbose(!quiet)
 				.build();
 
- */
-		EMCredalBuilder builder = new EMCredalBuilder(model, data)
+
+/*		EMCredalBuilder builder = new EMCredalBuilder(model, data)
 				.setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
 				.setThreshold(0.0)
 				.setNumTrajectories(1)
 				.setWeightedEM(true)
 				.setVerbose(false)
 				.setMaxEMIter(1).build();
-
+*/
 		long time = Watch.stop();
 		int iter = builder.getTrajectories().get(0).size() - 1;
 		StructuralCausalModel m = builder.getSelectedPoints().get(0);

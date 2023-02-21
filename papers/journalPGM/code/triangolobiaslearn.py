@@ -102,7 +102,7 @@ def runEMbias(model, datafile, output, seed=0, maxiter=200):
 
 s = EM_SEEDS[0]
 datasize = sizes[0]
-max_iter=1
+#max_iter=1
 
 # EM
 if run_em:

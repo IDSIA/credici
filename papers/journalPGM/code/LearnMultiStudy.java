@@ -195,11 +195,29 @@ public class LearnMultiStudy extends Terminal {
         TIntIntMap[] dataInterZb = model.samplesIntervened(data.length / 2, Z, model.getEndogenousVars());
 
         RandomUtil.setRandom(r);
+/*
+
+Do Dzb Dx
+Do Dzb
+Do Dx
+Do
+Dzb Dx
+Dzb
+Dx
+
+
+ */
 
 
         learnMultiStudyModelbiasedXZ(data, dataInterX, dataInterZb, "Dobs+Dx+Dzb ");
         learnMultiStudyModelbiasedXZ(data, null, dataInterZb, "Dobs+Dzb ");
+        learnMultiStudyModelbiasedXZ(data, dataInterX, null, "Dobs+Dx");
         learnMultiStudyModelbiasedXZ(data, null, null, "Dobs ");
+        learnMultiStudyModelbiasedXZ(null, dataInterX, dataInterZb, "Dx+Dzb ");
+        learnMultiStudyModelbiasedXZ(null, null, dataInterZb, "Dzb ");
+        learnMultiStudyModelbiasedXZ(null, dataInterX, null, "Dx");
+
+
 
 
 
@@ -397,9 +415,6 @@ public class LearnMultiStudy extends Terminal {
             integrator = DataIntegrator.of(model);
             if (dataObs != null)
                 integrator.setObservationalData(dataObs);
-
-
-
             if (dataInterX != null)
                 integrator.setData(dataInterX, new int[]{cause});
             if (dataInterZb != null) {
@@ -473,8 +488,8 @@ public class LearnMultiStudy extends Terminal {
         List selectedPoints =
                 builder.getSelectedPoints().stream()
                         .map(m -> {
-                                    //if(numDatasets>1)
-                                    //    return finalIntegrator.removeInterventionalFromMultiStudy(m, 0);
+                                    if(numDatasets>1)
+                                        return finalIntegrator.removeInterventionalFromMultiStudy(m, 0);
                                     return m.subModel(model.getVariables());    // The local parameters from the observational
                                 }
                         )

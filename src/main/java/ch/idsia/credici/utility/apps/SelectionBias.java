@@ -181,6 +181,7 @@ public class SelectionBias {
 		return endingPoints;
 	}
 
+
 	public static int findSelector(StructuralCausalModel modelBiased){
 
 		int[] exoPa = Arrays.stream(modelBiased.getExogenousVars())

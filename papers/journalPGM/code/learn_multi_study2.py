@@ -21,7 +21,8 @@ seed = int(sys.argv[2])
 k = int(sys.argv[3])
 N = int(sys.argv[4])
 
-tps = float(sys.argv[5])
+lp = int(sys.argv[5])>0
+
 
 
 
@@ -132,7 +133,7 @@ def learnintegrate(model, weighted = True, rewrite = False,
     runjava(javafile, args_str=args, heap_gbytes=128)
 
 ####
-for lp in [True, False]:
+for tps in [0.25, 0.75]:
     for m in MODELS:
         modelpath = Path(model_folder, modelset, m)
         outputpath = Path(res_folder, modelsetOutput)

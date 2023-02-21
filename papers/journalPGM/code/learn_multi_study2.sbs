@@ -6,13 +6,13 @@
 
 echo ${init_id}
 echo ${seed}
-N=100
+N=20
 
 for k in $(seq 0 ${N}); do
   for i in $(seq 0 ${SLURM_NTASKS}); do
     id=$[init_id+i]
-    srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u learn_multi_study2.py $id $seed $k $N 0.25 2> /dev/null &
-    srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u learn_multi_study2.py $id $seed $k $N 0.75 2> /dev/null &
+    srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u learn_multi_study2.py $id $seed $k $N 1 2> /dev/null &
+    srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u learn_multi_study2.py $id $seed $k $N 0 2> /dev/null &
   done
 done
 

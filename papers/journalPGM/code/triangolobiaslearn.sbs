@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --time=3-00:00:00
+#SBATCH -o /mnt/beegfs/rcabanas/dev/credici/papers/journalPGM/logs/triangolobiaslearn-%x.%j.out
+
+echo ${initseed}
+maxiter=200
+
+for i in $(seq 0 ${SLURM_NTASKS}); do
+  s=$[init_seed+i]
+  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u triangolobiaslearn.py $maxiter $s 0 2> /dev/null &
+  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u triangolobiaslearn.py $maxiter $s 1 2> /dev/null &
+done
+
+
+
+wait
+
+
+
+## usage: sbatch --export=init_seed=0 -n 50 triangolobiaslearn.sbs

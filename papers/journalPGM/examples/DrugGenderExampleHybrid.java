@@ -70,9 +70,9 @@ public class DrugGenderExampleHybrid {
 
         // Define counts and data
 
-        //dataFromPaper(model);
+        dataFromPaper(model);
         //dataFromPaper(model, ObservationBuilder.observe(G,female), model.getEndogenousVars());
-        dataFromPaper(model, ObservationBuilder.observe(G,male), model.getEndogenousVars());
+        //dataFromPaper(model, ObservationBuilder.observe(G,male), model.getEndogenousVars());
 
 
         ///

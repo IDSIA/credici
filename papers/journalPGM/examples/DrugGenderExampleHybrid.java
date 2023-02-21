@@ -6,6 +6,7 @@ import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
+import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.apps.SelectionBias;
@@ -50,8 +51,8 @@ public class DrugGenderExampleHybrid {
     public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException, IOException, CsvException {
 
         //for(int seed=0;seed<10; seed++)
-        //runEvol(0);
-        run(0);
+        runEvol(0);
+        //run(0);
 
 
         // todo: extend
@@ -65,7 +66,7 @@ public class DrugGenderExampleHybrid {
         RandomUtil.setRandomSeed(seed);
         // Conservative SCM
         StructuralCausalModel model = (StructuralCausalModel) IO.read(folder + "/models/literature/consPearl.uai");
-        //model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
+        model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
 
         // Define counts and data
 
@@ -119,7 +120,7 @@ public class DrugGenderExampleHybrid {
         RandomUtil.setRandomSeed(seed);
         // Conservative SCM
         StructuralCausalModel model = (StructuralCausalModel) IO.read(folder+"/models/literature/consPearl.uai");
-        //model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
+        model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
 
 
 
@@ -145,7 +146,7 @@ public class DrugGenderExampleHybrid {
         interventions = new TIntIntMap[]{};
         datasets = new TIntIntMap[][]{};
         //calculateExactPNS("CCVE Observational", model, dataObs, interventions, datasets);
-        //calculatePNS("Observational", model, dataObs, interventions, datasets, null);
+        calculatePNS("Observational", model, dataObs, interventions, datasets, null);
 
 
         int[][] hidden = {
@@ -163,19 +164,19 @@ public class DrugGenderExampleHybrid {
 
         //calculatePNS("Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets, null);
         //calculatePNS("Observational + do(drug) + do(no_drug)", model, dataObs, interventions, datasets, Sassig);
-        //calculatePNS("Observational + do(drug, no_drug)", model, dataObs, datasetX, null);
-        //calculatePNS("Observational + do(drug, no_drug)", model, dataObs, datasetX, Sassig);
+        calculatePNS("Observational + do(drug, no_drug)", model, dataObs, datasetX, null);
+        calculatePNS("Observational + do(drug, no_drug)", model, dataObs, datasetX, Sassig);
 
 
-        //calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, null, 0);
-        //calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, Sassig, 0);
-        //calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, null, 1);
-        //calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, Sassig, 1);
+        calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, null, 0);
+        calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, Sassig, 0);
+        calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, null, 1);
+        calculatePNSlocal("Observational + do(drug, no_drug)", model, dataObs, datasetX, Sassig, 1);
 
         interventions = new TIntIntMap[]{DataUtil.observe(T,drug), DataUtil.observe(T,no_drug)};
         datasets = new TIntIntMap[][]{dataDoDrug, dataDoNoDrug};
         //calculatePNS("do(drug) + do(no_drug)", model, null, interventions, datasets, null);
-        //calculatePNS("do(drug, no_drug)", model, null, datasetX, null);
+        calculatePNS("do(drug, no_drug)", model, null, datasetX, null);
 
 
 

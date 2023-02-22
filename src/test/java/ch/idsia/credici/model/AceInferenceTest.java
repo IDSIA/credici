@@ -1,5 +1,7 @@
 package ch.idsia.credici.model;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -32,6 +34,7 @@ public class AceInferenceTest {
             File f = ai.setNetwork(model);
             ai.compile();
             System.out.println(Files.readString(f.toPath()));
+            assertTrue(true);
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

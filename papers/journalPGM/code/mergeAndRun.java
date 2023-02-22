@@ -69,6 +69,10 @@ public class mergeAndRun extends Terminal {
     @CommandLine.Option(names={"-M", "--maxsize"}, description = "Maximum number of precise models considered. Defaults to as many as found in the folder")
     static int maxsize = -1;
 
+    @CommandLine.Option(names={"--descr"}, description = "description")
+    static String descr = "";
+
+
     // Global variables
     List<StructuralCausalModel> points = null;
     List<double[]> results;
@@ -94,8 +98,10 @@ public class mergeAndRun extends Terminal {
             double[] pns = calculatePNS(inf, cause, effect, trueState, falseState);
             long time = Watch.stop();
             System.gc();
-            logger.info("PNS with "+n+" models: "+Arrays.toString(pns)+"\t ellapsed time: "+time+" ms.");
-            //"pns_low","pns_up","num_points", "idx", "time"
+            logger.info("PNS with "+n+" models: "+Arrays.toString(pns)+"\t"+descr);
+
+            logger.info("ellapsed time: "+time+" ms.");
+            //"pns_low","pns_up","num_points", "idx", "time"+
             results.add(new double[]{pns[0], pns[1], n, idx[n-minsize], time});
             logRuntimeStats();
         }

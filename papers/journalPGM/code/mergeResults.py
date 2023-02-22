@@ -18,23 +18,18 @@ from datetime import datetime
 
 import sys
 
-print(sys.argv)
-
-modelname = "triangolo" # party triangolo
+MODELS = ["triangolo_causal_biassoft_2", "triangolo_causal_biashard_2"]
+modelname = "triangolo_causal_biassoft_2" # party triangolo
 sizes = 1000
 
 
-i, j = int(sys.argv[1]), int(sys.argv[2])
-if j<i: i,j = j,i
-SEEDS = list(range(i,j))
-CAUSES = [3,9]
+CAUSES = [3,9,7]
 #CAUSES = list(range(1,11))
 
 
 print("Merging precise models to bound causal queries.py")
 print(modelname)
 print(sizes)
-print(SEEDS)
 
 ####
 
@@ -61,15 +56,16 @@ def strtime():
 
 
 from pathlib import Path
+prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/")
 
-prj_path = Path(str(Path("../../../../").resolve()) + "/")
-exp_folder = Path(prj_path, "papers/journalEM/")
+#prj_path = Path(str(Path("../../../../").resolve()) + "/")
+exp_folder = Path(prj_path, "papers/journalPGM/")
 code_folder = Path(exp_folder, "code")
-res_folder = Path(exp_folder, "output")
+res_folder = Path(exp_folder, "output/biased/triangolo")
 
 
 
-jar_file = Path(prj_path, "target/credici-0.1.3-jar-with-dependencies.jar")
+jar_file = Path(prj_path, "target/credici-0.1.5-dev-SNAPSHOT-jar-with-dependencies.jar")
 #java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
 java = "java"
 
@@ -80,14 +76,17 @@ print(res_folder)
 print(jar_file)
 
 
-def merge(minsize, maxsize, input, output, cause, effect, seed=0):
+def merge(minsize, maxsize, input, output, cause, effect, seed=0, debug=False, descr=""):
     args = ""
+    if debug: args+="--debug "
     args += f"-m {minsize} "
     args += f"-M {maxsize} "
     args += f"--input {input} "
     args += f"--output {output} "
     args += f"--seed {seed} "
+    args += f"--descr {descr} "
     args += f"{cause} {effect} "
+
 
     javafile = Path(code_folder, "mergeAndRun.java")
 
@@ -96,16 +95,16 @@ def merge(minsize, maxsize, input, output, cause, effect, seed=0):
     exec_bash_print(cmd)
 
 
+c = CAUSES[2]
 
-for c in CAUSES:
-    io_folder = f"{res_folder}/{modelname}/{sizes}"
-    if not os.path.exists(io_folder):
-        os.makedirs(io_folder)
+varnames = ["Death", "Symptoms", " PPreference", " FAwareness", "Age", "Practitioner", "FSystem", "Triangolo", "Hospital", "PAwareness", "Karnofsky", "FPreference"]
 
-    merge(29,30, io_folder, io_folder, cause=c, effect=0)
+for modelname in MODELS:
+    for c in CAUSES:
+        io_folder = f"{res_folder}/{modelname}/{sizes}"
+        if not os.path.exists(io_folder):
+            os.makedirs(io_folder)
 
-    for s in SEEDS:
-        # 0 = Death, 3 = FAwareness, 9 = PAwareness
-        merge(1,20, io_folder, io_folder, cause=c, effect=0, seed=s)
+        # 0 = Death, 3 = FAwareness, 9 = PAwareness 7 =Triangolo
 
-
+        merge(200,200, io_folder, io_folder, cause=c, effect=0, debug=False, descr=f"{modelname}_{c}")

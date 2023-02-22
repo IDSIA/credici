@@ -16,6 +16,8 @@ print(sys.argv)
 
 
 MODELS = ["triangolo_causal_biassoft_2", "triangolo_causal_biashard_2"]
+MODELS = ["triangolo_causal"]
+
 sizes = [1000]
 run_em = True
 

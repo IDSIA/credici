@@ -21,3 +21,5 @@
 10	Karnofsky
 
 11	FPreference
+
+"Death", "Symptoms", " PPreference", " FAwareness", "Age", "Practitioner", "FSystem", "Triangolo", "Hospital", "PAwareness", "Karnofsky", "FPreference"2

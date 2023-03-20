@@ -98,16 +98,20 @@ public class AceExt {
 
 		System.out.println("  ** create a dummy net file **");
 		generate_dummy_net(m_dummy_net_file);
+		
 		/* Operations on lmap file */
 		// invoke the process that creates .lmap file from dummy net file
 		System.out.println("  ** compile the dummy net file **");
 		Ice_compile(m_dummy_net_file, m_compile_file);
+
 		// parse the lmap file which updates lmap_fix_lines and lmap_var_lines
 		System.out.println("  ** parse the dummy lmap file **");
 		parse_lmap(m_dummy_lmap_file);
+
 		// generate an lmap file for the original .net file
 		System.out.println("  ** generate the lmap file **");
 		generate_lmap(m_lmap_file);
+		
 		long endTime = System.currentTimeMillis();
 		System.out.println(" = Compilation took " + (endTime - startTime) + "ms");
 	}
@@ -148,7 +152,10 @@ public class AceExt {
 		try {
 			Process p = Runtime.getRuntime().exec(new String[] { "bash", "-c", command });
 			try {
-				p.waitFor();
+				int exit = p.waitFor();
+				if (exit != 0) { 
+					throw new RuntimeException(m_evaluate_file + " " + m_net_file + " " + m_inst_file);
+				}
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -424,19 +431,27 @@ public class AceExt {
 		// create a process which execute the command
 		String command1 = compile_file + " -forceC2d -cd06 " + net_file;
 		String command2 = "mv " + net_file + ".ac" + " " + m_net_file + ".ac";
+		System.out.println(command1);
+		System.out.println(command2);
 		try {
 				Process p = new ProcessBuilder().
 				command(compile_file, "-forceC2d", "-cd06", net_file).
 				redirectError(new File("err.err")).
 				start();
-				p.waitFor();
+				int exit = p.waitFor();
+				if (exit != 0) {
+					throw new RuntimeException(compile_file +  " -forceC2d "+ "-cd06 "+ net_file);
+				}
 				
 				p = new ProcessBuilder().
 				command("mv", net_file + ".ac", m_net_file + ".ac").
 				redirectError(new File("err2.err")).
 				start();
-				p.waitFor();
-				
+
+				exit = p.waitFor();
+				if (exit != 0) {
+					throw new RuntimeException(compile_file +  " -forceC2d "+ "-cd06 "+ net_file);
+				}
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 

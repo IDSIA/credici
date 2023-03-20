@@ -42,19 +42,23 @@ node n1 {
  */
 public class NetworkWriter implements Closeable {
     private PrintWriter stream; 
+    String nodePrefix, statePrefix;
 
-    public NetworkWriter(File target) throws IOException, FileNotFoundException {
+    public NetworkWriter(File target, String nodePrefix, String statePrefix ) throws IOException, FileNotFoundException {
         this.stream = new PrintWriter(target);
+        this.nodePrefix = nodePrefix; 
+        this.statePrefix = statePrefix;
     }
 
     public void write(BayesianNetwork network) throws IOException {
+        stream.println("net { }");
         for (int node : network.getVariables()){
-            stream.printf("node n%d {%n", node);
+            stream.printf("node %s%d {%n", nodePrefix, node);
             // states string
             String states = IntStream.range(0, network.getSize(node)).
-                mapToObj(i->"s"+i).
+                mapToObj(i->statePrefix+i).
                 collect(Collectors.joining("\" \""));
-            stream.printf("  states ( \"%s\" );%n", states);
+            stream.printf("  states = ( \"%s\" );%n", states);
             stream.println("}");
             stream.println();
         }
@@ -63,7 +67,7 @@ public class NetworkWriter implements Closeable {
         for (int node : network.getVariables()){
             BayesianFactor factor = network.getFactor(node);
             int[] parents = factor.getDomain().remove(node).getVariables();
-            stream.printf("potential ( n%d", node);
+            stream.printf("potential ( %s%d", nodePrefix, node);
             if (parents.length == 0) stream.println(" ) {");
             else {
                 String parents_str = Arrays.stream(parents).mapToObj(i->"n"+i).collect(Collectors.joining(" "));

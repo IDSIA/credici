@@ -1,0 +1,15 @@
+#!/bin/bash
+#
+# Unix script to convert a network to the uai 2008 evaluation format
+#
+# by Mark Chavira
+#
+# Configuration: adjust the memory allocated to java below if necessary
+
+ACEDIR=`dirname $0`
+if [[ ($MACHTYPE =~ ^i386-apple-darwin.*$) || ($MACHTYPE =~ ^x86_64-apple.*$) ]]; then
+  export DYLD_LIBRARY_PATH=$ACEDIR
+else
+  export LD_LIBRARY_PATH=$ACEDIR
+fi
+java -Xmx3700m -classpath "$ACEDIR/ace.jar:$ACEDIR/inflib.jar:$ACEDIR/jdom.jar" mark.reason.apps.BnFilter -f mark.reason.flt.FltNoisyToTable1 -pw mark.reason.net.PwUai "$@"

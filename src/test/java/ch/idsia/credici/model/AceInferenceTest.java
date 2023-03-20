@@ -6,13 +6,17 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 
 import org.junit.Test;
 
 import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.ace.AceInference;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.model.Instantiation;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 public class AceInferenceTest {
     @Test
@@ -35,9 +39,64 @@ public class AceInferenceTest {
             ai.compile();
             System.out.println(Files.readString(f.toPath()));
             assertTrue(true);
+            ai.update(model);
+            ai.query(3, ObservationBuilder.observe(1, 1));
+
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
+    }
+
+
+    @Test
+    public void serializeTest2() throws IOException {
+        BayesianNetwork bnet = new BayesianNetwork();
+		int y = bnet.addVariable(2);
+		int x = bnet.addVariable(2);
+        bnet.addParent(x, y);
+
+		bnet.setFactor(y, new BayesianFactor(bnet.getDomain(y), new double[]{0.3,0.7}));
+		bnet.setFactor(x, new BayesianFactor(bnet.getDomain(x,y), new double[] {0.1, 0.2, 0.3, 0.4}));
+        
+        StructuralCausalModel model = new StructuralCausalModel(){
+            @Override
+            public BayesianNetwork toBnet() {
+                return bnet;
+            }
+            @Override
+            public int[] getExogenousVars() {
+                return new int[]{y};
+            }
+
+            @Override
+            public BayesianFactor getFactor(int variable) {
+                return bnet.getFactor(variable);
+            }
+        };    
+
+        try {
+            AceInference ai = new AceInference("src/resources/ace");
+    
+            File f = ai.setNetwork(model);
+            ai.compile();
+            System.out.println(Files.readString(f.toPath()));
+            assertTrue(true);
+
+            System.out.println(Files.readString(f.toPath()));
+            assertTrue(true);
+            ai.update(model);
+            ai.query(x, new TIntIntHashMap());
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+
+
+    @Test
+    public void x() {
+        System.out.println()
+        ;
     }
 }

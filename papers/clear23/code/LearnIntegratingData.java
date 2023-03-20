@@ -3,8 +3,6 @@ package code;
 import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CausalInference;
 import ch.idsia.credici.inference.CausalMultiVE;
-import ch.idsia.credici.inference.CredalCausalApproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
@@ -12,16 +10,10 @@ import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.model.tools.CausalGraphTools;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
-import ch.idsia.credici.utility.FactorUtil;
-import ch.idsia.credici.utility.Probability;
-import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.credici.utility.reconciliation.DataIntegrator;
 import ch.idsia.credici.utility.reconciliation.IntegrationChecker;
-import ch.idsia.crema.factor.GenericFactor;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
@@ -241,7 +233,7 @@ public class LearnIntegratingData extends Terminal {
 
     public static void main(String[] args) {
         argStr = String.join(";", args);
-        CommandLine.run(new LearnIntegratingData(), args);
+        CommandLine.run(new LearnMultiStudy(), args);
         if(errMsg!="")
             System.exit(-1);
         System.exit(0);

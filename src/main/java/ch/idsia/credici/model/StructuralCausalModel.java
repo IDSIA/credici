@@ -18,6 +18,8 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
+import ch.idsia.crema.model.ObservationBuilder;
+import ch.idsia.crema.model.Domain;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.model.graphical.GenericSparseModel;

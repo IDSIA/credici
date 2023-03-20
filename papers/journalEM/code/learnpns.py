@@ -19,11 +19,12 @@ id,seed=8,0
 id = int(sys.argv[1])
 seed = int(sys.argv[2])
 
-modelset = "synthetic/s1/"
+modelset = "synthetic/s12/"
 #modelset = "triangolo/"
 modelsetOutput = modelset
-modelsetOutput = "synthetic/s1d/"
+#modelsetOutput = "synthetic/s12/"
 
+EMruns = 1000
 filterbyid = True
 CAUSE_EFFECT = []
 heapGB = 64
@@ -68,7 +69,7 @@ model_folder = Path(exp_folder, "models")
 data_folder = Path(exp_folder, "data")
 
 
-jar_file = Path(prj_path, "target/credici-0.1.3-jar-with-dependencies.jar")
+jar_file = Path(prj_path, "target/credici-0.1.5-dev-SNAPSHOT-jar-with-dependencies.jar")
 #java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
 java = "java"
 
@@ -144,5 +145,5 @@ for m in MODELS:
                 for criteria in SCRITERIA:
                     learnpns("EMCC", modelpath,
                              stop_criteria=criteria, th=th,
-                             executions=200,
+                             executions=EMruns,
                              output=outputpath, cause=c, effect=e, seed=seed)

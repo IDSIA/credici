@@ -47,6 +47,9 @@ public class Cofounding {
 
     }
 
+    public static StructuralCausalModel mergeExoParents(StructuralCausalModel model, int x, int y) {
+        return mergeExoParents(model, new int[][]{{x,y}});
+    }
 
     public static StructuralCausalModel mergeExoParents(StructuralCausalModel model, int[][] pairsX){
 
@@ -63,6 +66,9 @@ public class Cofounding {
         return fixVariableIDs(model);
     }
 
+    public static StructuralCausalModel mergeExoVars(StructuralCausalModel model, int u, int v) {
+        return mergeExoVars(model, new int[][]{{u,v}});
+    }
 
     public static StructuralCausalModel mergeExoVars(StructuralCausalModel model, int[][] pairsU){
 

@@ -15,7 +15,7 @@ import pandas as pd
 
 
 print(sys.argv)
-folder = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/synthetic/s2/"
+folder = "/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/synthetic/s12/"
 #folder = sys.argv[1]
 
 

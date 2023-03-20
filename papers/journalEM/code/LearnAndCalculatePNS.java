@@ -46,6 +46,8 @@ Parameters CLI:
 -w -rw -x 2 -ii 100 -m 500 -sc LLratio -th 0.999999 -a EMCC --debug --seed 0 --cause 4 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
 -w -rw -x 1 -ii 5 -m 500 -sc LLratio -th 0.5 -a EMCC --debug --seed 5 --cause 3 --effect 0 ./papers/journalEM/models/triangolo/triangolo_causal.uai
 -w -rw -x 1 -ii 5 -m 1 -sc KL -th 0.0 -a EMCC --debug --seed 5 --cause 3 --effect 0 /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/triangolo/triangolo_causal.uai
+
+-rw -w -x 10 -m 100 -a EMCC --debug --seed 0 ./papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
 * */
 
 

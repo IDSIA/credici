@@ -100,7 +100,7 @@ public class Prototype2vars {
             integrator.setObservationalData(dataObs);
 
         for(int i = 0; i< interventions.length; i++)
-            integrator.setData(interventions[i], datasets[i]);
+            integrator.setData(datasets[i], interventions[i]);
 
 
         TIntIntMap[] dataExt = integrator.getExtendedData();

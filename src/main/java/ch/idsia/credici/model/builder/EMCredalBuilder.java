@@ -94,7 +94,7 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public EMCredalBuilder(StructuralCausalModel causalModel, TIntIntMap[] data){
 		this.causalmodel = causalModel;
-		this.endogJointProbs = causalModel.endogenousBlanketProb();
+		//this.endogJointProbs = causalModel.endogenousBlanketProb();
 		this.data = data;
 		this.trainableVars = causalModel.getExogenousVars();
 
@@ -392,12 +392,14 @@ public class EMCredalBuilder extends CredalBuilder{
 		ExpectationMaximization em = null;
 		Collection stepArgs = null;
 		if(this.data==null) {
-			em = new BayesianCausalEM(startingModel).setKlthreshold(threshold).setRegularization(0.0);
-			stepArgs = (Collection) endogJointProbs.values();
+			throw new IllegalArgumentException("No data provided");
+			//em = new BayesianCausalEM(startingModel).setKlthreshold(threshold).setRegularization(0.0);
+			//stepArgs = (Collection) endogJointProbs.values();
 		}else if(weightedEM) {
 			em = new WeightedCausalEM(startingModel).setRegularization(0.0)
 					.setStopCriteria(stopCriteria)
 					.setThreshold(threshold)
+					//.setSmoothing(1)
 					//.setInferenceVariation(0)
 					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
@@ -421,6 +423,7 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		if(verbose)
 			System.out.println(" calculated EM trajectory of "+(t.size()-1));
+
 
 		// Return the trajectories
 		return t;

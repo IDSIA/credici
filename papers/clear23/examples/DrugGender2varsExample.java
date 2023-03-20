@@ -14,17 +14,14 @@ import ch.idsia.credici.utility.reconciliation.DataIntegrator;
 import ch.idsia.credici.utility.reconciliation.IntegrationChecker;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.utility.RandomUtil;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -179,7 +176,7 @@ public class DrugGender2varsExample {
             integrator.setObservationalData(dataObs);
 
         for(int i = 0; i< interventions.length; i++)
-            integrator.setData(interventions[i], datasets[i]);
+            integrator.setData(datasets[i], interventions[i]);
 
 
 

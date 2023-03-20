@@ -1,5 +1,7 @@
 package ch.idsia.credici.utility;
 
+import ch.idsia.credici.inference.CredalCausalVE;
+import ch.idsia.credici.model.Conditional;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.experiments.AsynIsCompatible;
 import ch.idsia.crema.data.ReaderCSV;
@@ -140,12 +142,11 @@ public class DataUtil {
 	public static TIntObjectMap<BayesianFactor> getCFactorsSplittedMap(StructuralCausalModel model, TIntIntMap[] data ){
 		TIntObjectMap<BayesianFactor> cfactors = new TIntObjectHashMap<>();
 
-		for (HashMap dom : model.getAllCFactorsSplittedDomains()) {
-			int left = (int) dom.get("left");
-			int[] right = (int[]) dom.get("right");
+		for (Conditional dom : model.getAllCFactorsSplittedDomains()) {
+			int left = dom.getLeft();//(int) dom.get("left");
 
-			Strides leftDom = model.getDomain((int) dom.get("left"));
-			Strides rightDom = model.getDomain((int[]) dom.get("right"));
+			Strides leftDom = model.getDomain(left);
+			Strides rightDom = model.getDomain(dom.getRight());
 			BayesianFactor f = DataUtil.getCondProb(data, leftDom, rightDom);
 			//System.out.println(left+"|"+Arrays.toString(right));
 			cfactors.put(left, f);
@@ -156,10 +157,10 @@ public class DataUtil {
 	public static TIntObjectMap<BayesianFactor> getCFactorsSplittedMap(StructuralCausalModel model, TIntIntMap[] data, int... exoVars){
 		TIntObjectMap<BayesianFactor> cfactors = new TIntObjectHashMap<>();
 
-		for (HashMap dom : model.getCFactorsSplittedDomains(exoVars)) {
-			int left = (int) dom.get("left");
-			Strides leftDom = model.getDomain((int) dom.get("left"));
-			Strides rightDom = model.getDomain((int[]) dom.get("right"));
+		for (Conditional dom : model.getCFactorsSplittedDomains(exoVars)) {
+			int left = dom.getLeft();
+			Strides leftDom = model.getDomain(left);
+			Strides rightDom = model.getDomain(dom.getRight());
 			BayesianFactor f = DataUtil.getCondProb(data, leftDom, rightDom);
 			cfactors.put(left, f);
 		}

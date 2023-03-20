@@ -910,28 +910,32 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	/// Based on Tian&Pearl 2003
 
-	public List<HashMap> getCFactorsSplittedDomains(int...exoVars){
+	/**
+	 * 
+	 * @param exoVars
+	 * @return
+	 */
+	public List<Conditional> getCFactorsSplittedDomains(int...exoVars){
 		if(this.exoConnectComponents().stream().filter(c -> ArraysUtil.equals(exoVars, c, true, true)).count() != 1)
 			throw new IllegalArgumentException("Wrong exogenous variables.");
 
-		List domains = new ArrayList();
+		List<Conditional> domains = new ArrayList<>();
 
 		int[] chU = this.getEndogenousChildren(exoVars);
 
 		if(chU.length>0) {
 			chU = DAGUtil.getTopologicalOrder(this.getNetwork(), chU);
 
-
 			for (int k = 0; k < chU.length; k++) {
-				HashMap dom = new HashMap();
+				//HashMap dom = new HashMap();
 				int x = chU[k];
 				int[] finalChU = chU;
 				int[] previous = IntStream.range(0, k).map(i -> finalChU[i]).toArray();
 				int[] right = ArraysUtil.unionSet(previous, this.getEndegenousParents(ArraysUtil.append(previous, x)));
-				dom.put("left", x);
-				dom.put("right", right);
+				//dom.put("left", x);
+				//dom.put("right", right);
 				//System.out.println(x+"|"+ Arrays.toString(right));
-				domains.add(dom);
+				domains.add(new Conditional(x, right));
 			}
 		}
 		return domains;
@@ -941,9 +945,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		List factors = new ArrayList();
 
-		for(HashMap dom : this.getCFactorsSplittedDomains(exoVars)){
-			int left = (int) dom.get("left");
-			int[] right = (int[]) dom.get("right");
+		for(Conditional dom : this.getCFactorsSplittedDomains(exoVars)){
+			int left = dom.getLeft();//(int) dom.get("left");
+			int[] right = dom.getRight();//(int[]) dom.get("right");
 			StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
 			VariableElimination inf = new FactorVariableElimination(infModel.getVariables());
 			inf.setFactors(infModel.getFactors());
@@ -959,9 +963,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		TIntObjectMap factors = new TIntObjectHashMap();
 
-		for(HashMap dom : this.getAllCFactorsSplittedDomains()){
-			int left = (int) dom.get("left");
-			int[] right = (int[]) dom.get("right");
+		for(Conditional dom : this.getAllCFactorsSplittedDomains()){
+			int left = dom.getLeft();//(int) dom.get("left");
+			int[] right = dom.getRight();//(int[]) dom.get("right");
 			StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
 
 
@@ -985,9 +989,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		TIntObjectMap factors = new TIntObjectHashMap();
 
-		for(HashMap dom : this.getCFactorsSplittedDomains(exoVars)){
-			int left = (int) dom.get("left");
-			int[] right = (int[]) dom.get("right");
+		for(Conditional dom : this.getCFactorsSplittedDomains(exoVars)){
+			int left = dom.getLeft();//(int) dom.get("left");
+			int[] right = dom.getRight();//(int[]) dom.get("right");
 			StructuralCausalModel infModel = new RemoveBarren().execute(this, ArraysUtil.append(right, left));
 			VariableElimination inf = new FactorVariableElimination(infModel.getVariables());
 			inf.setFactors(infModel.getFactors());
@@ -1008,8 +1012,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return BayesianFactor.combineAll(this.getCFactorsSplitted(exoVars));
 	}
 
-	public List<HashMap> getAllCFactorsSplittedDomains() {
-		return this.exoConnectComponents().stream().map(c -> this.getCFactorsSplittedDomains(c)).flatMap(List::stream).collect(Collectors.toList());
+	public List<Conditional> getAllCFactorsSplittedDomains() {
+		return this.exoConnectComponents().stream().map(this::getCFactorsSplittedDomains).flatMap(List::stream).collect(Collectors.toList());
 	}
 	public BayesianFactor[] getQDecomposition() {
 		return Arrays.stream(this.exoConnectComponents().stream().map(c -> this.getCFactor(c)).toArray()).toArray(BayesianFactor[]::new);

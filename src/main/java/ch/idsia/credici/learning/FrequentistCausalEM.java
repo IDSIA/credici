@@ -467,7 +467,6 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     public static void main(String[] args) throws InterruptedException {
 
-
         int N = 5000;
         int numIterations = 1000; // EM internal iterations
         int n = 3;

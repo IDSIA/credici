@@ -17,6 +17,7 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -233,9 +234,9 @@ public class CausalBuilder {
             if (chU.length == 1) {
                 model.setFactor(chU[0], EquationBuilder.of(model).withAllAssignments(chU[0]));
             } else {
-                HashMap eqs = (HashMap) EquationBuilder.of(model).withAllAssignmentsQM(u);
+                Map<Integer, BayesianFactor> eqs = EquationBuilder.of(model).withAllAssignmentsQM(u);
                 for (int x : chU) {
-                    model.setFactor(x, (BayesianFactor) eqs.get(x));
+                    model.setFactor(x, eqs.get(x));
                 }
             }
 

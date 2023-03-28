@@ -179,9 +179,15 @@ public class DAGUtil {
     }
 
 
-    public static Graph moral(SparseDirectedAcyclicGraph dag){
+    /**
+     * Get The moral graph. 
+     * 
+     * @param dag a {@link SparseDirectedAcyclicGraph} representing a Bayesian Network or Structural Causal Network
+     * @return The moral graph as a JGraphT networks
+     */
+    public static Graph<Integer, DefaultEdge> moral(SparseDirectedAcyclicGraph dag){
 
-        Graph moral = new DefaultUndirectedGraph(DefaultEdge.class);
+        Graph<Integer, DefaultEdge> moral = new DefaultUndirectedGraph<>(DefaultEdge.class);
         for(int x : dag.getVariables())
             moral.addVertex(x);
 
@@ -197,14 +203,14 @@ public class DAGUtil {
         return moral;
     }
 
-    public static  List<int[]> connectComponents(Graph g){
-        ConnectivityInspector connectInspect = new ConnectivityInspector(g);
-        List connectedComponentList = connectInspect.connectedSets();
-        return (List<int[]>) connectedComponentList.stream().map(s -> Ints.toArray((Set)s)).collect(Collectors.toList());
+    public static  List<int[]> connectComponents(Graph<Integer, DefaultEdge> g){
+        ConnectivityInspector<Integer, DefaultEdge> connectInspect = new ConnectivityInspector<>(g);
+        List<Set<Integer>> connectedComponentList = connectInspect.connectedSets();
+        return connectedComponentList.stream().map(Ints::toArray).collect(Collectors.toList());
     }
 
-    public static  boolean isConnected(Graph g){
-        return new ConnectivityInspector(g).isConnected();
+    public static  boolean isConnected(Graph<Integer, DefaultEdge> g){
+        return new ConnectivityInspector<>(g).isConnected();
     }
 
 
@@ -214,14 +220,14 @@ public class DAGUtil {
             return false;
 
 
-        Graph moral = DAGUtil.moral(dag);
+        Graph<Integer, DefaultEdge> moral = DAGUtil.moral(dag);
         for(int v : obs) {
             if(v!=a && v!=b)
                 moral.removeVertex(v);
         }
 
         // check if a and b are not graphically connected in the moral graph
-        return !new ConnectivityInspector(moral).pathExists(a,b);
+        return !new ConnectivityInspector<>(moral).pathExists(a,b);
     }
 
 
@@ -246,6 +252,7 @@ public class DAGUtil {
         return distanceMatrix;
     }
 
+    
     public static DefaultUndirectedGraph getUndirected(SparseDirectedAcyclicGraph dag) {
         DefaultUndirectedGraph g = new DefaultUndirectedGraph(DefaultEdge.class);
         for(int v : dag.vertexSet())

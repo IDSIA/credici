@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -79,18 +80,19 @@ public class EquationBuilder {
         return this.fromVector(var, ArraysUtil.flattenInts(assignments));
     }
 
-    public HashMap<Integer, BayesianFactor> conservative(int... exoVars) {
+    public Map<Integer, BayesianFactor> conservative(int... exoVars) {
         if(model.exoConnectComponents().stream().filter(c -> ArraysUtil.equals(exoVars, c, true, true)).count() != 1)
             throw new IllegalArgumentException("Wrong exogenous variables.");
 
         int[] chU = model.getEndogenousChildren(exoVars);
-        HashMap<Integer, BayesianFactor> eqs = null;
+        Map<Integer, BayesianFactor> eqs = null;
         if(chU.length==1 && exoVars.length==1){
             eqs = new HashMap<Integer, BayesianFactor>();
             eqs.put(chU[0], EquationBuilder.of(model).withAllAssignments(chU[0]));
-        }if(chU.length>1 && exoVars.length==1){
-            eqs = (HashMap) EquationBuilder.of(model).withAllAssignmentsQM(exoVars[0]);
-        }else{
+        }
+        if(chU.length>1 && exoVars.length==1) {
+            eqs = EquationBuilder.of(model).withAllAssignmentsQM(exoVars[0]);
+        } else{
             throw new NotImplementedException("Not implemented conservative specification for non-quaisi markovian");
         }
 
@@ -110,7 +112,7 @@ public class EquationBuilder {
         return from2DArray(var, Combinatorial.getCombinations(n, states));
     }
 
-    public HashMap withAllAssignmentsQM(int exoVar){//, HashMap varNames){
+    public Map<Integer, BayesianFactor> withAllAssignmentsQM(int exoVar) {
 
         // Check topology
         if (this.model.getExogenousParents(this.model.getEndogenousChildren(exoVar)).length != 1)
@@ -124,7 +126,7 @@ public class EquationBuilder {
 
 
         // Equations to be built
-        HashMap eqs = new HashMap();
+        HashMap<Integer, BayesianFactor> eqs = new HashMap<>();
         for(int v : this.model.getEndogenousChildren(exoVar)) {
             Strides domf = this.model.getDomain
                     (Ints.concat(new int[]{v}, this.model.getParents(v)));
@@ -136,9 +138,9 @@ public class EquationBuilder {
 
         // Build set S
 
-        List S = new ArrayList();
+        List<List<Integer>> S = new ArrayList<>();
         for(int v : this.model.getEndogenousChildren(exoVar)){
-            List dom = IntStream.range(0, this.model.getDomain(v).getCardinality(v)).boxed().collect(Collectors.toList());
+            List<Integer> dom = IntStream.range(0, this.model.getDomain(v).getCardinality(v)).boxed().collect(Collectors.toList());
             int endoPaCard = this.model.getDomain(this.model.getEndegenousParents(v)).getCombinations();
             for(int i=0; i< endoPaCard; i++){
                 S.add(dom);
@@ -147,21 +149,18 @@ public class EquationBuilder {
 
 
         int i = 0;
-        for(Object s_ : Combinatorial.cartesianProduct((List[])S.toArray(List[]::new))){
-            List s = (List) s_;
+        for(List<Integer> s : Combinatorial.cartesianProduct(S)){
             int j = 0;
             for(int v : this.model.getEndogenousChildren(exoVar)){
-                BayesianFactor f = (BayesianFactor) eqs.get(v);
+                BayesianFactor f = eqs.get(v);
                 Strides endoPaDom = this.model.getDomain(this.model.getEndegenousParents(v));
                 IndexIterator it = endoPaDom.getIterator();
                 while(it.hasNext()){
                     int idx = it.next();
                     ObservationBuilder endoPaValues = ObservationBuilder.observe(endoPaDom.getVariables(), endoPaDom.statesOf(idx));
                     ObservationBuilder exoPaValues = ObservationBuilder.observe(exoVar, i);
-                    EquationOps.setValue(f, exoPaValues, endoPaValues, v, (int)s.get(j));
-                    //System.out.println("f"+v+"("+exoVar+"_"+i+","+endoPaValues+") = "+v+"_"+(int)s.get(j));
+                    EquationOps.setValue(f, exoPaValues, endoPaValues, v, s.get(j));
                     j++;
-
                 }
             }
             i++;

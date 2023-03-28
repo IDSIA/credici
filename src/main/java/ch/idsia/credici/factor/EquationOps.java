@@ -22,12 +22,11 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 public class EquationOps {
+
+	private EquationOps() {}
+	
 	public static void setValue(BayesianFactor f, TIntIntHashMap exoPaValues, TIntIntHashMap endoPaValues, int var, int value){
-	/*	System.out.println("exoPaValues: "+exoPaValues);
-		System.out.println("endoPaValues: "+endoPaValues);
-		System.out.println("Set "+var+"="+value);
-		System.out.println(f.getDomain());
-*/
+
 		TIntIntHashMap conf = new TIntIntHashMap();
 
 		for(int y : endoPaValues.keys())
@@ -41,15 +40,10 @@ public class EquationOps {
 			int offset = FactorUtil.getOffset(f, conf);
 			if(v!=value) {
 				f.setValueAt(0, offset);
-				//System.out.println("0 -> "+offset);
-			}
-			else {
+			} else {
 				f.setValueAt(1, offset);
-				//System.out.println("1 -> "+offset);
-
 			}
 		}
-
 	}
 
 
@@ -72,11 +66,9 @@ public class EquationOps {
 
 			if(!Arrays.equals(v, value)){
 				f.setValueAt(0, offset);
-				//System.out.println("0 -> "+offset);
 			}
 			else {
 				f.setValueAt(1, offset);
-				//System.out.println("1 -> "+offset);
 			}
 		}
 	}

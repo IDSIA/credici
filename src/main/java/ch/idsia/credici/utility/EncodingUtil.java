@@ -20,6 +20,7 @@ public class EncodingUtil {
 			if(arr[i]) index += Math.pow(2,arr.length-1-i);
 		return index;
 	}
+	
 	public static boolean[] decimalToBoolArray(long index, int size){
 
 		String binStr = Integer.toBinaryString((int) index);

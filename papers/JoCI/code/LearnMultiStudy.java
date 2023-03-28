@@ -135,7 +135,6 @@ public class LearnMultiStudy extends Terminal {
             }
         }
         throw new IllegalArgumentException("Cannot determine cause");
-
     }
 
     public void buildIntegrationModel() throws InterruptedException {

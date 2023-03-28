@@ -22,6 +22,12 @@ public class CausalUAIParser extends NetUAIParser<StructuralCausalModel> {
 
     public static boolean ignoreChecks = false;
 
+
+    public CausalUAIParser() {
+        TYPE = UAITypes.CAUSAL;
+    }
+
+    
     public CausalUAIParser(String file) throws FileNotFoundException {
         TYPE = UAITypes.CAUSAL;
         this.bufferedReader = initReader(file);

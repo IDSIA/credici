@@ -40,6 +40,7 @@ import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
+import org.jgrapht.graph.DefaultEdge;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -1036,6 +1037,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public TIntIntMap sample(int... vars) {
 		return sample(new TIntIntHashMap(), vars);
 	}
+
 	public TIntIntMap sample(TIntIntMap obs, int... vars){
 		for(int v : DAGUtil.getTopologicalOrder(this.getNetwork())){
 			if(!obs.containsKey(v)) {
@@ -1048,15 +1050,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 					f = f.filter(pa, obs.get(pa));
 				}
 
-
-				TIntIntMap sample = null;
-				do{
-					try{
-						sample = f.sample();
-					}catch (Exception e){
-					}
-				}while (sample==null);
-				obs.putAll(sample);
+				obs.putAll(f.sample());
 			}
 		}
 
@@ -1078,12 +1072,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public String edgesToString(){
-		Set edgeSet = this.getNetwork().edgeSet();
+		Set<DefaultEdge> edgeSet = this.getNetwork().edgeSet();
 		String edgesStr = edgeSet.toString();
 		Map<String, String> replacements = Map.of(" ","", ":",",");
 
 		for (Map.Entry<String, String> entry : replacements.entrySet()) {
-			edgesStr.replace(entry.getKey(), entry.getValue());
+			edgesStr = edgesStr.replace(entry.getKey(), entry.getValue());
 		}
 		return edgesStr;
 	}
@@ -1091,7 +1085,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	public StructuralCausalModel reverseEdge(int from, int to) {
 
-		int a = from, b = to;
+		int a = from;
+		int b = to;
 
 		//the edge should exist
 		if (!ArraysUtil.contains(a, this.getParents(b)))
@@ -1205,17 +1200,17 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 
 	public int getEndogenousTreewidth(){
-		Graph moral = DAGUtil.moral(this.getEndogenousDAG());
+		Graph<Integer, DefaultEdge> moral = DAGUtil.moral(this.getEndogenousDAG());
 		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() -1;
 
 	}
 	public int getExogenousTreewidth(){
-		Graph moral = DAGUtil.moral(this.getExogenousDAG());
+		Graph<Integer, DefaultEdge> moral = DAGUtil.moral(this.getExogenousDAG());
 		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() - 1;
 
 	}
 	public int getTreewidth(){
-		Graph moral = DAGUtil.moral(this.getNetwork());
+		Graph<Integer, DefaultEdge> moral = DAGUtil.moral(this.getNetwork());
 		return new ChordalGraphMaxCliqueFinder<>(moral).getClique().size() -1;
 
 	}

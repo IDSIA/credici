@@ -157,7 +157,7 @@ public class EMCredalBuilder extends CredalBuilder{
 		}
 
  */
-
+		
 		if(selPolicy == SelectionPolicy.LAST || !hasInnerPoint()) {
 			selectedPoints = getTrajectories().stream().map(t -> t.get(t.size() - 1)).collect(Collectors.toList());
 		}else {

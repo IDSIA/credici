@@ -30,6 +30,7 @@ import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
@@ -37,6 +38,8 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
+import org.apache.commons.rng.sampling.distribution.DirichletSampler;
+import org.apache.commons.rng.simple.RandomSource;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
@@ -343,6 +346,16 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 
 	public void randomizeExoFactor(int u, int prob_decimals){
+		// Strides left = this.getDomain(u);
+		// Strides right = this.getDomain(this.getParents(u));
+
+        // DirichletSampler x = DirichletSampler.symmetric(RandomSource.MWC_256.create(), left.getCombinations(), 1);
+		// double[][] data = new double[right.getCombinations()][];
+		// data = x.samples(data.length).toArray(len->new double[len][]);
+		
+		// BayesianFactor bf = new BayesianFactor(left.concat(right), Doubles.concat(data), false);
+		// this.setFactor(u, bf);
+
 		this.setFactor(u,
 				BayesianFactor.random(this.getDomain(u),
 						this.getDomain(this.getParents(u)),

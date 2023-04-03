@@ -21,8 +21,8 @@ public class FactorQueue<F extends GenericFactor> implements Iterator<ArrayList<
 		this.sequence = sequence;
         this.results = new ArrayList<>();
 
-		for (int var : sequence) {
-			this.data.put(var, new ArrayList<F>());
+		for (int variable : sequence) {
+			this.data.put(variable, new ArrayList<F>());
 		}
 	}
 	

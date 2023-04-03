@@ -3,24 +3,31 @@ package ch.idsia.credici;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.tuple.Pair;
 
+import gnu.trove.impl.hash.TIntIntHash;
 import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 
 /**
  * A data table counting duplicates.
  */
-public class Table {
-    
+public class Table implements Iterable<Map.Entry<int[], Integer>> {
+    Double x;
     private int[] columns;
     private TreeMap<int[], Integer> dataTable;
 
     public Table(TIntIntMap[] data) {
+        Number x; 
+    
         if (data.length == 0)
             throw new IllegalArgumentException("No data provided");
 
@@ -35,6 +42,19 @@ public class Table {
     public Table(int[] columns) {
         this.columns = columns;
         dataTable = new TreeMap<>(Arrays::compare);
+    }
+
+
+    public TIntIntMap[] convert() {
+        ArrayList<TIntIntMap> res = new ArrayList<>();
+
+        for (Map.Entry<int[], Integer> entry : dataTable.entrySet()) {
+            TIntIntHashMap map = new TIntIntHashMap(columns, entry.getKey());
+            for (int i = 0; i < entry.getValue(); i++) {
+                res.add(map);
+            }
+        }
+        return res.toArray(new TIntIntMap[res.size()]);
     }
 
     /**
@@ -93,6 +113,8 @@ public class Table {
     }
     
 
+
+
     public static Table readTable(String filename) throws IOException {
         return readTable(filename, "\\s");
     }
@@ -134,5 +156,36 @@ public class Table {
             sb.append(entry.getValue()).append('\t').append(out).append('\n');
         }
         return sb.toString();
+    }
+
+    @Override
+    public Iterator<Map.Entry<int[], Integer>> iterator() {
+        return dataTable.entrySet().iterator();
+    }
+
+
+    public Iterable<Pair<TIntIntMap, Integer>> mapIterable() {
+        return new Iterable<Pair<TIntIntMap,Integer>>() {
+            
+            @Override
+            public Iterator<Pair<TIntIntMap, Integer>> iterator() {
+                    
+                var iter = dataTable.entrySet().iterator();
+                return new Iterator<Pair<TIntIntMap,Integer>>() {
+
+                    @Override
+                    public boolean hasNext() {
+                        return iter.hasNext();
+                    }
+
+                    @Override
+                    public Pair<TIntIntMap, Integer> next() {
+                        var nextVal = iter.next();
+                        TIntIntMap ret = new TIntIntHashMap(columns, nextVal.getKey());
+                        return Pair.of(ret, nextVal.getValue());
+                    }
+                };
+            }
+        };
     }
 }

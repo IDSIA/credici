@@ -143,12 +143,11 @@ public class DataUtil {
 		TIntObjectMap<BayesianFactor> cfactors = new TIntObjectHashMap<>();
 
 		for (Conditional dom : model.getAllCFactorsSplittedDomains()) {
-			int left = dom.getLeft();//(int) dom.get("left");
+			int left = dom.getLeft();
 
 			Strides leftDom = model.getDomain(left);
 			Strides rightDom = model.getDomain(dom.getRight());
 			BayesianFactor f = DataUtil.getCondProb(data, leftDom, rightDom);
-			//System.out.println(left+"|"+Arrays.toString(right));
 			cfactors.put(left, f);
 		}
 		return cfactors;

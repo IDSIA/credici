@@ -60,13 +60,15 @@ public class AceExt {
 	// we should randomize those CPTs when compile the Ace
 	private String[] m_variables;
 
+	private boolean table = false;
 	/*
 	 * net_file: a string representing the location of the .NET file
 	 * variables: variables whose CPTs may be modified during training
 	 */
-	public AceExt(String net_file,  String[] variables, String exepath) {
+	public AceExt(String net_file,  String[] variables, String exepath, boolean table) {
 		// for constructing the network
 		m_net_file = net_file;
+		this.table = table;
 		// create a dummy net file
 		m_dummy_net_file = m_net_file.substring(0, m_net_file.length() - 4) + "_dummy.net";
 		m_dummy_lmap_file = m_dummy_net_file + ".lmap";
@@ -189,12 +191,15 @@ public class AceExt {
 		String strLine;
 		try {
 			while ((strLine = reader.readLine()) != null) {
-				String sub_string = ",e)";
-				if (strLine.contains(sub_string)) {
+				if (strLine.startsWith("Pr(e)")) {
+					String[] e = strLine.split("=");
+					double pe = Double.valueOf(e[1].trim());
+					query_ans.put("e", Arrays.asList(pe));
+				} else if (strLine.contains(",e)")) {
 					String[] words = strLine.split("\\,");
 					String var_name = words[0].substring(3, words[0].length());
 					// if the variable is one of the queried var
-					if (query_vars.contains(var_name)) {
+					//if (query_vars.contains(var_name)) {
 						List<Double> vals = new ArrayList<Double>();
 						int recording = 0;
 						String newstr = "";
@@ -212,7 +217,7 @@ public class AceExt {
 							vals.add(dec_num);
 						}
 						query_ans.put(var_name, vals);
-					}
+					//}
 				}
 			}
 		} catch (IOException e) {
@@ -429,18 +434,19 @@ public class AceExt {
 
 	private void Ice_compile(String net_file, String compile_file) {
 		// create a process which execute the command
-		String command1 = compile_file + " -forceC2d -cd06 " + net_file;
+		String method = this.table ? "-forceTabular" : "-forceC2d";
+		String command1 = compile_file + " " + method + " -cd06 " + net_file;
 		String command2 = "mv " + net_file + ".ac" + " " + m_net_file + ".ac";
 		System.out.println(command1);
 		System.out.println(command2);
 		try {
 				Process p = new ProcessBuilder().
-				command(compile_file, "-forceC2d", "-cd06", net_file).
+				command(compile_file, method, "-cd06", net_file).
 				redirectError(new File("err.err")).
 				start();
 				int exit = p.waitFor();
 				if (exit != 0) {
-					throw new RuntimeException(compile_file +  " -forceC2d "+ "-cd06 "+ net_file);
+					throw new RuntimeException(compile_file +  " "+method +" -cd06 "+ net_file);
 				}
 				
 				p = new ProcessBuilder().
@@ -450,7 +456,7 @@ public class AceExt {
 
 				exit = p.waitFor();
 				if (exit != 0) {
-					throw new RuntimeException(compile_file +  " -forceC2d "+ "-cd06 "+ net_file);
+					throw new RuntimeException(compile_file +  " "+ method +" -cd06 "+ net_file);
 				}
 		} catch (InterruptedException e) {
 			e.printStackTrace();

@@ -38,7 +38,11 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
+import org.apache.commons.rng.UniformRandomProvider;
+import org.apache.commons.rng.sampling.DiscreteProbabilityCollectionSampler;
 import org.apache.commons.rng.sampling.distribution.DirichletSampler;
+import org.apache.commons.rng.sampling.distribution.DiscreteSampler;
+import org.apache.commons.rng.sampling.distribution.MarsagliaTsangWangDiscreteSampler;
 import org.apache.commons.rng.simple.RandomSource;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
@@ -51,6 +55,8 @@ import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import javax.annotation.Nonnull;
+
 /**
  * Author:  Rafael Cabañas
  * Date:    04.02.2020
@@ -61,6 +67,8 @@ import java.util.stream.Stream;
  */
 public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, SparseDirectedAcyclicGraph> {
 
+
+	private UniformRandomProvider randomSource;
 
 	private String name="";
 
@@ -74,11 +82,13 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 */
 	public StructuralCausalModel() {
 		super(new SparseDirectedAcyclicGraph());
+		initRandom();
 	}
 
 	public StructuralCausalModel(String name) {
 		super(new SparseDirectedAcyclicGraph());
 		this.name=name;
+		initRandom();
 	}
 
 	/**
@@ -90,7 +100,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 */
 	public StructuralCausalModel(SparseDirectedAcyclicGraph empiricalDAG, int[] endoVarSizes, int... exoVarSizes){
 		super(new SparseDirectedAcyclicGraph());
-
+		initRandom();
+	
 		if(endoVarSizes.length != empiricalDAG.getVariables().length)
 			throw new IllegalArgumentException("endoVarSizes vector should as long as the number of vertices in the dag");
 
@@ -116,8 +127,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			else
 				this.addParent(v, this.addVariable(exoVarSizes[i], true));
 		}
-
 	}
+	
+	protected void initRandom() {
+		randomSource = RandomSource.MWC_256.create();
+	}
+
 
 	/**
 	 * Constructs a makovian equationless SCM from a bayesian network
@@ -147,6 +162,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public StructuralCausalModel copy(){
 
 		StructuralCausalModel copy = new StructuralCausalModel();
+		copy.randomSource = this.randomSource;
 		for (int v: this.getVariables()){
 			int vid = copy.addVariable(v, this.getSize(v), this.isExogenous(v));
 		}
@@ -344,23 +360,31 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		}
 	}
 
-
+	
+	/**
+	 * Randomize the distribution associated to the specified exogenous variable u. 
+	 * This will assing a probability sampled from a dirichlet with alpha == 1.
+	 * 
+	 * The decimals parameter is unused.
+	 * 
+	 * @param u the variable whos distribution is to be randomized
+	 * @param prob_decimals unused
+	 */
 	public void randomizeExoFactor(int u, int prob_decimals){
-		// Strides left = this.getDomain(u);
-		// Strides right = this.getDomain(this.getParents(u));
+		Strides left = this.getDomain(u);
+		Strides right = this.getDomain(this.getParents(u));
 
-        // DirichletSampler x = DirichletSampler.symmetric(RandomSource.MWC_256.create(), left.getCombinations(), 1);
-		// double[][] data = new double[right.getCombinations()][];
-		// data = x.samples(data.length).toArray(len->new double[len][]);
+        DirichletSampler x = DirichletSampler.symmetric(randomSource, left.getCombinations(), 1);
+		double[][] data = new double[right.getCombinations()][];
+		data = x.samples(data.length).toArray(len->new double[len][]);
 		
-		// BayesianFactor bf = new BayesianFactor(left.concat(right), Doubles.concat(data), false);
-		// this.setFactor(u, bf);
+		this.setFactor(u, new BayesianFactor(left.concat(right), Doubles.concat(data), false));
 
-		this.setFactor(u,
-				BayesianFactor.random(this.getDomain(u),
-						this.getDomain(this.getParents(u)),
-						prob_decimals, false)
-		);
+		// this.setFactor(u,
+		// 		BayesianFactor.random(this.getDomain(u),
+		// 				this.getDomain(this.getParents(u)),
+		// 				prob_decimals, false)
+		// );
 
 	}
 
@@ -386,24 +410,23 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 
-		/**
-		 * Attach to each variable (endogenous) a random factor.
+	/**
+	 * Attach to each variable (endogenous) a random factor.
+	 * 
+ 	 */
+	public void fillWithRandomEquations() {
+		for (int x : getEndogenousVars()) {
+			Strides pa_x = this.getDomain(this.getParents(x));
+			int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
 
-		 */
-		public void fillWithRandomEquations(){
-
-			for (int x : getEndogenousVars()) {
-				Strides pa_x = this.getDomain(this.getParents(x));
-				int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
-
-				this.setFactor(x,
-						BayesianFactor.deterministic(
-								this.getDomain(x),
-								pa_x,
-								assignments)
-				);
-			}
+			this.setFactor(x,
+					BayesianFactor.deterministic(
+							this.getDomain(x),
+							pa_x,
+							assignments)
+			);
 		}
+	}
 
 
 
@@ -412,7 +435,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param prob_decimals
 	 * @return
 	 */
-	public TIntObjectMap[] getRandomFactors(int prob_decimals){
+	public TIntObjectMap[] getRandomFactors(int prob_decimals) {
 
 		StructuralCausalModel model = this.copy();
 
@@ -430,7 +453,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return new TIntObjectMap[] {empirical, equations};
 
 	}
-
 
 	/**
 	 * Gets the empirical probability of a endogenous variable by marginalizing out
@@ -1051,6 +1073,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return sample(new TIntIntHashMap(), vars);
 	}
 
+
+	private ObservationBuilder sample(BayesianFactor bf) {
+		double[] probs = bf.getData();
+		List<Integer> states = IntStream.range(0, bf.getDomain().getSizeAt(0)).mapToObj(Integer::valueOf).collect(Collectors.toList());
+		var ds = new DiscreteProbabilityCollectionSampler<Integer>(randomSource, states, probs);
+		return bf.getDomain().observationOf(ds.sample());
+	}
+	
 	public TIntIntMap sample(TIntIntMap obs, int... vars){
 		for(int v : DAGUtil.getTopologicalOrder(this.getNetwork())){
 			if(!obs.containsKey(v)) {
@@ -1063,7 +1093,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 					f = f.filter(pa, obs.get(pa));
 				}
 
-				obs.putAll(f.sample());
+				obs.putAll(sample(f));
 			}
 		}
 

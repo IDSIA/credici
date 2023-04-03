@@ -17,7 +17,7 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.procedure.TIntIntProcedure;
 
 public class AceInference {
-
+    private boolean table = true;
     private File networkFile;
     private StructuralCausalModel model; 
     private AceExt ace; 
@@ -41,7 +41,7 @@ public class AceInference {
 
     public void compile() {
         String[] names = IntStream.of(model.getExogenousVars()).mapToObj((a)-> "n" + a).toArray(String[]::new);
-        ace = new AceExt(networkFile.getAbsolutePath(), names, acePath);
+        ace = new AceExt(networkFile.getAbsolutePath(), names, acePath, table);
     }
    
     
@@ -71,6 +71,22 @@ public class AceInference {
         String name = nodeName(node);
         Map<String, List<Double>> ret = ace.evaluate(Arrays.asList(name), evidenceMap);
         return ret.get(name).stream().mapToDouble(Double::doubleValue).toArray();
+    }
+
+    public double pevidence( TIntIntMap evidence) {
+        Map<String, String> evidenceMap = new HashMap<>();
+        if (evidence != null) {
+            evidence.forEachEntry(new TIntIntProcedure() {    
+                @Override
+                public boolean execute(int n, int s) {
+                    evidenceMap.put(nodeName(n), stateName(n, s));
+                    return true;
+                }
+            });
+        }
+        Map<String, List<Double>> ret = ace.evaluate(Arrays.asList(), evidenceMap);
+        return ret.get("e").stream().mapToDouble(Double::doubleValue).toArray()[0];
+        //return 0;
     }
 
     String stateName(int node, int state){

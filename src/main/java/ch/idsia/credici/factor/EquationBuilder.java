@@ -199,9 +199,9 @@ public class EquationBuilder {
     }
 
 
-    public static BayesianFactor conservative(int Uvar, Strides endoDom, int[] vars, int... endoPa){
+    public static BayesianFactor conservative(int Uvar, Strides endoDom, int[] vars, int... endoParents){
 
-        Strides domY = DomainUtil.subDomain(endoDom, endoPa);
+        Strides domY = DomainUtil.subDomain(endoDom, endoParents);
         Strides domX = DomainUtil.subDomain(endoDom, vars);
         int m = domY.getCombinations();
         int Usize = (int)Math.pow(domX.getCombinations(), m);
@@ -213,15 +213,14 @@ public class EquationBuilder {
 
         int i = 0;
         for(int[] confX : DomainUtil.getEventSpace(IntStream.range(0,m).mapToObj(k->domX).toArray(Strides[]::new))){
-            //System.out.println(Arrays.toString(confX));
+        
             for(int k=0; k<m; k++) {
                 int finalK = k;
                 int[] xval = IntStream.range(0, domX.getSize()).map(j ->  confX[finalK *domX.getSize() + j]).toArray();
-                //System.out.println("f(u_"+i+", Y="+Arrays.toString((int[]) Yspace.get(k))+") = "+Arrays.toString(xval));
                 EquationOps.setValue(
                         f,
                         ObservationBuilder.observe(Uvar, i),
-                        ObservationBuilder.observe(endoPa, (int[]) Yspace.get(k)),
+                        ObservationBuilder.observe(endoParents, (int[]) Yspace.get(k)),
                         vars,
                         xval
                 );

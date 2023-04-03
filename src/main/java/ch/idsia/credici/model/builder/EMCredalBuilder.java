@@ -6,6 +6,7 @@ import ch.idsia.credici.learning.BayesianCausalEM;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.learning.WeightedCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.Probability;
@@ -110,11 +111,6 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
 		this.data = data;
 		this.trainableVars = causalModel.getExogenousVars();
-
-
-		//this.inputGenDist = genDist;
-		//setTargetGenDist();
-
 	}
 
 	public static EMCredalBuilder of(StructuralCausalModel causalModel, TIntIntMap[] data){
@@ -145,18 +141,9 @@ public class EMCredalBuilder extends CredalBuilder{
 	}
 
 
-	private void selectPoints(){
+	private void selectPoints() {
 		// If there is not any inner point, apply LAST,
 		// which can always be applyed but the inner approximation is not guaranteed.
-/*
-		for(List<StructuralCausalModel> t : this.trajectories){
-			StructuralCausalModel m = t.get(t.size()-1);
-			System.out.print(Probability.logLikelihood(targetGenDist, targetGenDist, 1));
-			System.out.print("\t"+Probability.logLikelihood(m.getEmpiricalMap(false), targetGenDist, 1));
-			System.out.println("\tratio="+ratioLk(t.get(t.size()-1)));
-		}
-
- */
 		
 		if(selPolicy == SelectionPolicy.LAST || !hasInnerPoint()) {
 			selectedPoints = getTrajectories().stream().map(t -> t.get(t.size() - 1)).collect(Collectors.toList());
@@ -196,25 +183,9 @@ public class EMCredalBuilder extends CredalBuilder{
 					if (out != null && in != null)
 						selectedPoints.add(bisection(out, in));
 				}
-
-
-
 			} else {
 				throw new IllegalArgumentException("Wrong selection policy");
 			}
-
-
-			//selectedPoints = selectedPoints.stream().filter(m-> ratioLk(m)==1.0).collect(Collectors.toList());
-
-
-			/*
-			// add last points that are inside:
-			selectedPoints.addAll(
-					trayectories.stream()
-							.map(t -> t.get(t.size() - 1))
-							.filter(this::isInside)
-							.collect(Collectors.toList())
-			);*/
 		}
 
 	}
@@ -395,19 +366,20 @@ public class EMCredalBuilder extends CredalBuilder{
 			throw new IllegalArgumentException("No data provided");
 			//em = new BayesianCausalEM(startingModel).setKlthreshold(threshold).setRegularization(0.0);
 			//stepArgs = (Collection) endogJointProbs.values();
-		}else if(weightedEM) {
+		} else if(weightedEM) {
 			em = new WeightedCausalEM(startingModel).setRegularization(0.0)
 					.setStopCriteria(stopCriteria)
 					.setThreshold(threshold)
 					//.setSmoothing(1)
-					//.setInferenceVariation(0)
+					.setInferenceVariation(inferenceVariation)
 					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
-		}else{
+		} else {
 			em = new FrequentistCausalEM(startingModel)
 					.setStopCriteria(stopCriteria)
 					.setThreshold(threshold)
 					.setRegularization(0.0)
+					.setInferenceVariation(inferenceVariation)
 					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
 		}
@@ -478,6 +450,12 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public EMCredalBuilder setStopCriteria(FrequentistCausalEM.StopCriteria stopCriteria) {
 		this.stopCriteria = stopCriteria;
+		return this;
+	}
+
+	private int inferenceVariation= 0;
+	public EMCredalBuilder setInferenceVariation(int i) {
+		this.inferenceVariation = i;
 		return this;
 	}
 

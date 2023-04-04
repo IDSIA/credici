@@ -1,5 +1,6 @@
 package ch.idsia.credici.learning;
 
+import ch.idsia.credici.learning.inference.AceMethod;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
@@ -23,6 +24,7 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.time.StopWatch;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -74,16 +76,22 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         this(model, (new MinFillOrdering()).apply(model));
     }
 
-
+    @Override
     protected void stepPrivate(Collection stepArgs) throws InterruptedException {
         // E-stage
-        TIntObjectMap<BayesianFactor> counts = expectation((TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new));
-        // M-stage
-        maximization(counts);
+        try {
+            TIntObjectMap<BayesianFactor> counts;
+            counts = expectation((TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new));
+            // M-stage
+            maximization(counts);
+        } catch (IOException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
 
     }
 
-    protected TIntObjectMap<BayesianFactor> expectation(TIntIntMap[] observations) throws InterruptedException {
+    protected TIntObjectMap<BayesianFactor> expectation(TIntIntMap[] observations) throws InterruptedException, IOException {
 
         TIntObjectMap<BayesianFactor> counts = new TIntObjectHashMap<>();
         for (int variable : posteriorModel.getVariables()) {
@@ -220,7 +228,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
 
 
-    BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException {
+    BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException, IOException {
 
         if(query.length>1)
             throw new IllegalArgumentException("Target variable cannot be more than one. Not implemented");
@@ -251,7 +259,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 case 2: p = inferenceVariation2(query, obs, hash); break;
                 case 3: p = inferenceVariation3(query, obs); break;
                 case 4: p = inferenceVariation4(query, obs, hash); break;
-                case 5: p = inferenceVariationAce(query, filteredObs); break;
+                case 5: p = inferenceVariationAce(query, filteredObs, hash); break;
 
             }
 
@@ -264,9 +272,14 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     }
 
-    private BayesianFactor inferenceVariationAce(int[] query, TIntIntMap filteredObs) {
+    public AceMethod getAce() {
+        return ace;
+    }
+
+    private AceMethod ace = new AceMethod();
+    private BayesianFactor inferenceVariationAce(int[] query, TIntIntMap obs, String hash) throws InterruptedException, IOException {
         
-        return null;
+        return ace.run((StructuralCausalModel) posteriorModel, query[0], obs, hash);
     }
 
     /*
@@ -299,6 +312,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
      * The model is simplified at the first posterior query and stored in a caché
      * */
     BayesianFactor inferenceVariation2(int[] query, TIntIntMap obs, String hash) throws InterruptedException {
+
         StructuralCausalModel infModel = null;
 
         if(!modelCache.containsKey(hash)) {

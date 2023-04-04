@@ -2,6 +2,8 @@ package ace;
 
 import java.util.*;
 
+import org.apache.commons.io.IOUtils;
+
 import ch.idsia.crema.utility.ArraysUtil;
 
 import java.io.BufferedReader;
@@ -10,8 +12,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 
 public class AceExt {
 
@@ -93,25 +97,25 @@ public class AceExt {
 
 		/* Operations on NET file */
 		// parse the .net file
-		System.out.println("=== ACE Extension for Training v1.0 ===");
+		//System.out.println("=== ACE Extension for Training v1.0 ===");
 		long startTime = System.currentTimeMillis();
-		System.out.println("  ** parse net file **");
+		//System.out.println("  ** parse net file **");
 		parse_net(variables);
 
-		System.out.println("  ** create a dummy net file **");
+		//System.out.println("  ** create a dummy net file **");
 		generate_dummy_net(m_dummy_net_file);
 		
 		/* Operations on lmap file */
 		// invoke the process that creates .lmap file from dummy net file
-		System.out.println("  ** compile the dummy net file **");
+		//System.out.println("  ** compile the dummy net file **");
 		Ice_compile(m_dummy_net_file, m_compile_file);
 
 		// parse the lmap file which updates lmap_fix_lines and lmap_var_lines
-		System.out.println("  ** parse the dummy lmap file **");
+		//System.out.println("  ** parse the dummy lmap file **");
 		parse_lmap(m_dummy_lmap_file);
 
 		// generate an lmap file for the original .net file
-		System.out.println("  ** generate the lmap file **");
+		//System.out.println("  ** generate the lmap file **");
 		generate_lmap(m_lmap_file);
 		
 		long endTime = System.currentTimeMillis();
@@ -151,13 +155,17 @@ public class AceExt {
 		// execute the marginal
 		// create a process which execute the command
 		String command = m_evaluate_file + " " + m_net_file + " " + m_inst_file;
+		String io = ""; 
 		try {
-			Process p = Runtime.getRuntime().exec(new String[] { "bash", "-c", command });
+			//Process p = Runtime.getRuntime().exec(new String[] { "bash", "-c", command });
+	
+			Process p = Runtime.getRuntime().exec(command);
 			try {
 				int exit = p.waitFor();
 				if (exit != 0) { 
 					throw new RuntimeException(m_evaluate_file + " " + m_net_file + " " + m_inst_file);
 				}
+				io = IOUtils.toString(p.getInputStream(), StandardCharsets.UTF_8);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -168,28 +176,52 @@ public class AceExt {
 		Map<String, List<Double>> query_ans = new HashMap<String, List<Double>>();
 		HashSet<String> query_vars = new HashSet<String>(query_nodes);
 		match_queries(query_ans, query_vars);
+		save_timings(io);
 		long endTime = System.currentTimeMillis();
 		System.out.println("== Evaluating " + query_nodes.size() + " query nodes with " + evidence.size()
-				+ " evidences took " + (endTime - startTime) + "ms");
+				+ " evidences took " + (endTime - startTime) + "ms " + command);
 		return query_ans;
 	}
 
+	private double lastSetupTime;
+	private double lastQueryTime;
+	private double lastReadTime;
+
+	private void save_timings(String io) {
+		this.lastSetupTime = -1;
+		this.lastQueryTime = -1;
+		this.lastReadTime = -1;
+
+		io.lines().forEach(line -> {
+			if (line.startsWith("  Total Initialization Time (ms) : ")) 
+				this.lastSetupTime = Double.valueOf(line.split(":")[1].trim());
+			else if (line.startsWith("Network Read Time (ms) : ")) 
+				this.lastReadTime = Double.valueOf(line.split(":")[1].trim());
+			else if (line.startsWith("  Total Inference Time (ms) : "))
+				this.lastQueryTime = Double.valueOf(line.split(":")[1].trim());
+		});
+	}
+
+
+	public double getLastQueryTime() {
+		return lastQueryTime;
+	}
+
+	public double getLastReadTime() {
+		return lastReadTime;
+	}
+	public double getLastSetupTime() {
+		return lastSetupTime;
+	}
+	
 	private void match_queries(Map<String, List<Double>> query_ans, HashSet<String> query_vars) {
 		/*
 		 * The file stream code was referenced from
 		 * https://stackoverflow.com/questions/45826412/how-to-parse-a-simple-text-file-
 		 * in-java
 		 */
-		FileInputStream stream = null;
-		try {
-			stream = new FileInputStream(m_marginal_file);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-
-		BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
 		String strLine;
-		try {
+		try (BufferedReader reader = new BufferedReader(new FileReader(m_marginal_file))) {
 			while ((strLine = reader.readLine()) != null) {
 				if (strLine.startsWith("Pr(e)")) {
 					String[] e = strLine.split("=");
@@ -238,10 +270,8 @@ public class AceExt {
 		}
 		buffer += "</instantiation>\n";
 		// write to the file
-		try {
-			BufferedWriter writer = new BufferedWriter(new FileWriter(m_inst_file));
+		try(BufferedWriter writer = new BufferedWriter(new FileWriter(m_inst_file))){
 			writer.write(buffer);
-			writer.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -249,16 +279,9 @@ public class AceExt {
 
 	// parse the .net network file
 	private void parse_net(String[] variables) {
-		FileInputStream stream = null;
-		try {
-			stream = new FileInputStream(m_net_file);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-
-		BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
+		
 		String strLine;
-		try {
+		try (BufferedReader reader = new BufferedReader(new FileReader(m_net_file))) {
 			while ((strLine = reader.readLine()) != null) {
 				String[] words = strLine.trim().split("\\s+");
 				// create a new node
@@ -423,10 +446,8 @@ public class AceExt {
 		}
 
 		// write to the file
-		try {
-			BufferedWriter writer = new BufferedWriter(new FileWriter(dummy_file));
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(dummy_file))) {
 			writer.write(buffer);
-			writer.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -435,24 +456,25 @@ public class AceExt {
 	private void Ice_compile(String net_file, String compile_file) {
 		// create a process which execute the command
 		String method = this.table ? "-forceTabular" : "-forceC2d";
-		String command1 = compile_file + " " + method + " -cd06 " + net_file;
-		String command2 = "mv " + net_file + ".ac" + " " + m_net_file + ".ac";
-		System.out.println(command1);
-		System.out.println(command2);
+		//String command1 = compile_file + " " + method + " -cd06 " + net_file;
+		//String command2 = "mv " + net_file + ".ac" + " " + m_net_file + ".ac";
+		//System.out.println(command1);
+		//System.out.println(command2);
 		try {
 				Process p = new ProcessBuilder().
-				command(compile_file, method, "-cd06", net_file).
-				redirectError(new File("err.err")).
-				start();
+					command(compile_file, method, "-cd06", net_file).
+					redirectError(new File("err.err")).
+					start();
+
 				int exit = p.waitFor();
 				if (exit != 0) {
 					throw new RuntimeException(compile_file +  " "+method +" -cd06 "+ net_file);
 				}
 				
 				p = new ProcessBuilder().
-				command("mv", net_file + ".ac", m_net_file + ".ac").
-				redirectError(new File("err2.err")).
-				start();
+					command("mv", net_file + ".ac", m_net_file + ".ac").
+					redirectError(new File("err2.err")).
+					start();
 
 				exit = p.waitFor();
 				if (exit != 0) {
@@ -483,7 +505,7 @@ public class AceExt {
 					String word = words[i];
 					// if the word is a numerical value and is one of the keys
 					// we add the line to be a var line, also update the factor
-					if (utils.isNumeric(word) && dum2fac.containsKey(Double.parseDouble(word))) {
+					if (Utils.isNumeric(word) && dum2fac.containsKey(Double.parseDouble(word))) {
 						Factor f = dum2fac.get(Double.parseDouble(word));
 						String rpl_str = strLine.replace(word, "@");
 						f.set_lmap(rpl_str);
@@ -519,10 +541,8 @@ public class AceExt {
 			}
 		}
 		// write to the file
-		try {
-			BufferedWriter writer = new BufferedWriter(new FileWriter(lmap_file));
+		try (BufferedWriter writer = new BufferedWriter(new FileWriter(lmap_file))) {
 			writer.write(buffer);
-			writer.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -352,6 +352,11 @@ public class EMCredalBuilder extends CredalBuilder{
 		return selectedPoints.stream().allMatch(this::isInside);
 	}
 
+	private double aceQueryTime;
+	public double getAceQueryTime() {
+		return aceQueryTime;
+	}
+
 	private List<StructuralCausalModel> runEM() throws InterruptedException {
 
 		StructuralCausalModel startingModel =
@@ -360,7 +365,7 @@ public class EMCredalBuilder extends CredalBuilder{
 						,trainableVars
 		);
 
-		ExpectationMaximization em = null;
+		FrequentistCausalEM em = null;
 		Collection stepArgs = null;
 		if(this.data==null) {
 			throw new IllegalArgumentException("No data provided");
@@ -389,9 +394,10 @@ public class EMCredalBuilder extends CredalBuilder{
 				.setTrainableVars(this.trainableVars);
 		em.run(stepArgs, maxEMIter);
 
+		if (inferenceVariation == 5) // ace
+			aceQueryTime = em.getAce().getQueryTime();
 
-
-		List<StructuralCausalModel> t = em.getIntermediateModels();
+		List<StructuralCausalModel> t = em.getIntermediateModels().stream().map(n->(StructuralCausalModel)n).collect(Collectors.toList());
 
 		if(verbose)
 			System.out.println(" calculated EM trajectory of "+(t.size()-1));

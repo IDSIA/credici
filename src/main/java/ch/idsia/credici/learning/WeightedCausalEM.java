@@ -17,6 +17,7 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.time.StopWatch;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
@@ -70,15 +71,18 @@ public class WeightedCausalEM extends FrequentistCausalEM {
 
 
     protected void stepPrivate(Collection stepArgs) throws InterruptedException {
+        try {
         // E-stage
         TIntObjectMap<BayesianFactor> counts = expectation((Pair[]) stepArgs.toArray(Pair[]::new));
         // M-stage
         maximization(counts);
-
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
     }
 
 
-    protected TIntObjectMap<BayesianFactor> expectation(Pair[] dataWeighted) throws InterruptedException {
+    protected TIntObjectMap<BayesianFactor> expectation(Pair[] dataWeighted) throws InterruptedException, IOException {
 
         TIntObjectMap<BayesianFactor> counts = new TIntObjectHashMap<>();
         for (int variable : posteriorModel.getVariables()) {

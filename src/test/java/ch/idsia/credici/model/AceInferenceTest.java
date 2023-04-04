@@ -13,6 +13,7 @@ import org.junit.Test;
 import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.ace.AceInference;
 import ch.idsia.credici.learning.ve.VE;
+import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
@@ -21,6 +22,7 @@ import ch.idsia.crema.model.Instantiation;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.model.math.FactorOperation;
+import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
 public class AceInferenceTest {
@@ -59,10 +61,19 @@ public class AceInferenceTest {
         BayesianNetwork bnet = new BayesianNetwork();
 		int y = bnet.addVariable(2);
 		int x = bnet.addVariable(2);
+        int z = bnet.addVariable(3);
         bnet.addParent(x, y);
+        bnet.addParents(z, x, y);
 
-		bnet.setFactor(y, new BayesianFactor(bnet.getDomain(y), new double[]{0.3,0.7}));
-		bnet.setFactor(x, new BayesianFactor(bnet.getDomain(x,y), new double[] {0.1, 0.2, 0.3, 0.4}));
+        BayesianFactor fy = new BayesianFactor(bnet.getDomain(y), new double[]{0.3,0.7});
+        BayesianFactor fx = new BayesianFactor(bnet.getDomain(x,y), new double[] {0.1, 0.2, 0.3, 0.4});
+        BayesianFactor fz = new BayesianFactor(bnet.getDomain(z,x,y), new double[] {
+            0.1, 0.2, 0.7, 0.3, 0.1, 0.6, 0.6, 0.2, 0.2, 0.2, 0.5, 0.3
+        });
+
+		bnet.setFactor(y, fy);
+		bnet.setFactor(x, fx);
+        bnet.setFactor(z, fz);
         
        
         StructuralCausalModel model = new StructuralCausalModel(){
@@ -99,19 +110,30 @@ public class AceInferenceTest {
             double xxx = ai.pevidence(new TIntIntHashMap(new int[]{x}, new int[]{0}));
             System.out.println(xxx);
 
-
+            long start = System.currentTimeMillis();
             VE<BayesianFactor> ve = new VE<BayesianFactor>(new MinFillOrdering().apply(bnet));
-        
             BayesianFactor fac = ve.apply(bnet, x);
-            System.out.println("caio");
+            long end = System.currentTimeMillis();
+
+            System.out.println("VE P(X) took " + (end - start) + "ms");
             System.out.println(Arrays.toString(fac.getData()));
 
-            //ve.setInstantiation(
+            start = System.currentTimeMillis();
             ve.setNormalize(false);
             fac = ve.apply(bnet, new int[0], new TIntIntHashMap(new int[]{x}, new int[]{0}));
-            System.out.println("caio");
+            end = System.currentTimeMillis();
+            System.out.println("P(e) took "+ (end - start) + "ms");
             System.out.println(Arrays.toString(fac.getData()));
 
+            start = System.currentTimeMillis();
+            BayesianFactor ff = ch.idsia.crema.factor.FactorUtil.combine(fx,new BayesianFactor[]{fy,fz});
+            ff=ff.marginalize(z).marginalize(y);
+            end = System.currentTimeMillis();
+            System.out.println("P(e) took "+ (end - start) + "ms");
+            System.out.println(Arrays.toString(ff.getData()));
+
+            //TIntObjectMap<double[]> ma = ai.getPosteriors(new TIntIntHashMap(new int[]{x}, new int[]{0}));
+            
         } catch (IOException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

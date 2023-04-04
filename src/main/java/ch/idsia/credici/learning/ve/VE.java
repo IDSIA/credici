@@ -145,26 +145,26 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
 
         while (queue.hasNext()) {
             int variable = queue.getVariable();
-            System.out.println("Var " + variable);
+           // System.out.println("Var " + variable);
             Collection<F> var_factors = queue.next();
 
             if (!var_factors.isEmpty()) {
-                for (F f : var_factors) {
-                   System.out.println(f);
-                }
+                // for (F f : var_factors) {
+                //    System.out.println(f);
+                // }
                 F last = FactorUtil.combine(operator, var_factors);
-                System.out.println("combined: " + last);
+                //System.out.println("combined: " + last);
                 if (instantiation != null && instantiation.containsKey(variable)) {
                     int state = instantiation.get(variable);
                     last = operator.filter(last, variable, state);
-                    System.out.println("Filtered " + last);
+                   // System.out.println("Filtered " + last);
                 }
                 if (Arrays.binarySearch(query, variable) >= 0) {
                     // query var // nothing to do
-                    System.out.println("Var is target");
+                //    System.out.println("Var is target");
                 } else {
                     last = operator.marginalize(last, variable);
-                    System.out.println("Marginalized " + last);
+                 //   System.out.println("Marginalized " + last);
                 }
                 queue.add(last);
             }

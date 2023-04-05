@@ -23,6 +23,7 @@ import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.learning.ExpectationMaximization;
+import ch.idsia.crema.model.io.dot.DotSerialize;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl.NotImplementedException;
@@ -64,8 +65,7 @@ public class Example1 {
         // System.out.println(Arrays.toString(a));
 
 
-
-
+        
     public static void main(String[] args) throws IOException, InterruptedException, NotImplementedException {
         File file = File.createTempFile("Credici", ".uai");
         Files.writeString(file.toPath(), "CAUSAL\n"+
@@ -82,6 +82,7 @@ public class Example1 {
         "64	0 0 0 0  1 1 1 1  0 0 0 0  1 1 1 1  0 0 0 0  1 1 1 1  0 0 0 0  1 1 1 1  "+
            "0 0 0 0  1 1 1 1  0 0 0 0  1 1 1 1  0 0 0 0  1 1 1 1  0 0 0 0  1 1 1 1\n"+
         "32	0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0 ", Charset.defaultCharset());
+
         // Files.writeString(file.toPath(), "CAUSAL\n"+
         // "4\n"+
         // "2 2 2 8\n"+
@@ -95,14 +96,17 @@ public class Example1 {
         // "16	0 0 0 0  0 0 0 0  0 0 0 0  0 0 0 0 \n"+
         // "8	0 0 0 0  0 0 0 0 ", Charset.defaultCharset());
         
-
-        StructuralCausalModel model = new CausalUAIParser("party_causal_0.uai").parse();//file.getAbsolutePath()).parse();
+        StructuralCausalModel model = new CausalUAIParser("party_causal_0.uai").parse();//
+        //StructuralCausalModel model = new CausalUAIParser("triangolo_causal_0.uai").parse();//
+        //StructuralCausalModel model = new CausalUAIParser(file.getAbsolutePath()).parse();
         BayesianFactor bf0 = model.getFactor(0);
         BayesianFactor bf1 = model.getFactor(1);
         BayesianFactor bf2 = model.getFactor(2);
         BayesianFactor bf3 = model.getFactor(3);
 
-
+        DotSerialize serialize = new DotSerialize();
+        System.out.println(serialize.run(model));
+        
        // Map<Integer,BayesianFactor> map = EquationBuilder.of(model).conservative(3);
 
         model.fillExogenousWithRandomFactors(9);
@@ -115,8 +119,8 @@ public class Example1 {
         Table table = new Table(samples);
         System.out.print(table);
 
-
-        for (int iv =0; iv<=5; ++iv) {
+        int[] ivs = new int[] { 6 };//0,1,2,3,4,6,5 };
+        for (int iv :ivs) {
             long start = System.currentTimeMillis();
             EMCredalBuilder builder = EMCredalBuilder.of(model.copy(), table.convert())
                 .setMaxEMIter(20)
@@ -126,7 +130,7 @@ public class Example1 {
                 .setInferenceVariation(iv)
                 .build();
                 System.out.println(iv + ": " +(System.currentTimeMillis() - start));
-                if (iv == 5) { 
+                if (iv >= 5) { 
                     System.out.println("ACE TIME: " + builder.getAceQueryTime());
                 }
             for (var m : builder.getSelectedPoints()){

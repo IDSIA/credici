@@ -357,16 +357,25 @@ public class EMCredalBuilder extends CredalBuilder{
 		return aceQueryTime;
 	}
 
+
+	private StructuralCausalModel randomModel(StructuralCausalModel reference) {
+		// return (StructuralCausalModel) BayesianFactor.randomModel(
+		// 				causalmodel, 10, false
+		// 				,trainableVars
+		// );
+		StructuralCausalModel rmodel = reference.copy();
+		rmodel.initRandom(0);
+		rmodel.fillExogenousWithRandomFactors(0);
+		return rmodel;
+	}
+
 	private List<StructuralCausalModel> runEM() throws InterruptedException {
 
-		StructuralCausalModel startingModel =
-				(StructuralCausalModel) BayesianFactor.randomModel(
-						causalmodel, 10, false
-						,trainableVars
-		);
+		StructuralCausalModel startingModel = randomModel(causalmodel);
 
 		FrequentistCausalEM em = null;
 		Collection stepArgs = null;
+
 		if(this.data==null) {
 			throw new IllegalArgumentException("No data provided");
 			//em = new BayesianCausalEM(startingModel).setKlthreshold(threshold).setRegularization(0.0);
@@ -396,6 +405,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		if (inferenceVariation == 5) // ace
 			aceQueryTime = em.getAce().getQueryTime();
+		else if (inferenceVariation == 6) // ace
+			aceQueryTime = em.getAceLocal().getQueryTime();
 
 		List<StructuralCausalModel> t = em.getIntermediateModels().stream().map(n->(StructuralCausalModel)n).collect(Collectors.toList());
 

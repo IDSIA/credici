@@ -1,6 +1,8 @@
 package ch.idsia.credici.learning;
 
+import ch.idsia.credici.learning.inference.AceLocalMethod;
 import ch.idsia.credici.learning.inference.AceMethod;
+import ch.idsia.credici.learning.inference.EMInference;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
@@ -259,7 +261,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 case 2: p = inferenceVariation2(query, obs, hash); break;
                 case 3: p = inferenceVariation3(query, obs); break;
                 case 4: p = inferenceVariation4(query, obs, hash); break;
-                case 5: p = inferenceVariationAce(query, filteredObs, hash); break;
+                case 5: p = inferenceVariationAce(query, filteredObs, hash, ace); break;
+                case 6: p = inferenceVariationAce(query, filteredObs, hash, aceLocal); break;
 
             }
 
@@ -275,11 +278,14 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     public AceMethod getAce() {
         return ace;
     }
+    public AceLocalMethod getAceLocal() {
+        return aceLocal;
+    }
 
     private AceMethod ace = new AceMethod();
-    private BayesianFactor inferenceVariationAce(int[] query, TIntIntMap obs, String hash) throws InterruptedException, IOException {
-        
-        return ace.run((StructuralCausalModel) posteriorModel, query[0], obs, hash);
+    private AceLocalMethod aceLocal = new AceLocalMethod();
+    private BayesianFactor inferenceVariationAce(int[] query, TIntIntMap obs, String hash, EMInference method) throws InterruptedException, IOException {
+        return method.run((StructuralCausalModel) posteriorModel, query[0], obs, hash);
     }
 
     /*

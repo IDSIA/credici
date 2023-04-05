@@ -128,9 +128,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				this.addParent(v, this.addVariable(exoVarSizes[i], true));
 		}
 	}
-	
-	protected void initRandom() {
-		randomSource = RandomSource.MWC_256.create();
+	public void initRandom() {
+		initRandom(0);
+	}
+
+	public void initRandom(long seed) {
+		randomSource = RandomSource.JDK.create(seed);
 	}
 
 

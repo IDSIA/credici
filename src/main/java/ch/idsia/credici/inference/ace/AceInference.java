@@ -20,7 +20,7 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.procedure.TIntIntProcedure;
 
 public class AceInference {
-    private boolean table = true;
+    private boolean table = false;
     private File networkFile;
     private StructuralCausalModel model; 
     private AceExt ace; 
@@ -33,7 +33,8 @@ public class AceInference {
 
     public File setNetwork(StructuralCausalModel network) throws IOException {
         networkFile = File.createTempFile("CrediciAceModel", ".net");
-
+        networkFile.deleteOnExit();
+        
         try(NetworkWriter writer = new NetworkWriter(networkFile, "n", "s")) {
             writer.write(network.toBnet());
         }
@@ -59,9 +60,8 @@ public class AceInference {
         ace.update_CPTs(data);
     }
 
-    public void update(StructuralCausalModel network, int U) {
+    public void update(BayesianFactor f, int U) {
         Map<String, List<Double>> data = new HashMap<>();
-        BayesianFactor f = network.getFactor(U);
         List<Double> dta = Arrays.stream(f.getData()).<Double>mapToObj(Double::valueOf).collect(Collectors.toList());
         data.put(nodeName(U), dta);
         ace.update_CPTs(data);

@@ -1293,11 +1293,11 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public boolean isCompatible(TIntIntMap[] data, int fixDecimals) {
-		return this.getUncompatibleNodes(data, fixDecimals).size()==0;
+		return this.getUncompatibleNodes(data, fixDecimals).isEmpty();
 	}
 
 	public boolean isCompatible(TIntIntMap[] data, int[] exoVars, int fixDecimals) {
-		return this.getUncompatibleNodes(data, exoVars, fixDecimals).size()==0;
+		return this.getUncompatibleNodes(data, exoVars, fixDecimals).isEmpty();
 	}
 	public List<Integer> getUncompatibleNodes(TIntIntMap[] data, int fixDecimals){
 		HashMap empMap = DataUtil.getEmpiricalMap(this, data);

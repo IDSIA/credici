@@ -38,10 +38,9 @@ public class CollectionTools {
 	 * @return
 	 */
 	public static double[] roundNonZerosToTarget(double[] arr, double target, boolean newZeros, int num_decimals) {
+		double[] data = arr;//.clone();//Arrays.copyOf(arr, arr.length); // round will make a copy
 
-		double[] data = Arrays.copyOf(arr, arr.length);
-
-		data = ArraysUtil.round(data, num_decimals);
+		data = ArraysUtil.round(data, num_decimals); 
 
 		// Prevents from adding new zeros.
 		if(!newZeros) {
@@ -53,11 +52,7 @@ public class CollectionTools {
 
 		BigDecimal sum = BigDecimal.valueOf(0.0);
 		for (int i = 0; i < data.length; i++) {
-			//try {
-				sum = sum.add(BigDecimal.valueOf(data[i]));
-			//}catch(Exception e){
-			//	System.out.println();
-			//}
+			sum = sum.add(BigDecimal.valueOf(data[i]));
 		}
 		for (int i = data.length - 1; i >= 0; i--) {
 			if (data[i] != 0) {

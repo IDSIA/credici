@@ -21,68 +21,52 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.stream.IntStream;
 
 
 public class WeightedCausalEM extends FrequentistCausalEM {
 
-    private double regularization = 0.00001;
-
-    private TIntObjectMap<BayesianFactor> counts;
-
-    private HashMap<String, BayesianFactor> posteriorCache = new HashMap<>();
-
-    private boolean usePosteriorCache = true;
-
-
-
-    public WeightedCausalEM(StructuralCausalModel model,
-                               JoinInference<BayesianFactor, BayesianFactor> inferenceEngine) {
-        super(model, inferenceEngine);
-    }
-
-    public WeightedCausalEM(GraphicalModel<BayesianFactor> model, int[] elimSeq){
-        super(model, elimSeq);
-    }
 
     public WeightedCausalEM(GraphicalModel<BayesianFactor> model) {
         super(model);
     }
 
 
-
+    @Override
     public void step(Collection stepArgs) throws InterruptedException {
         stepPrivate(stepArgs);
+
         performedIterations++;
         if(recordIntermediate)
             addIntermediateModels(posteriorModel);
 
     }
 
+    @Override
     public void run(Collection stepArgs, int iterations) throws InterruptedException {
-        //TIntIntMap[] data = (TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new);
         setData((TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new));
-        Pair[] dataWeighted = DataUtil.getCounts(data);
-        super.run(Arrays.asList(dataWeighted), iterations);
 
+        List<Pair> pairs = Arrays.asList(DataUtil.getCounts(data));
+        super.run(pairs, iterations);
     }
 
 
 
-
+    @Override
     protected void stepPrivate(Collection stepArgs) throws InterruptedException {
         try {
-        // E-stage
-        TIntObjectMap<BayesianFactor> counts = expectation((Pair[]) stepArgs.toArray(Pair[]::new));
-        // M-stage
-        maximization(counts);
+            // E-stage
+            TIntObjectMap<BayesianFactor> counts = expectation(stepArgs);
+            // M-stage
+            maximization(counts);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
 
 
-    protected TIntObjectMap<BayesianFactor> expectation(Pair[] dataWeighted) throws InterruptedException, IOException {
+    protected TIntObjectMap<BayesianFactor> expectation(Collection<Pair> dataWeighted) throws InterruptedException, IOException {
 
         TIntObjectMap<BayesianFactor> counts = new TIntObjectHashMap<>();
         for (int variable : posteriorModel.getVariables()) {
@@ -90,7 +74,6 @@ public class WeightedCausalEM extends FrequentistCausalEM {
         }
 
         clearPosteriorCache();
-
 
         for(Pair p : dataWeighted){
             TIntIntMap observation = (TIntIntMap) p.getLeft();
@@ -118,59 +101,6 @@ public class WeightedCausalEM extends FrequentistCausalEM {
         }
 
         return counts;
-    }
-
-
-    public static void main(String[] args) throws InterruptedException {
-
-
-        int N = 5000;
-        int numIterations = 1000; // EM internal iterations
-        int n = 8;
-        int endoVarSize = 2;
-        int exoVarSize = 4;
-
-
-
-        RandomUtil.setRandomSeed(1000);
-        StructuralCausalModel causalModel = RandomChainNonMarkovian.buildModel(n, endoVarSize, exoVarSize);
-        SparseModel vmodel = causalModel.toVCredal(causalModel.getEmpiricalProbs());
-
-        System.out.println(vmodel);
-
-        TIntIntMap[] data = IntStream.range(0, N)
-                .mapToObj(i -> causalModel.sample(causalModel.getEndogenousVars()))
-                .toArray(TIntIntMap[]::new);
-
-
-        // randomize P(U)
-        StructuralCausalModel rmodel = (StructuralCausalModel) BayesianFactor.randomModel(causalModel,
-                5, false
-                ,causalModel.getExogenousVars()
-        );
-
-
-        // Run EM in the causal model
-        ExpectationMaximization em =
-                new WeightedCausalEM(rmodel)
-                        .setInferenceVariation(1)
-                        .setVerbose(false)
-                        .setRegularization(0.0)
-                        .usePosteriorCache(true)
-                        .setTrainableVars(causalModel.getExogenousVars());
-
-        StopWatch watch = new StopWatch();
-        watch.start();
-
-        // run the method
-        em.run(Arrays.asList(data), numIterations);
-
-        watch.stop();
-        System.out.println("Time Elapsed: " + watch.getTime()+" ms.");
-
-        System.out.println(em.getPosterior());
-
-
     }
 
 }

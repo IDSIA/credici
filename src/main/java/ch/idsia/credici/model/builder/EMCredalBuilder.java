@@ -5,6 +5,7 @@ import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.BayesianCausalEM;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.learning.WeightedCausalEM;
+import ch.idsia.credici.learning.inference.EMInference;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.utility.DataUtil;
@@ -353,10 +354,13 @@ public class EMCredalBuilder extends CredalBuilder{
 	}
 
 	private double aceQueryTime;
+	private double aceSetupTime;
 	public double getAceQueryTime() {
 		return aceQueryTime;
 	}
-
+	public double getAceSetupTime() {
+		return aceSetupTime;
+	}
 
 	private StructuralCausalModel randomModel(StructuralCausalModel reference) {
 		// return (StructuralCausalModel) BayesianFactor.randomModel(
@@ -384,30 +388,35 @@ public class EMCredalBuilder extends CredalBuilder{
 			em = new WeightedCausalEM(startingModel).setRegularization(0.0)
 					.setStopCriteria(stopCriteria)
 					.setThreshold(threshold)
-					//.setSmoothing(1)
-					.setInferenceVariation(inferenceVariation)
-					.usePosteriorCache(true);
+					.setInferenceVariation(inferenceVariation);
+
 			stepArgs = (Collection) Arrays.asList(data);
+
 		} else {
 			em = new FrequentistCausalEM(startingModel)
 					.setStopCriteria(stopCriteria)
 					.setThreshold(threshold)
 					.setRegularization(0.0)
-					.setInferenceVariation(inferenceVariation)
-					.usePosteriorCache(true);
+					.setInferenceVariation(inferenceVariation);
+
 			stepArgs = (Collection) Arrays.asList(data);
 		}
 
 		em.setVerbose(verbose)
 				.setRecordIntermediate(true)
-				.setTrainableVars(this.trainableVars);
+				.setTrainableVars(this.trainableVars)
+				.setInferenceMethod(method);
+
 		em.run(stepArgs, maxEMIter);
 
-		if (inferenceVariation == 5) // ace
+		if (inferenceVariation == 5) {// ace
 			aceQueryTime = em.getAce().getQueryTime();
-		else if (inferenceVariation == 6) // ace
+			aceSetupTime = em.getAce().getSetupTime();
+		}
+		else if (inferenceVariation == 6) {// ace
 			aceQueryTime = em.getAceLocal().getQueryTime();
-
+			aceSetupTime = em.getAceLocal().getSetupTime();
+		}
 		List<StructuralCausalModel> t = em.getIntermediateModels().stream().map(n->(StructuralCausalModel)n).collect(Collectors.toList());
 
 		if(verbose)
@@ -452,11 +461,7 @@ public class EMCredalBuilder extends CredalBuilder{
 	}
 
 	private void setTargetGenDist(){
-	//	if(this.numDecimalsRound>0)
-	//		this.targetGenDist = FactorUtil.fixEmpiricalMap(this.inputGenDist, numDecimalsRound);
-	//	else
-			this.targetGenDist = this.inputGenDist;
-
+		this.targetGenDist = this.inputGenDist;
 	}
 
 	public  EMCredalBuilder setTrainableVars(int[] trainableVars) {
@@ -476,165 +481,11 @@ public class EMCredalBuilder extends CredalBuilder{
 		return this;
 	}
 
-	public static void main(String[] args) throws InterruptedException {
-
-		StructuralCausalModel m = null;
-		int[] X = null;
-		int[] U = null;
-
-		int s = 7;
-		//for(s = 0; s<100; s++) {
-
-		RandomUtil.setRandomSeed(s);
-
-		m = new StructuralCausalModel();
-
-		// Xs
-		m.addVariable(2, false);
-		//m.addVariable(3, false);
-		m.addVariable(2, false);
-//		m.addVariable(2, false);
-
-		// Us
-		m.addVariable(2, true);
-		m.addVariable(4, true);
-		//m.addVariable(4, true);
-
-		X = m.getEndogenousVars();
-		U = m.getExogenousVars();
-
-		for (int i = 1; i < X.length; i++)
-			m.addParents(X[i], X[i - 1]);
-
-		m.addParents(X[0], U[0]);
-		m.addParents(X[1], U[1]);
-		
-		
-//		m.addParents(X[2], U[1]);
-
-		// m.addParents(X[2], U[0]);
-		// m.addParents(X[3], U[1]);
-		
-		
-		int target = X[1];
-		int intervention = X[0];
-
-		m.fillWithRandomFactors(2);
-		try {
-			CredalCausalVE ve = new CredalCausalVE(m);
-			VertexFactor exactRes = (VertexFactor) ve.causalQuery()
-					.setTarget(target)
-					.setIntervention(intervention, 0)
-					.run();
-			System.out.println("Exact result:");
-			System.out.println(exactRes);
-		}catch (Exception e){
-			System.out.println("Exception");
-		}
-		//}
-
-		SparseModel vmodel = m.toVCredal(m.getEmpiricalProbs());
-		System.out.println(vmodel);
-
-		TIntIntMap[] data = m.samples(10000, m.getEndogenousVars());
-
-		//System.out.println("PGM v-model:");
-		//System.out.println(m.toVCredal(DataUtil.getEmpiricalMap(m,data).values()));
-
-
-		System.out.println("Empirical from generative model");
-		System.out.println(m.getEmpiricalMap(false));
-
-		System.out.println("Empirical from data");
-		System.out.println(DataUtil.getEmpiricalMap(m,data));
-
-
-		// Even with the equationless it does not work
-		//StructuralCausalModel m2 = CausalBuilder.of(m.getEmpiricalNet()).build();
-
-
-		for(SelectionPolicy pol : List.of(SelectionPolicy.LAST)) {
-
-
-
-
-			System.out.println(pol);
-			System.out.println("--------------------------------------------------------");
-
-			Watch.start();
-			EMCredalBuilder builder = EMCredalBuilder.of(m, data)
-					.setSelPolicy(pol)
-					.setMaxEMIter(200)
-					.setNumTrajectories(20)
-					.setTrueCredalModel(vmodel)
-					.setWeightedEM(true)
-					.build();
-			Watch.stopAndPrint();
-
-			//builder.getSelectedPoints().forEach(System.out::println);
-			//System.out.println(builder.getModel());
-			System.out.println("\tIs Inner approximation = " + builder.isInnerApproximation());
-			System.out.println("\tConverging Trajectories = " +builder.getConvergingTrajectories().size());
-			System.out.println("\tSelected points = " + builder.getSelectedPoints().size());
-
-
-			CausalMultiVE inf = new CausalMultiVE(builder.getSelectedPoints())
-					.setToInterval(true);
-			IntervalFactor res = (IntervalFactor) inf.causalQuery()
-					.setTarget(target)
-					.setIntervention(intervention, 0)
-					.run();
-
-			System.out.println("\n\nResult running multiple precise VE:\n\n"+res);
-
-
-		}
+	private EMInference method; 
+	public EMCredalBuilder setInference(EMInference inference) {
+		this.method = inference;
+		return this;
 	}
-
-/*
-
-LAST 20
-P([2] | [])
-	[0.44405466205941935, 0.06018842810796025]
-	[0.9398115718920401, 0.5559453379405808]
-
-BISECTION_BORDER_SAME_PATH 20
-P([2] | [])
-	[0.2645509341604673, 0.5678434545043037]
-	[0.43215654549569626, 0.7354490658395326]
-
-BISECTION_BORDER 20
-P([2] | [])
-	[0.09013191122681088, 0.5921845767715432]
-	[0.4078154232284568, 0.9098680887731891]
-
-BISECTION_ALL 20
-P([2] | [])
-	[0.09013191122681088, 0.5921845767715432]
-	[0.4078154232284568, 0.9098680887731891]
------
-
-BISECTION_BORDER_SAME_PATH 5
-
-K(vars[2]|[]) [0.7880478416277151, 0.21195215837228487]
-              [0.8736064623032311, 0.12639353769676887]
-BISECTION_BORDER_SAME_PATH 10
-
-K(vars[2]|[]) [0.7880478416277151, 0.21195215837228487]
-              [0.8736064623032311, 0.12639353769676887]
-
-BISECTION_BORDER_SAME_PATH 20
-K(vars[2]|[]) [0.7880096677408601, 0.21199033225913994]
-              [0.8749604785507616, 0.12503952144923844]
-
-BISECTION_BORDER_SAME_PATH 40
-K(vars[2]|[]) [0.7880096677408601, 0.21199033225913994]
-              [0.8749746323988837, 0.12502536760111635]
-
-
- */
-
-
 
 
 }

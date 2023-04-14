@@ -1,8 +1,6 @@
 package ch.idsia.credici.learning.inference;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Map;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -13,6 +11,7 @@ import ch.idsia.crema.model.GraphicalModel;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
+
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
@@ -31,7 +30,8 @@ public class CachedModels implements EMInference {
     /*
      * The model is simplified at the first posterior query and stored in a caché
      * */
-    public BayesianFactor run(StructuralCausalModel posteriorModel, int U, TIntIntMap obs, String hash) throws InterruptedException {
+    public BayesianFactor run(StructuralCausalModel posteriorModel, int U, TIntIntMap obs,  TIntIntMap filteredObs, String hash) throws InterruptedException {
+
         if (inferenceEngine == null) {
             inferenceEngine = getDefaultInference(posteriorModel, (new MinFillOrdering()).apply(posteriorModel));
         }

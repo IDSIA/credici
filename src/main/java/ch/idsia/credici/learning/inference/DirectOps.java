@@ -13,7 +13,7 @@ public class DirectOps implements EMInference {
      The inference engine is not invoked, operations over factors are directly perfomed.
      */
     @Override
-    public BayesianFactor run(StructuralCausalModel posteriorModel, int U, TIntIntMap obs, String hash) throws InterruptedException {
+    public BayesianFactor run(StructuralCausalModel posteriorModel, int U, TIntIntMap obs,  TIntIntMap filteredObs, String hash) {
         // todo: only with M and QM... set checks
 
         int[] chU = posteriorModel.getChildren(U);

@@ -1,19 +1,16 @@
 package ch.idsia.credici.inference;
 
 import ch.idsia.credici.model.tools.CausalOps;
+import ch.idsia.credici.learning.ve.VE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.inference.ve.FactorVariableElimination;
-import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
-import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
-import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
@@ -72,7 +69,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         int[] newElimOrder = ArraysUtil.intersection(elimOrder, infModel.getVariables());
 
         // run variable elimination as usual
-        VariableElimination ve = new FactorVariableElimination(newElimOrder);
+        VE<BayesianFactor> ve = new VE<>(newElimOrder);
         if(filteredEvidence.size()>0) ve.setEvidence(filteredEvidence);
         ve.setFactors(infModel.getFactors());
         return (BayesianFactor) ve.run(target);

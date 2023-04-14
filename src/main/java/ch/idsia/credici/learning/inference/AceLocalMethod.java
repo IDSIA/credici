@@ -14,18 +14,32 @@ import gnu.trove.map.TIntIntMap;
 /**
  * custom ace for each P(U)
  */
-public class AceLocalMethod implements EMInference {
+public class AceLocalMethod implements EMInference, TotalTiming {
 
     private double setupTime = 0;
 	private double queryTime = 0;
-	private double readTime = 0;
+
 
     private Map<Integer, AceInference> aces = new HashMap<>();
 
-
+    @Override
+    public double getQueryTime() {
+        return queryTime;
+    }
 
     @Override
-    public BayesianFactor run(StructuralCausalModel posteriorModel, int U, TIntIntMap obs, String hash) throws InterruptedException, IOException {
+    public double getSetupTime() {
+        return setupTime;
+    }
+
+    @Override
+    public void reset() {
+        setupTime = 0;
+        queryTime = 0;
+    }
+
+    @Override
+    public BayesianFactor run(StructuralCausalModel posteriorModel, int U, TIntIntMap obs,TIntIntMap filteredObs, String hash) throws InterruptedException, IOException {
         BayesianFactor bf = posteriorModel.getFactor(U);
         AceInference ace = aces.get(U);
 
@@ -33,6 +47,8 @@ public class AceLocalMethod implements EMInference {
             StructuralCausalModel infModel = new RemoveBarren().execute(posteriorModel, new int[] {U}, obs);
             ace = new AceInference("src/resources/ace");
             ace.setNetwork(infModel);
+            ace.setUseTable(true);
+            
             ace.compile();
             aces.put(U, ace);
         }
@@ -43,11 +59,8 @@ public class AceLocalMethod implements EMInference {
         double[] data =  ace.query(U, obs);
 
         queryTime += ace.getQueryTime();
+        setupTime += ace.getSetupTime();
 
         return new BayesianFactor(bf.getDomain(), data);
-    }
-
-    public double getQueryTime() {
-        return queryTime;
     }
 }

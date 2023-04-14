@@ -13,6 +13,8 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.checkerframework.checker.units.qual.A;
 import org.checkerframework.checker.units.qual.C;
 
+import com.google.common.primitives.Ints;
+
 import ch.idsia.crema.factor.Factor;
 import ch.idsia.crema.factor.FactorUtil;
 import ch.idsia.crema.factor.GenericFactor;
@@ -35,9 +37,6 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
     private TIntIntMap order;
 
     private List<F> factors;
-
-    /** network could contain disconnected components lets collect them all*/
-    private F output;
 
     private TIntIntMap instantiation;
 
@@ -141,37 +140,30 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
 
         FactorQueue<F> queue = new FactorQueue<>(sequence);
         queue.init(factors);
-        boolean normalize = false;
 
         while (queue.hasNext()) {
             int variable = queue.getVariable();
-           // System.out.println("Var " + variable);
             Collection<F> var_factors = queue.next();
 
             if (!var_factors.isEmpty()) {
-                // for (F f : var_factors) {
-                //    System.out.println(f);
-                // }
                 F last = FactorUtil.combine(operator, var_factors);
-                //System.out.println("combined: " + last);
+
                 if (instantiation != null && instantiation.containsKey(variable)) {
                     int state = instantiation.get(variable);
                     last = operator.filter(last, variable, state);
-                   // System.out.println("Filtered " + last);
                 }
                 if (Arrays.binarySearch(query, variable) >= 0) {
-                    // query var // nothing to do
-                //    System.out.println("Var is target");
+                    // query var 
+                    // nothing to do
                 } else {
                     last = operator.marginalize(last, variable);
-                 //   System.out.println("Marginalized " + last);
                 }
                 queue.add(last);
             }
         }
 
         Collection<F> res = queue.getResults();
-        F last = FactorUtil.combine(operator,res);
+        F last = FactorUtil.combine(operator, res);
         
         if (this.normalize) {
             last = FactorUtil.normalize(operator, last);
@@ -203,6 +195,40 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
     }
 
  
+
+    public F conditionalQuery(int target, int... conditioning) {
+        return conditionalQuery(new int[]{target},  new TIntIntHashMap(), conditioning);
+    }
+
+
+    public F conditionalQuery(int target, TIntIntMap evidence, int... conditioning) {
+        return conditionalQuery(new int[]{target},evidence, conditioning);
+    }
+
+    public F conditionalQuery(int[] target, TIntIntMap evidence, int... conditioning) {
+        conditioning = ArraysUtil.unique(Ints.concat(conditioning, evidence.keys()));
+
+        // Computes the join
+        BayesianFactor numerator = (BayesianFactor) run(Ints.concat(target, conditioning));
+
+        BayesianFactor denomintor = numerator;
+        for (int v : target) {
+            if (ArraysUtil.contains(v, conditioning))
+                throw new IllegalArgumentException("Variable " + v + " cannot be in target and conditioning set");
+            denomintor = denomintor.marginalize(v);
+        }
+
+        // Conditional probability
+        BayesianFactor cond = numerator.divide(denomintor);
+
+        // Sets evidence
+        for (int v : evidence.keys())
+            cond = cond.filter(v, evidence.get(v));
+
+        return (F) cond.replaceNaN(0.0);
+    }
+
+
     public static void main(String[] args) {
         BayesianNetwork bn = new BayesianNetwork();
         int A = bn.addVariable(2);
@@ -251,8 +277,8 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
 
 
         MinFillOrdering mfo = new MinFillOrdering();
-		int[] order = mfo.apply(bn);
-        
+		int[] order = new int[] { 7, 9, 0,1,3,6,2,4,5,8};// mfo.apply(bn);
+        System.out.println(Arrays.toString(order));
         VE<BayesianFactor> ve = new VE<>(order);
         ve.setNormalize(false);
         ve.setFactors(bn.getFactors());

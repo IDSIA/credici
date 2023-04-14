@@ -18,10 +18,9 @@ public class CachedCCEquations implements EMInference {
 
     /*
      * The model is simplified at the first posterior query and stored in a caché
-     * 
      */
     @Override
-    public BayesianFactor run(StructuralCausalModel posteriorModel, int U, TIntIntMap obs, String hash) throws InterruptedException {
+    public BayesianFactor run(StructuralCausalModel posteriorModel, int U, TIntIntMap obs,  TIntIntMap filteredObs, String hash) throws InterruptedException {
 
         int[] chU = posteriorModel.getChildren(U);
 

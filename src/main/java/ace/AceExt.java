@@ -18,6 +18,7 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 public class AceExt {
+	private final static boolean debug = false;
 
 	// all varaibles from the BN
 	private List<Variable> m_vars;
@@ -97,36 +98,42 @@ public class AceExt {
 
 		/* Operations on NET file */
 		// parse the .net file
-		//System.out.println("=== ACE Extension for Training v1.0 ===");
-		long startTime = System.currentTimeMillis();
-		//System.out.println("  ** parse net file **");
+		if(debug) System.out.println("=== ACE Extension for Training v1.0 ===");
+		long startTime = 0;
+
+		if(debug) startTime = System.currentTimeMillis();
+		if(debug) System.out.println("  ** parse net file **");
 		parse_net(variables);
 
-		//System.out.println("  ** create a dummy net file **");
+		if(debug) System.out.println("  ** create a dummy net file **");
 		generate_dummy_net(m_dummy_net_file);
 		
 		/* Operations on lmap file */
 		// invoke the process that creates .lmap file from dummy net file
-		//System.out.println("  ** compile the dummy net file **");
+		if(debug) System.out.println("  ** compile the dummy net file **");
 		Ice_compile(m_dummy_net_file, m_compile_file);
 
 		// parse the lmap file which updates lmap_fix_lines and lmap_var_lines
-		//System.out.println("  ** parse the dummy lmap file **");
+		if(debug) System.out.println("  ** parse the dummy lmap file **");
 		parse_lmap(m_dummy_lmap_file);
 
 		// generate an lmap file for the original .net file
-		//System.out.println("  ** generate the lmap file **");
+		if(debug) System.out.println("  ** generate the lmap file **");
 		generate_lmap(m_lmap_file);
 		
-		long endTime = System.currentTimeMillis();
-		System.out.println(" = Compilation took " + (endTime - startTime) + "ms");
+		if(debug) {
+			long endTime = System.currentTimeMillis();
+			System.out.println(" = Compilation took " + (endTime - startTime) + "ms");
+		}
 	}
 
 	// update CPTs for variables
 	// Mapping of variable and 1D array for each variable
 	// also update the lmap file
 	public void update_CPTs(Map<String, List<Double>> params) {
-		long startTime = System.currentTimeMillis();
+		long startTime = 0;
+		if (debug) startTime = System.currentTimeMillis();
+
 		// update CPTs
 		for (Map.Entry<String, List<Double>> entry : params.entrySet()) {
 			String var_name = entry.getKey();
@@ -138,8 +145,10 @@ public class AceExt {
 		}
 		// update lmap
 		generate_lmap(m_lmap_file);
-		long endTime = System.currentTimeMillis();
-		System.out.println("== Updating parameters took " + (endTime - startTime) + "ms");
+		if(debug) {
+			long endTime = System.currentTimeMillis();
+			System.out.println("== Updating parameters took " + (endTime - startTime) + "ms");
+		}
 	}
 
 	// compute query
@@ -149,7 +158,8 @@ public class AceExt {
 
 	public Map<String, List<Double>> evaluate(List<String> query_nodes,
 			Map<String, String> evidence) {
-		long startTime = System.currentTimeMillis();
+		long startTime = 0;
+		if(debug) startTime = System.currentTimeMillis();
 		// we first create an .inst file
 		write_inst(evidence);
 		// execute the marginal
@@ -177,9 +187,11 @@ public class AceExt {
 		HashSet<String> query_vars = new HashSet<String>(query_nodes);
 		match_queries(query_ans, query_vars);
 		save_timings(io);
-		long endTime = System.currentTimeMillis();
-		System.out.println("== Evaluating " + query_nodes.size() + " query nodes with " + evidence.size()
-				+ " evidences took " + (endTime - startTime) + "ms " + command);
+		if(debug) {
+			long endTime = System.currentTimeMillis();
+			System.out.println("== Evaluating " + query_nodes.size() + " query nodes with " + evidence.size()
+					+ " evidences took " + (endTime - startTime) + "ms " + command);
+		}
 		return query_ans;
 	}
 
@@ -373,10 +385,12 @@ public class AceExt {
 			e.printStackTrace();
 		}
 		// Summarize graph info
-		System.out.println("      = NET INFO = ");
-		System.out.println("          total " + m_vars.size() + " nodes: " + m_variables.length +
-				" variables, " + (m_vars.size() - m_variables.length) + " constants");
-		System.out.println("          total " + m_num_params + " parameters ");
+		if(debug) {
+			System.out.println("      = NET INFO = ");
+			System.out.println("          total " + m_vars.size() + " nodes: " + m_variables.length +
+					" variables, " + (m_vars.size() - m_variables.length) + " constants");
+			System.out.println("          total " + m_num_params + " parameters ");
+		}
 	}
 
 	// create a dummy net file

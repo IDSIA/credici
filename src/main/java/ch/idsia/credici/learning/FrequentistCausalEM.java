@@ -24,6 +24,9 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
+
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.io.IOException;
@@ -31,12 +34,10 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-
 public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private double regularization = 0.00001;
 
-    private TIntObjectMap<BayesianFactor> counts;
 
     private HashMap<String, BayesianFactor> posteriorCache = new HashMap<>();
 
@@ -44,9 +45,9 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private int inferenceVariation = 2;
 
-    TIntObjectHashMap replacedFactors = null;
+    protected TIntObjectHashMap<BayesianFactor> replacedFactors = null;
 
-    StopCriteria stopCriteria = StopCriteria.KL;
+    protected StopCriteria stopCriteria = StopCriteria.KL;
 
     protected double klthreshold = Double.NaN;
 
@@ -105,28 +106,12 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         for (TIntIntMap observation : observations) {
             for (int var : trainableVars) {
 
-
                 int[] relevantVars = ArraysUtil.addToSortedArray(posteriorModel.getParents(var), var);
                 int[] hidden =  IntStream.of(relevantVars).filter(x -> !observation.containsKey(x)).toArray();
 
-                //int[] obsVars = IntStream.of(relevantVars).filter(x -> observation.containsKey(x)).toArray();
-                // Consider only d-connected observed variables
-                int[] obsVars = IntStream.of(observation.keys())
-                        .filter(x -> !DAGUtil.dseparated(
-                                ((StructuralCausalModel)priorModel).getNetwork(),
-                                var,
-                                x,
-                                observation.keys()))
-                        .toArray();
-
-                if(hidden.length>0){
+                if(hidden.length > 0){
                     // Case with missing data
                     BayesianFactor phidden_obs = posteriorInference(hidden, observation);
-
-                    /*if(obsVars.length>0)
-                        phidden_obs = phidden_obs.combine(
-                                BayesianFactor.getJoinDeterministic(posteriorModel.getDomain(obsVars), observation));
-                    */
                     counts.put(var, counts.get(var).addition(phidden_obs));
                 }else{
                     //fully-observable case
@@ -174,6 +159,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
 
     }
+
+
     private List<int[]> getTrainableExoCC(){
         return ((StructuralCausalModel)posteriorModel)
                 .exoConnectComponents()
@@ -228,33 +215,56 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     }
 
 
+    private TIntObjectMap<TIntSet> dconnected = new TIntObjectHashMap<>();
+    TIntIntMap getFilteredObs(int var, TIntIntMap obs) {
+        StructuralCausalModel model = (StructuralCausalModel) priorModel;
+        TIntSet connected;
 
+        if (dconnected.containsKey(var)) {
+            connected = dconnected.get(var);
+        } else {
+            int[] keys = obs.keys();
+            int[] conkey = IntStream.of(keys).filter(key -> !DAGUtil.dseparated(model.getNetwork(), var, key, keys)).toArray();
+    
+            connected = new TIntHashSet(conkey);
+            dconnected.put(var, connected);
+        }
+
+        // Consider only d-connected observed variables
+        // int[] obsVars = IntStream.of(obs.keys())
+        //         .filter(x -> !DAGUtil.dseparated(
+        //             model.getNetwork(),
+        //             var,
+        //             x,
+        //             obs.keys()))
+        //         .toArray();
+
+        
+        // TIntIntMap filteredObs = new TIntIntHashMap();
+        // for(int v : obsVars) filteredObs.put(v, obs.get(v));
+             
+        TIntIntMap filteredObs = new TIntIntHashMap(obs);
+        
+        filteredObs.retainEntries((key, value) -> connected.contains(key));
+        return filteredObs;
+    }
 
     BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException, IOException {
 
+ 
         if(query.length>1)
             throw new IllegalArgumentException("Target variable cannot be more than one. Not implemented");
 
         int var = query[0];
 
-        // Consider only d-connected observed variables
-        int[] obsVars = IntStream.of(obs.keys())
-                .filter(x -> !DAGUtil.dseparated(
-                        ((StructuralCausalModel)priorModel).getNetwork(),
-                        var,
-                        x,
-                        obs.keys()))
-                .toArray();
-
-        TIntIntMap filteredObs = new TIntIntHashMap();
-        for(int v : obsVars) filteredObs.put(v, obs.get(v));
-
-
+        TIntIntMap filteredObs = getFilteredObs(var, obs);
+       
         String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, filteredObs.keys(), filteredObs.values()));
 
         if(!posteriorCache.containsKey(hash) || !usePosteriorCache) {
 
             BayesianFactor p = null;
+            
             switch (this.inferenceVariation){
                 case 0: p = inferenceVariation0(query, obs); break;
                 case 1: p = inferenceVariation1(query, obs); break;
@@ -265,6 +275,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 case 6: p = inferenceVariationAce(query, filteredObs, hash, aceLocal); break;
 
             }
+
+            //p = method.run((StructuralCausalModel) priorModel, query[0], obs, hash);
 
             if(usePosteriorCache)
                 posteriorCache.put(hash, p);
@@ -284,8 +296,19 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private AceMethod ace = new AceMethod();
     private AceLocalMethod aceLocal = new AceLocalMethod();
+    private EMInference method; 
+
+    public FrequentistCausalEM setInferenceMethod(EMInference method) {
+        this.method = method;
+        return this;
+    }
+
+    private BayesianFactor inference(int[] query, TIntIntMap obs, String hash) throws InterruptedException, IOException {
+        return method.run((StructuralCausalModel) posteriorModel, query[0], obs, obs, hash);
+    }
+
     private BayesianFactor inferenceVariationAce(int[] query, TIntIntMap obs, String hash, EMInference method) throws InterruptedException, IOException {
-        return method.run((StructuralCausalModel) posteriorModel, query[0], obs, hash);
+        return method.run((StructuralCausalModel) posteriorModel, query[0], obs, obs,  hash);
     }
 
     /*
@@ -418,6 +441,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         this.data = data;
     }
 
+    @Override
     public void run(Collection stepArgs, int iterations) throws InterruptedException {
 
         if(data == null)

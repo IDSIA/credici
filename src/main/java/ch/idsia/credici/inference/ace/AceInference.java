@@ -137,5 +137,8 @@ public class AceInference {
     public double getSetupTime() { 
         return ace.getLastSetupTime();
     }
-
+  
+    public void setUseTable(boolean status) {
+        this.table = status;
+    }
 }

@@ -43,6 +43,7 @@ public class AceInferenceTest {
         try {
             AceInference ai = new AceInference("src/resources/ace");
             File f = ai.setNetwork(model);
+            ai.setUseTable(true);
             ai.compile();
             System.out.println(Files.readString(f.toPath()));
             assertTrue(true);
@@ -94,7 +95,7 @@ public class AceInferenceTest {
 
         try {
             AceInference ai = new AceInference("src/resources/ace");
-    
+            ai.setUseTable(true);
             File f = ai.setNetwork(model);
             ai.compile();
             System.out.println(Files.readString(f.toPath()));

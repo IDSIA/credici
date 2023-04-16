@@ -231,18 +231,20 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         }
 
         // Consider only d-connected observed variables
-        // int[] obsVars = IntStream.of(obs.keys())
-        //         .filter(x -> !DAGUtil.dseparated(
-        //             model.getNetwork(),
-        //             var,
-        //             x,
-        //             obs.keys()))
-        //         .toArray();
+        int[] obsVars = IntStream.of(obs.keys())
+                .filter(x -> !DAGUtil.dseparated(
+                    model.getNetwork(),
+                    var,
+                    x,
+                    obs.keys()))
+                .toArray();
 
-        
-        // TIntIntMap filteredObs = new TIntIntHashMap();
-        // for(int v : obsVars) filteredObs.put(v, obs.get(v));
-             
+        TIntSet con = new TIntHashSet(obsVars);
+       
+        boolean x = con.equals(connected);
+        if(!x) 
+            System.out.println("xxx");
+
         TIntIntMap filteredObs = new TIntIntHashMap(obs);
         
         filteredObs.retainEntries((key, value) -> connected.contains(key));

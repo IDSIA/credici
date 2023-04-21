@@ -20,32 +20,40 @@ class Factor {
     // whether or not the entry is functional
     private boolean is_fixed;
 
+    // index withing the ACE ONline engine
+    private int index; 
+
     // constructor
     public Factor(Variable var, List<Variable> parents, boolean fixed){
-	f_var = var;
-	f_parents = parents;
-	f_inst = new ArrayList<String>();
-	is_fixed = fixed;
+        f_var = var;
+        f_parents = parents;
+        f_inst = new ArrayList<String>();
+        is_fixed = fixed;
+        index = -1;
     }
 
     // modify the lmap string to adjust for the new f_value
     // if dummy = true, then modify the f_dummy_lmap instead
     private void modify_lmap(boolean dummy){
-	
+       // if (!dummy) engine.update(index, f_value);
     }
 
     // display the factor
     public void display(){
-	System.out.println(f_inst + ": " + f_value + ' ' + f_dummy_value);
+	    System.out.println(f_inst + ": " + f_value + ' ' + f_dummy_value);
     }
     // setters
-    public void set_value(Double val){
-	f_value = val;
-	modify_lmap(false);
+    public boolean set_value(Double val){
+        if (f_value != val) {
+            f_value = val;
+            modify_lmap(false);
+            return true;
+        } else 
+            return false;
     }
     public void set_dummy_value(Double val){
-	f_dummy_value = val;
-	modify_lmap(true);
+        f_dummy_value = val;
+        modify_lmap(true);
     }
     public void set_lmap(String s){
 	f_lmap = s;
@@ -74,4 +82,12 @@ class Factor {
     public boolean isfixed(){
 	return is_fixed;
     }
+
+	public void setIndex(int index) {
+        this.index = index;
+	}
+
+	public int getIndex() {
+		return this.index;
+	}
 }

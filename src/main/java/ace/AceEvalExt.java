@@ -1,10 +1,15 @@
 package ace;
 
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.apache.commons.io.IOUtils;
 
 import ch.idsia.crema.utility.ArraysUtil;
+import edu.ucla.belief.ace.Evidence;
+import edu.ucla.belief.ace.OnlineEngineSop;
+import gnu.trove.map.TIntIntMap;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -17,7 +22,10 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-public class AceExt {
+public class AceEvalExt {
+
+	private CrediciEngine engine;
+
 	private final static boolean debug = false;
 
 	// all varaibles from the BN
@@ -30,18 +38,12 @@ public class AceExt {
 	private String m_dummy_net_file;
 	// dummy lmap file
 	private String m_dummy_lmap_file;
-	// inst file
-	private String m_inst_file;
 	// Ace compile file location
 	private String m_compile_file;
-	// Ace evaluate file location
-	private String m_evaluate_file;
-	// marginal file
-	private String m_marginal_file;
+	
 
 	// conversion between variable and name
-	private Map<String, Variable> n2v;
-	private Map<Variable, String> v2n;
+	private Map<Integer, Variable> n2v;
 
 	// utils
 	private Utils utils;
@@ -63,14 +65,18 @@ public class AceExt {
 
 	// variables whose CPTs can be modified
 	// we should randomize those CPTs when compile the Ace
-	private String[] m_variables;
+	private Set<Integer> m_variables;
 
 	private boolean table = false;
-	/*
-	 * net_file: a string representing the location of the .NET file
-	 * variables: variables whose CPTs may be modified during training
+
+	/**
+	 * @param net_file string representing the location of the .NET file
+	 * @param variables int[] variables whose CPTs may be modified during training
+	 * @param exepath the location of the ace executables
+	 * @param table boolean indicating whether to use the java implemntation (true) or the native c2d compile (false)
 	 */
-	public AceExt(String net_file,  String[] variables, String exepath, boolean table) {
+	public AceEvalExt(String net_file,  int[] variables, String exepath, boolean table) throws Exception {
+
 		// for constructing the network
 		m_net_file = net_file;
 		this.table = table;
@@ -78,77 +84,72 @@ public class AceExt {
 		m_dummy_net_file = m_net_file.substring(0, m_net_file.length() - 4) + "_dummy.net";
 		m_dummy_lmap_file = m_dummy_net_file + ".lmap";
 		m_lmap_file = m_net_file + ".lmap";
-		m_inst_file = m_net_file + ".inst";
-		m_marginal_file = m_net_file + ".marginals";
 		m_compile_file = exepath + "/compile";
-		m_evaluate_file = exepath + "/evaluate";
+		
+		m_variables = IntStream.of(variables).boxed().collect(Collectors.toCollection(HashSet::new));
 
-		m_variables = variables;
-		m_vars = new ArrayList<Variable>();
-		n2v = new HashMap<String, Variable>();
-		v2n = new HashMap<Variable, String>();
+		m_vars = new ArrayList<>();
+		n2v = new HashMap<>();
 		m_num_params = 0;
-		m_order_potentials = new ArrayList<String>();
+		m_order_potentials = new ArrayList<>();
 
 		// for parsing and updating lmap file
-		dum2fac = new HashMap<Double, Factor>();
-		lmap_fix_lines = new HashMap<Integer, String>();
-		lmap_var_lines = new HashMap<Integer, Factor>();
+		dum2fac = new HashMap<>();
+		lmap_fix_lines = new HashMap<>();
+		lmap_var_lines = new HashMap<>();
 		lmap_num_lines = 0;
 
 		/* Operations on NET file */
 		// parse the .net file
-		if(debug) System.out.println("=== ACE Extension for Training v1.0 ===");
-		long startTime = 0;
 
-		if(debug) startTime = System.currentTimeMillis();
-		if(debug) System.out.println("  ** parse net file **");
 		parse_net();
 
-		if(debug) System.out.println("  ** create a dummy net file **");
 		generate_dummy_net(m_dummy_net_file);
 		
 		/* Operations on lmap file */
 		// invoke the process that creates .lmap file from dummy net file
-		if(debug) System.out.println("  ** compile the dummy net file **");
 		Ice_compile(m_dummy_net_file, m_compile_file);
 
 		// parse the lmap file which updates lmap_fix_lines and lmap_var_lines
-		if(debug) System.out.println("  ** parse the dummy lmap file **");
 		parse_lmap(m_dummy_lmap_file);
+	
 
 		// generate an lmap file for the original .net file
 		if(debug) System.out.println("  ** generate the lmap file **");
 		generate_lmap(m_lmap_file);
 		
-		if(debug) {
-			long endTime = System.currentTimeMillis();
-			System.out.println(" = Compilation took " + (endTime - startTime) + "ms");
-		}
+		// init ace engine
+		engine = new CrediciEngine(m_lmap_file, m_net_file + ".ac", true);	
+		storeNameMap();
 	}
 
+	Map<Integer, Integer> outInVarMapping;
+	Map<Integer, Integer> inOutVarMapping;
+	private void storeNameMap() {
+		this.outInVarMapping = new HashMap<>();
+		this.inOutVarMapping = new HashMap<>();
+
+		for (Map.Entry<Integer, Variable> entry : n2v.entrySet()) {
+			int v = engine.varForName("n"+entry.getKey());
+			outInVarMapping.put(entry.getKey(), v);
+			inOutVarMapping.put(v, entry.getKey());
+		}
+	}
 	// update CPTs for variables
 	// Mapping of variable and 1D array for each variable
 	// also update the lmap file
-	public void update_CPTs(Map<String, List<Double>> params) {
-		long startTime = 0;
-		if (debug) startTime = System.currentTimeMillis();
+	public void update_CPTs(Integer u, double[] params) {
+		Variable var = n2v.get(u);
+		for (int i = 0; i < params.length; i++) {
+			int idx = var.getAbsoluteIndex(i);
+			var.get_factors().get(i).set_value(params[i]);
+			engine.updateFactor(idx, params[i]);
+		}
+	}
 
-		// update CPTs
-		for (Map.Entry<String, List<Double>> entry : params.entrySet()) {
-			String var_name = entry.getKey();
-			List<Double> cpt = entry.getValue();
-			Variable var = n2v.get(var_name);
-			for (int i = 0; i < cpt.size(); i++) {
-				var.modify_CPT(cpt.get(i), i, false);
-			}
-		}
-		// update lmap
+	public void commitLmap() throws Exception {
 		generate_lmap(m_lmap_file);
-		if(debug) {
-			long endTime = System.currentTimeMillis();
-			System.out.println("== Updating parameters took " + (endTime - startTime) + "ms");
-		}
+		engine = new CrediciEngine(m_lmap_file, m_net_file + ".ac", table);
 	}
 
 	// compute query
@@ -156,43 +157,27 @@ public class AceExt {
 	// input query_nodes: names of the nodes that will be queried
 	// evidence: map variable to a value
 
-	public Map<String, List<Double>> evaluate(List<String> query_nodes,
-			Map<String, String> evidence) {
-		long startTime = 0;
-		if(debug) startTime = System.currentTimeMillis();
-		// we first create an .inst file
-		write_inst(evidence);
-		// execute the marginal
-		// create a process which execute the command
-		String command = m_evaluate_file + " " + m_net_file + " " + m_inst_file;
-		String io = ""; 
-		try {
-			//Process p = Runtime.getRuntime().exec(new String[] { "bash", "-c", command });
-	
-			Process p = Runtime.getRuntime().exec(command);
-			try {
-				int exit = p.waitFor();
-				if (exit != 0) { 
-					throw new RuntimeException(m_evaluate_file + " " + m_net_file + " " + m_inst_file);
-				}
-				io = IOUtils.toString(p.getInputStream(), StandardCharsets.UTF_8);
-			} catch (Exception e) {
-				e.printStackTrace();
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
+	public Map<Integer, double[]> evaluate(int[] query, TIntIntMap evidence) throws Exception {
+			Evidence e = new Evidence(engine);
+
+		evidence.forEachEntry((key,val)->{
+			int a = outInVarMapping.get(key);
+			e.varCommit(a, val);
+			return true;
+		});
+		engine.evaluate(e);
+
+		Map<Integer, double[]> res = new HashMap<>();
+		res.put(-1, new double[] {engine.evaluationResults()});
+
+		engine.differentiate();
+
+		for (int v : query) {
+			int veng = outInVarMapping.get(v);
+			double[] d = engine.varPosteriors(veng); // P(v|e)
+			res.put(v, d);
 		}
-		// extract query information from the marginal file
-		Map<String, List<Double>> query_ans = new HashMap<String, List<Double>>();
-		HashSet<String> query_vars = new HashSet<String>(query_nodes);
-		match_queries(query_ans, query_vars);
-		save_timings(io);
-		if(debug) {
-			long endTime = System.currentTimeMillis();
-			System.out.println("== Evaluating " + query_nodes.size() + " query nodes with " + evidence.size()
-					+ " evidences took " + (endTime - startTime) + "ms " + command);
-		}
-		return query_ans;
+		return res;
 	}
 
 	private double lastSetupTime;
@@ -226,68 +211,7 @@ public class AceExt {
 		return lastSetupTime;
 	}
 	
-	private void match_queries(Map<String, List<Double>> query_ans, HashSet<String> query_vars) {
-		/*
-		 * The file stream code was referenced from
-		 * https://stackoverflow.com/questions/45826412/how-to-parse-a-simple-text-file-
-		 * in-java
-		 */
-		String strLine;
-		try (BufferedReader reader = new BufferedReader(new FileReader(m_marginal_file))) {
-			while ((strLine = reader.readLine()) != null) {
-				if (strLine.startsWith("Pr(e)")) {
-					String[] e = strLine.split("=");
-					double pe = Double.valueOf(e[1].trim());
-					query_ans.put("e", Arrays.asList(pe));
-				} else if (strLine.contains(",e)")) {
-					String[] words = strLine.split("\\,");
-					String var_name = words[0].substring(3, words[0].length());
-					// if the variable is one of the queried var
-					//if (query_vars.contains(var_name)) {
-						List<Double> vals = new ArrayList<Double>();
-						int recording = 0;
-						String newstr = "";
-						for (int i = 1; i < strLine.length(); i++) {
-							if (strLine.charAt(i - 1) == '[')
-								recording = 1;
-							if (strLine.charAt(i) == ']')
-								recording = 0;
-							if (recording == 1 && (strLine.charAt(i) != ' '))
-								newstr += strLine.charAt(i);
-						}
-						words = newstr.split("\\,");
-						for (int i = 0; i < words.length; i++) {
-							Double dec_num = Double.parseDouble(words[i]);
-							vals.add(dec_num);
-						}
-						query_ans.put(var_name, vals);
-					//}
-				}
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
-
-	private void write_inst(Map<String, String> evidence) {
-		String buffer = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<instantiation date=\"Jun 4, 2005 7:07:21 AM\">\n";
-		for (Map.Entry<String, String> entry : evidence.entrySet()) {
-			String var_name = entry.getKey();
-			String val = entry.getValue();
-			buffer += "<inst id=\"";
-			buffer += var_name;
-			buffer += "\" value=\"";
-			buffer += val;
-			buffer += "\"/>\n";
-		}
-		buffer += "</instantiation>\n";
-		// write to the file
-		try(BufferedWriter writer = new BufferedWriter(new FileWriter(m_inst_file))){
-			writer.write(buffer);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-	}
+	
 
 	// parse the .net network file
 	private void parse_net() {
@@ -299,19 +223,20 @@ public class AceExt {
 				// create a new node
 				if (words[0].equals("node")) {
 					String name = words[1];
+					
+					int vid = Integer.parseInt(name.substring(1));
 					Variable var = new Variable();
 					var.set_name(name);
-					n2v.put(name, var);
-					v2n.put(var, name);
+					
+					n2v.put(vid, var);
+					
 					m_vars.add(var);
-					// we set it to be a variable if found it in m_variables
-					for (int i = 0; i < m_variables.length; i++) {
-						if (m_variables[i].equals(name)) {
-							var.set_isVariable();
-							break;
-						}
-					}
 
+					// we set it to be a variable if found it in m_variables
+					if (m_variables.contains(vid))
+							var.set_isVariable();						
+	
+	
 					// read another line that contains {
 					while ((strLine = reader.readLine()) != null) {
 						words = strLine.trim().split("\\s+");
@@ -347,16 +272,19 @@ public class AceExt {
 						if (child.equals(")")) {
 							child = words[pos_line - 3];	
 						}
-						var = n2v.get(child);
+						int cid = varId(child);
+						var = n2v.get(cid);
 					}
 					// if | exists in the string
 					else {
 						child = words[pos_line - 1];
-						var = n2v.get(child);
+						int cid = varId(child);
+						var = n2v.get(cid);
 						// add parents for the child
 						for (int i = pos_line + 1; i < words.length; i++) {
 							if (words[i].charAt(0) != ')') {
-								var.add_parent(n2v.get(words[i]));
+								int pid = varId(words[i]);
+								var.add_parent(n2v.get(pid));
 							} else
 								break;
 						}
@@ -385,21 +313,15 @@ public class AceExt {
 			e.printStackTrace();
 		}
 		// Summarize graph info
-		if(debug) {
-			System.out.println("      = NET INFO = ");
-			System.out.println("          total " + m_vars.size() + " nodes: " + m_variables.length +
-					" variables, " + (m_vars.size() - m_variables.length) + " constants");
-			System.out.println("          total " + m_num_params + " parameters ");
-		}
 	}
 
 	// create a dummy net file
 	// all CPTs are filled with dummy values
 	private void generate_dummy_net(String dummy_file) {
 		// each increment step
-		Double dummy_step = 1.0 / 2 / m_num_params;
+		double dummy_step = 1.0 / 2 / m_num_params;
 		// initial dummy value
-		Double dummy_val = 0.0;
+		double dummy_val = 0.0;
 
 		String buffer = "net\n{\n}\n";
 		// add nodes
@@ -421,7 +343,8 @@ public class AceExt {
 		// add potentials
 		for (int i = 0; i < m_order_potentials.size(); i++) {
 			String name = m_order_potentials.get(i);
-			Variable var = n2v.get(name);
+			int vid = varId(name);
+			Variable var = n2v.get(vid);
 			buffer += "potential ( ";
 			buffer += var.get_name();
 			List<Variable> parents = var.get_parents();
@@ -470,10 +393,6 @@ public class AceExt {
 	private void Ice_compile(String net_file, String compile_file) {
 		// create a process which execute the command
 		String method = this.table ? "-forceTabular" : "-forceC2d";
-		//String command1 = compile_file + " " + method + " -cd06 " + net_file;
-		//String command2 = "mv " + net_file + ".ac" + " " + m_net_file + ".ac";
-		//System.out.println(command1);
-		//System.out.println(command2);
 		try {
 				Process p = new ProcessBuilder().
 					command(compile_file, method, "-cd06", net_file).
@@ -503,15 +422,8 @@ public class AceExt {
 	}
 
 	private void parse_lmap(String lmap_file) {
-		FileInputStream stream = null;
-		try {
-			stream = new FileInputStream(lmap_file);
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
-		}
-		BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
 		String strLine;
-		try {
+		try (BufferedReader reader = new BufferedReader(new FileReader(lmap_file))) {
 			while ((strLine = reader.readLine()) != null) {
 				String[] words = strLine.split("\\$");
 				boolean fixed = true;
@@ -521,8 +433,10 @@ public class AceExt {
 					// we add the line to be a var line, also update the factor
 					if (Utils.isNumeric(word) && dum2fac.containsKey(Double.parseDouble(word))) {
 						Factor f = dum2fac.get(Double.parseDouble(word));
+						f.setIndex(Integer.parseInt(words[2]));
 						String rpl_str = strLine.replace(word, "@");
 						f.set_lmap(rpl_str);
+
 						lmap_var_lines.put(lmap_num_lines, f);
 						fixed = false;
 						break;
@@ -560,6 +474,9 @@ public class AceExt {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+	}
 
+	private int varId(String name) {
+		return Integer.parseInt(name.substring(1));
 	}
 }

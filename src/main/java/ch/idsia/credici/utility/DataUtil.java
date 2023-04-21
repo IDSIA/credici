@@ -226,13 +226,19 @@ public class DataUtil {
 	}
 
 	public static TIntIntMap[] unique(TIntIntMap[] data){
-		ArrayList out = new ArrayList();
-		for(TIntIntMap instance: data){
-			if(!out.stream().anyMatch(s-> DataUtil.instanceEquals((TIntIntMap) s, instance)) ){
-				out.add(instance);
-			}
-		}
-		return (TIntIntMap[]) out.toArray(TIntIntMap[]::new);
+		Set<TIntIntMap> xx = new HashSet<>(Arrays.asList(data));
+		return xx.toArray(TIntIntMap[]::new);
+		// for (TIntIntMap m : xx) {
+		// 	System.out.println(m);
+		// }
+
+		// ArrayList out = new ArrayList();
+		// for(TIntIntMap instance: data){
+		// 	if(!out.stream().anyMatch(s-> DataUtil.instanceEquals((TIntIntMap) s, instance)) ){
+		// 		out.add(instance);
+		// 	}
+		// }
+		// return (TIntIntMap[]) out.toArray(TIntIntMap[]::new);
 	}
 
 	public static TIntIntMap select(TIntIntMap d, int... keys){

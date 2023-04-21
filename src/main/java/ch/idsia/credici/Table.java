@@ -8,6 +8,7 @@ import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -99,9 +100,19 @@ public class Table implements Iterable<Map.Entry<int[], Integer>> {
         dataTable.compute(row, (k,v)-> (v == null) ? count : v + count);
     } 
 
+    /**
+     * Create a subtable for the specified columns. Columns not present in this table will be ignore and 
+     * not be part of the resulting table.
+     * 
+     * @param cols the subset of columns
+     * @return a new Table
+     */
     public Table subtable(int[] cols) {
-        int[] idx = Arrays.stream(cols).map(col -> ArrayUtils.indexOf(columns, col)).toArray();
-        Table res = new Table(cols);
+    
+        int[] idx = Arrays.stream(cols).map(col -> ArrayUtils.indexOf(columns, col)).filter(a -> a >= 0).toArray();
+        int[] matching = IntStream.of(idx).map(id->columns[id]).toArray();
+
+        Table res = new Table(matching);
         for (Map.Entry<int[], Integer> entry : dataTable.entrySet()){
             int[] values = entry.getKey();
             int count = entry.getValue();
@@ -114,7 +125,13 @@ public class Table implements Iterable<Map.Entry<int[], Integer>> {
     
 
 
-
+    /**
+     * Read a table from a whitespace separated file. The whitespace can be any regex \s character.
+     * 
+     * @param filename
+     * @return
+     * @throws IOException
+     */
     public static Table readTable(String filename) throws IOException {
         return readTable(filename, "\\s");
     }

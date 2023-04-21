@@ -1,28 +1,28 @@
 package ch.idsia.credici.learning;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
+import org.apache.commons.lang3.tuple.Pair;
+
+import ch.idsia.credici.inference.ace.AceInference;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
-import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.inference.JoinInference;
-import ch.idsia.crema.learning.ExpectationMaximization;
 import ch.idsia.crema.model.GraphicalModel;
-import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
-import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
-import org.apache.commons.lang3.time.StopWatch;
-import org.apache.commons.lang3.tuple.Pair;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.List;
-import java.util.stream.IntStream;
 
 
 public class WeightedCausalEM extends FrequentistCausalEM {
@@ -66,6 +66,7 @@ public class WeightedCausalEM extends FrequentistCausalEM {
     }
 
 
+    NumberFormat nf = NumberFormat.getNumberInstance();
     protected TIntObjectMap<BayesianFactor> expectation(Collection<Pair> dataWeighted) throws InterruptedException, IOException {
 
         TIntObjectMap<BayesianFactor> counts = new TIntObjectHashMap<>();
@@ -74,10 +75,47 @@ public class WeightedCausalEM extends FrequentistCausalEM {
         }
 
         clearPosteriorCache();
+        if (inferenceVariation == 5 && this.method != null){
+            this.method.set((StructuralCausalModel) posteriorModel);
+        }
+
 
         for(Pair p : dataWeighted){
             TIntIntMap observation = (TIntIntMap) p.getLeft();
-            long w = ((Long)p.getRight()).longValue();
+            long w = ((Long) p.getRight()).longValue();
+
+            if (inferenceVariation == 5 && this.method != null) {
+                try{
+                    this.method.update(observation);
+                } catch(Exception ex) {
+                    ex.printStackTrace();
+                    StructuralCausalModel scm = (StructuralCausalModel) posteriorModel;
+                    for (int e : scm.getExogenousVars()) {
+                        BayesianFactor bf = scm.getFactor(e);
+
+                        System.out.print("Var " + e + "\t");
+                        System.out.println(Arrays.stream(bf.getData()).<String>mapToObj(nf::format).collect(Collectors.joining(",")));
+                    }
+                    var ace = new AceInference("src/resources/ace");
+                    File model = ace.init(scm, true);
+                    System.out.println(model);
+
+                    String buffer = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<instantiation date=\"Jun 4, 2005 7:07:21 AM\">\n";
+                    for (var k : observation.keySet().toArray()) {
+
+                        String var_name = "n"+k;
+                        String val = "s" + observation.get(k);
+                        buffer += "<inst id=\"";
+                        buffer += var_name;
+                        buffer += "\" value=\"";
+                        buffer += val;
+                        buffer += "\"/>\n";
+                    }
+                    buffer += "</instantiation>\n";
+                    Files.writeString(Path.of("n1.inst"), buffer);
+                    System.exit(-1);
+                }
+            }
 
             for (int var : trainableVars) {
 

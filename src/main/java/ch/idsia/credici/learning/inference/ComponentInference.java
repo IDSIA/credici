@@ -7,8 +7,11 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import gnu.trove.map.TIntIntMap;
 
-public interface EMInference {
-    public BayesianFactor run(StructuralCausalModel posteriorModel, int U, TIntIntMap obs,  TIntIntMap filteredObs, String hash)
-     throws InterruptedException, IOException;
+public interface ComponentInference {
+    public BayesianFactor posterior(int U);
+
+	public void set(StructuralCausalModel posteriorModel);
+
+	public void update(TIntIntMap observation) throws Exception;
 
 }

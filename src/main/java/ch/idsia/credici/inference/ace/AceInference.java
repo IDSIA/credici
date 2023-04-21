@@ -2,131 +2,125 @@ package ch.idsia.credici.inference.ace;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
+import java.util.logging.Logger;
 
-import ace.AceExt;
+import ace.AceEvalExt;
 import ch.idsia.credici.model.StructuralCausalModel;
-
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.procedure.TIntIntProcedure;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 public class AceInference {
-    private boolean table = false;
     private File networkFile;
     private StructuralCausalModel model; 
-    private AceExt ace; 
+    private AceEvalExt ace; 
     private String acePath; 
+    private int[] exo; 
+
 
     public AceInference(String acepath) {
         this.acePath = acepath;
     }
 
 
-    public File setNetwork(StructuralCausalModel network) throws IOException {
+    public File init(StructuralCausalModel network, boolean table) throws IOException {
         networkFile = File.createTempFile("CrediciAceModel", ".net");
         networkFile.deleteOnExit();
         
+        Logger.getGlobal().info(networkFile.toString());
+
         try(NetworkWriter writer = new NetworkWriter(networkFile, "n", "s")) {
             writer.write(network.toBnet());
         }
+        
         this.model = network;
+        this.exo = network.getExogenousVars();
+
+        try { 
+            ace = new AceEvalExt(networkFile.getAbsolutePath(), exo, acePath, table);
+            
+        } catch(Exception e) {
+            throw new IOException("Exception instantiating AaceEvalExt", e);
+        }
         return networkFile;
     }
 
-    public void compile() {
-        String[] names = IntStream.of(model.getExogenousVars()).mapToObj((a)-> "n" + a).toArray(String[]::new);
-        ace = new AceExt(networkFile.getAbsolutePath(), names, acePath, table);
-    }
-   
-    
-
     public void update(StructuralCausalModel network) {
-        Map<String, List<Double>> data = new HashMap<>();
-        
         for (int ex : network.getExogenousVars()) {
             BayesianFactor f = network.getFactor(ex);
-            List<Double> dta = Arrays.stream(f.getData()).<Double>mapToObj(Double::valueOf).collect(Collectors.toList());
-            data.put(nodeName(ex), dta);
-        }
-        ace.update_CPTs(data);
+            double[] dta = f.getData();
+            ace.update_CPTs(ex, dta);
+        }    
+        this.dirty = true;
     }
 
-    public void update(BayesianFactor f, int U) {
-        Map<String, List<Double>> data = new HashMap<>();
-        List<Double> dta = Arrays.stream(f.getData()).<Double>mapToObj(Double::valueOf).collect(Collectors.toList());
-        data.put(nodeName(U), dta);
-        ace.update_CPTs(data);
+    public void update(BayesianFactor f) {
+        if (f.getDomain().getSize() != 1) 
+            throw new IllegalArgumentException("only single var domains");
+
+        int U = f.getDomain().getVariables()[0];
+        ace.update_CPTs(U, f.getData());
+        this.dirty = true;
     }
 
-    public double[] query(int node, TIntIntMap evidence) {
-        Map<String, String> evidenceMap = new HashMap<>();
-        if (evidence != null) {
-            evidence.forEachEntry((n,s) -> {
-                evidenceMap.put(nodeName(n), stateName(n, s));
-                return true;
-            });
-        }
-        String name = nodeName(node);
-        Map<String, List<Double>> ret = ace.evaluate(Arrays.asList(name), evidenceMap);
-        return ret.get(name).stream().mapToDouble(Double::doubleValue).toArray();
-    }
+    private Map<Integer, BayesianFactor> factors;
+    private double pe;
+    private boolean dirty = true;
+    private TIntIntMap evidence;
 
-    public double pevidence( TIntIntMap evidence) {
-        Map<String, String> evidenceMap = new HashMap<>();
-        if (evidence != null) {
-            evidence.forEachEntry((n, s) -> {
-                evidenceMap.put(nodeName(n), stateName(n, s));
-                return true;
-            });
-        }
-        Map<String, List<Double>> ret = ace.evaluate(Arrays.asList(), evidenceMap);
-        return ret.get("e").stream().mapToDouble(Double::doubleValue).toArray()[0];
-    }
-
-    public TIntObjectMap<double[]> getPosteriors(TIntIntMap evidence) {
-        Map<String, String> evidenceMap = new HashMap<>();
-        if (evidence != null) {
-            evidence.forEachEntry((n, s) -> {
-                evidenceMap.put(nodeName(n), stateName(n, s));
-                return true;
-            });
-        }
-        Map<String, List<Double>> ret = ace.evaluate(Arrays.asList(), evidenceMap);
-        TIntObjectMap<double[]> result = new TIntObjectHashMap<>(ret.size());
-        ret.entrySet().stream().forEach(x->result.put(
-            nodeId(x.getKey()), 
-            toDoubleArray(x.getValue())
-        ));
-        return result;
+    public void dirty() {
+        this.dirty = true;
     }
     
-    private int nodeId(String node) {
-        if (node.equals("e")) {
-            return -1;
+    public BayesianFactor posterior(int u) {
+        return factors.get(u);
+    }
+    
+    public Map<Integer, BayesianFactor> compute(TIntIntMap evidence) throws Exception {
+        if (dirty) {
+            //  ace.commitLmap();
+            
+            
+            var res = ace.evaluate(model.getExogenousVars(), evidence);
+            factors = new HashMap<>(res.size());
+
+            for (var entry : res.entrySet()) {
+                if (entry.getKey() == -1) {
+                    pe = entry.getValue()[0];
+                } else  {
+                    BayesianFactor factor = model.getFactor(entry.getKey()).copy();
+                    factor.setData(entry.getValue());
+                    factors.put(entry.getKey(), factor);
+                }
+            }
+            
+            
+            this.evidence = new TIntIntHashMap(evidence);
+            dirty = false;
+            return factors;
+        } else { 
+            if(!evidence.equals(this.evidence)) 
+                throw new IllegalArgumentException("Update first");
+            return factors;
         }
-        node = node.substring(1);
-        return Integer.parseInt(node);
     }
 
-    private double[] toDoubleArray(Collection<Double> list) {
-        return list.stream().mapToDouble(Double::doubleValue).toArray();
+   
+    public double pevidence() {
+        return pe;
     }
 
-    String stateName(int node, int state){
-        return "s" + state;
-    }
-    String nodeName(int node) {
-        return "n" + node;
-    }
+
+
+
+    // String stateName(int node, int state){
+    //     return "s" + state;
+    // }
+    // String nodeName(int node) {
+    //     return "n" + node;
+    // }
 
     public double getQueryTime() { 
         return ace.getLastQueryTime();
@@ -136,9 +130,5 @@ public class AceInference {
     }
     public double getSetupTime() { 
         return ace.getLastSetupTime();
-    }
-  
-    public void setUseTable(boolean status) {
-        this.table = status;
     }
 }

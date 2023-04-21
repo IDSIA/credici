@@ -1,8 +1,6 @@
 package ch.idsia.credici.learning;
 
-import ch.idsia.credici.learning.inference.AceLocalMethod;
-import ch.idsia.credici.learning.inference.AceMethod;
-import ch.idsia.credici.learning.inference.EMInference;
+import ch.idsia.credici.learning.inference.ComponentInference;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
@@ -43,7 +41,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private boolean usePosteriorCache = true;
 
-    private int inferenceVariation = 2;
+    protected int inferenceVariation = 2;
 
     protected TIntObjectHashMap<BayesianFactor> replacedFactors = null;
 
@@ -176,7 +174,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 return TrajectoryAnalyser.hasConvergedL1((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
         }else if(stopCriteria == StopCriteria.LLratio){
             return TrajectoryAnalyser.hasConvergedLLratio((StructuralCausalModel) posteriorModel, data, threshold, exoCC);
-
+        //} else if(stopCriteria == StopCriteria.newLL) {
+        
         }else{
             throw new IllegalArgumentException("Wrong stopping Criteria");
         }
@@ -251,16 +250,24 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         return filteredObs;
     }
 
-    BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException, IOException {
 
- 
+
+    BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException, IOException {
+        if (this.inferenceVariation == 5) { 
+            return this.method.posterior(query[0]);
+        } else {
+            return posteriorInferenceOld(query, obs);
+        }
+    }
+
+    BayesianFactor posteriorInferenceOld(int[] query, TIntIntMap obs) throws InterruptedException, IOException {
+  
         if(query.length>1)
             throw new IllegalArgumentException("Target variable cannot be more than one. Not implemented");
 
         int var = query[0];
-
-        TIntIntMap filteredObs = getFilteredObs(var, obs);
-       
+        TIntIntMap filteredObs  = getFilteredObs(var, obs);
+        
         String hash = Arrays.toString(Ints.concat(query,new int[]{-1}, filteredObs.keys(), filteredObs.values()));
 
         if(!posteriorCache.containsKey(hash) || !usePosteriorCache) {
@@ -273,9 +280,6 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 case 2: p = inferenceVariation2(query, obs, hash); break;
                 case 3: p = inferenceVariation3(query, obs); break;
                 case 4: p = inferenceVariation4(query, obs, hash); break;
-                case 5: p = inferenceVariationAce(query, filteredObs, hash, ace); break;
-                case 6: p = inferenceVariationAce(query, filteredObs, hash, aceLocal); break;
-
             }
 
             //p = method.run((StructuralCausalModel) priorModel, query[0], obs, hash);
@@ -289,28 +293,13 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     }
 
-    public AceMethod getAce() {
-        return ace;
-    }
-    public AceLocalMethod getAceLocal() {
-        return aceLocal;
-    }
+    
 
-    private AceMethod ace = new AceMethod();
-    private AceLocalMethod aceLocal = new AceLocalMethod();
-    private EMInference method; 
+    protected ComponentInference method; 
 
-    public FrequentistCausalEM setInferenceMethod(EMInference method) {
+    public FrequentistCausalEM setInferenceMethod(ComponentInference method) {
         this.method = method;
         return this;
-    }
-
-    private BayesianFactor inference(int[] query, TIntIntMap obs, String hash) throws InterruptedException, IOException {
-        return method.run((StructuralCausalModel) posteriorModel, query[0], obs, obs, hash);
-    }
-
-    private BayesianFactor inferenceVariationAce(int[] query, TIntIntMap obs, String hash, EMInference method) throws InterruptedException, IOException {
-        return method.run((StructuralCausalModel) posteriorModel, query[0], obs, obs,  hash);
     }
 
     /*

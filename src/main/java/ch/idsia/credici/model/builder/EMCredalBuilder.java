@@ -5,7 +5,7 @@ import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.BayesianCausalEM;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.learning.WeightedCausalEM;
-import ch.idsia.credici.learning.inference.EMInference;
+import ch.idsia.credici.learning.inference.ComponentInference;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.utility.DataUtil;
@@ -83,12 +83,9 @@ public class EMCredalBuilder extends CredalBuilder{
 	public EMCredalBuilder(StructuralCausalModel causalModel){
 		this.causalmodel = causalModel;
 		this.endogJointProbs = causalModel.endogenousBlanketProb();
-		//this.inputGenDist = causalModel.getEmpiricalMap(false);
 		this.trainableVars = causalModel.getExogenousVars();
-
-		//setTargetGenDist();
-
 	}
+
 	public static EMCredalBuilder of(StructuralCausalModel causalModel){
 		return new EMCredalBuilder(causalModel);
 	}
@@ -96,13 +93,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public EMCredalBuilder(StructuralCausalModel causalModel, TIntIntMap[] data){
 		this.causalmodel = causalModel;
-		//this.endogJointProbs = causalModel.endogenousBlanketProb();
 		this.data = data;
 		this.trainableVars = causalModel.getExogenousVars();
-
-		//this.inputGenDist = causalModel.getEmpiricalMap(false);
-		//setTargetGenDist();
-
 	}
 
 
@@ -128,6 +120,7 @@ public class EMCredalBuilder extends CredalBuilder{
 		mergePoints();
 		return this;
 	}
+
 	public EMCredalBuilder selectAndMerge(){
 		selectPoints();
 		mergePoints();
@@ -368,7 +361,7 @@ public class EMCredalBuilder extends CredalBuilder{
 		// 				,trainableVars
 		// );
 		StructuralCausalModel rmodel = reference.copy();
-		rmodel.initRandom(0);
+		//rmodel.initRandom(0);
 		rmodel.fillExogenousWithRandomFactors(0);
 		return rmodel;
 	}
@@ -409,14 +402,6 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		em.run(stepArgs, maxEMIter);
 
-		if (inferenceVariation == 5) {// ace
-			aceQueryTime = em.getAce().getQueryTime();
-			aceSetupTime = em.getAce().getSetupTime();
-		}
-		else if (inferenceVariation == 6) {// ace
-			aceQueryTime = em.getAceLocal().getQueryTime();
-			aceSetupTime = em.getAceLocal().getSetupTime();
-		}
 		List<StructuralCausalModel> t = em.getIntermediateModels().stream().map(n->(StructuralCausalModel)n).collect(Collectors.toList());
 
 		if(verbose)
@@ -481,8 +466,8 @@ public class EMCredalBuilder extends CredalBuilder{
 		return this;
 	}
 
-	private EMInference method; 
-	public EMCredalBuilder setInference(EMInference inference) {
+	private ComponentInference method; 
+	public EMCredalBuilder setInference(ComponentInference inference) {
 		this.method = inference;
 		return this;
 	}

@@ -18,6 +18,8 @@ class Variable {
 
 	// map each CPT index to a factor
 	private Map<Integer, Factor> v_factors;
+	private int[] absoluteIndex; 
+
 	// chunk size for each variable
 	private List<Integer> chunk_size;
 
@@ -42,7 +44,12 @@ class Variable {
 		v_parents.add(parent);
 	}
 
-	public void modify_CPT(Double CPT_entry, int index, boolean dummy) {
+	public int getAbsoluteIndex(int index) {
+		return v_factors.get(index).getIndex();
+	}
+	
+	public boolean modify_CPT(double CPT_entry, int index, boolean dummy) {
+		//System.out.println(this.v_name + " " + this.v_id + " " +index + " " + CPT_entry);
 		// if chunk size is not initialized yet, we do so first
 		if (chunk_size.size() == 0)
 			init_chunk_size();
@@ -50,14 +57,18 @@ class Variable {
 		if (index == -1) {
 			index = v_factors.size();
 		}
+
+		boolean change = false;
+
 		// index uniquely identify the factor
 		// if the factor is already in the list, then we modify its value
 		if (v_factors.containsKey(index))
 			if (dummy)
 				v_factors.get(index).set_dummy_value(CPT_entry);
 			else
-				v_factors.get(index).set_value(CPT_entry);
+				change |= v_factors.get(index).set_value(CPT_entry);
 		else {
+			change = true;
 			Factor new_fac = make_factors(CPT_entry, index);
 			if (dummy)
 				new_fac.set_dummy_value(CPT_entry);
@@ -65,10 +76,11 @@ class Variable {
 				new_fac.set_value(CPT_entry);
 			v_factors.put(index, new_fac);
 		}
+		return change;
 	}
 
 	// create factors for the variable
-	private Factor make_factors(Double CPT_entry, int index) {
+	private Factor make_factors(double CPT_entry, int index) {
 		// we next traverse the parents and create strings and value
 		int remain = index;
 		Factor f = new Factor(this, v_parents, (!v_isVariable));
@@ -118,14 +130,6 @@ class Variable {
 		return v_parents;
 	}
 
-	public List<Double> get_CPT() {
-		List<Double> CPT = new ArrayList<Double>();
-		for (int i = 0; i < v_factors.size(); i++) {
-			Factor f = v_factors.get(i);
-			CPT.add(f.get_value());
-		}
-		return CPT;
-	}
 
 	public boolean isVariable() {
 		return v_isVariable;

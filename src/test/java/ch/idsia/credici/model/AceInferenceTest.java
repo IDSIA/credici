@@ -42,15 +42,14 @@ public class AceInferenceTest {
 
         try {
             AceInference ai = new AceInference("src/resources/ace");
-            File f = ai.setNetwork(model);
-            ai.setUseTable(true);
-            ai.compile();
+            File f = ai.init(model, true);
             System.out.println(Files.readString(f.toPath()));
             assertTrue(true);
             ai.update(model);
-            ai.query(3, ObservationBuilder.observe(1, 1));
+            ai.compute(ObservationBuilder.observe(1, 1));
+            ai.posterior(3);
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
@@ -95,20 +94,23 @@ public class AceInferenceTest {
 
         try {
             AceInference ai = new AceInference("src/resources/ace");
-            ai.setUseTable(true);
-            File f = ai.setNetwork(model);
-            ai.compile();
+            File f = ai.init(model, true);
+            
             System.out.println(Files.readString(f.toPath()));
             assertTrue(true);
 
             System.out.println(Files.readString(f.toPath()));
             assertTrue(true);
             ai.update(model);
-            
-            double[] xx = ai.query(x, new TIntIntHashMap());//new int[]{x}, new int[]{0}));
-            System.out.println(Arrays.toString(xx));
+            ai.compute(new TIntIntHashMap());
 
-            double xxx = ai.pevidence(new TIntIntHashMap(new int[]{x}, new int[]{0}));
+            BayesianFactor bf = ai.posterior(z);//new int[]{x}, new int[]{0}));
+            
+            System.out.println(Arrays.toString(bf.getData()));
+
+            ai.compute(new TIntIntHashMap(new int[]{x}, new int[]{0}));
+            double xxx = ai.pevidence();
+
             System.out.println(xxx);
 
             long start = System.currentTimeMillis();
@@ -135,7 +137,7 @@ public class AceInferenceTest {
 
             //TIntObjectMap<double[]> ma = ai.getPosteriors(new TIntIntHashMap(new int[]{x}, new int[]{0}));
             
-        } catch (IOException e) {
+        } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }

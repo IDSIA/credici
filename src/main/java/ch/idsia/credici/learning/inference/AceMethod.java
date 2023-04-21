@@ -1,55 +1,40 @@
 package ch.idsia.credici.learning.inference;
 
-import java.io.IOException;
-import java.util.HashMap;
-
 import ch.idsia.credici.inference.ace.AceInference;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import gnu.trove.map.TIntIntMap;
 
-public class AceMethod implements EMInference, TotalTiming {
-
-    private double setupTime = 0;
-	private double queryTime = 0;
-	
+public class AceMethod implements ComponentInference {
 
     private AceInference ace = null;
 
     @Override
-    public double getQueryTime() {
-        return queryTime;
+    public BayesianFactor posterior(int u) {
+        return ace.posterior(u);
     }
 
     @Override
-    public double getSetupTime() {
-        return setupTime;
+    public void set(StructuralCausalModel posteriorModel)    {
+        var ace = getAce(posteriorModel);
+        ace.update(posteriorModel);
     }
 
     @Override
-    public void reset() {
-        setupTime = 0;
-        queryTime = 0;
+    public void update(TIntIntMap observation) throws Exception {
+        ace.dirty();
+        ace.compute(observation);
     }
 
-    @Override
-    public BayesianFactor run(StructuralCausalModel posteriorModel, int U,TIntIntMap obs, TIntIntMap filteredobs, String hash) throws InterruptedException, IOException {
-        BayesianFactor bf = posteriorModel.getFactor(U);
+    private AceInference getAce(StructuralCausalModel posteriorModel)   {
         if (ace == null) {
-            ace = new AceInference("src/resources/ace");
-            ace.setNetwork(posteriorModel);
-            ace.setUseTable(true);
-            ace.compile();
+            try {
+                ace = new AceInference("src/resources/ace");
+                ace.init(posteriorModel, true);
+            } catch(Exception e) { 
+                e.printStackTrace();
+            }
         }
-        else {
-            ace.update(posteriorModel.getFactor(U), U);
-        }
-
-        double[] data =  ace.query(U, obs);
-
-        queryTime += ace.getQueryTime();
-        setupTime += ace.getSetupTime();
-
-        return new BayesianFactor(bf.getDomain(), data);
+        return ace;
     }
 }

@@ -132,6 +132,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		initRandom(0);
 	}
 
+	/** 
+	 * Initialize random generator with given seed
+	 */
 	public void initRandom(long seed) {
 		randomSource = RandomSource.JDK.create(seed);
 	}
@@ -179,6 +182,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		return copy;
 	}
+
+
 
 	/**
 	 * Add a new variable to the model. Added variables will be appended to the model and the index of the added

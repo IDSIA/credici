@@ -3,6 +3,7 @@ package ch.idsia.credici.model;
 import ch.idsia.credici.IO;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.tools.CausalOps;
+import ch.idsia.credici.model.transform.CComponents;
 import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
@@ -10,6 +11,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
+import ch.idsia.crema.model.io.dot.DotSerialize;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
@@ -19,7 +21,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import cern.colt.Arrays;
+
+import java.io.File;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.stream.Stream;
 
@@ -237,6 +244,7 @@ public class StructuralCausalModelTest {
         // True join
         BayesianFactor pjoin = (BayesianFactor) inf.conditionalQuery(new int[]{z,y,x});
         actual = pjoin.getData();
+        System.out.println(Arrays.toString(actual));
         expected = new double[]{ 0.12960000000000002, 0.21460000000000004, 0.016800000000000002, 0.13000000000000003, 0.0432, 0.3478, 0.0504, 0.06760000000000001 };
         Assert.assertArrayEquals(expected,actual,0.000001);
 
@@ -302,10 +310,30 @@ public class StructuralCausalModelTest {
         assertArrayEquals(new int[]{1,2,3}, m.endoConnectComponents().get(1));
         assertArrayEquals(new int[]{4}, m.endoConnectComponents().get(2));
 
-
     }
 
+    private void print(String target, StructuralCausalModel model, int i) throws IOException, InterruptedException {
+        DotSerialize dot = new DotSerialize();
 
+        File f = File.createTempFile("graph",".dot");
+        Files.writeString(f.toPath(), dot.run(model), Charset.defaultCharset());
+        Process p = new ProcessBuilder("dot" ,"-Tpng", "-o"+target+"i"+i+".png", f.getAbsolutePath()).start();
+        p.waitFor();
+        f.deleteOnExit();
+    }
+
+    @Test
+    public  void componentNews() throws IOException, InterruptedException {
+        StructuralCausalModel m = syntheticModel();
+        CComponents transform = new CComponents();
+        int i = 1;
+        print("img/",m, 0);
+
+        for (StructuralCausalModel model : transform.apply(m)) {
+            print("img/", model, i++);
+        }
+        
+    }
 
     @Test
     public  void exoTreeWidth() throws IOException {

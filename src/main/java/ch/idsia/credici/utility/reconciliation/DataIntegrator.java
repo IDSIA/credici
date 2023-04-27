@@ -393,7 +393,7 @@ public class DataIntegrator {
             int S = this.getStudyVar();
             int N = m.getDomain(S).getCombinations();
             m.removeVariable(S);
-            m.fillExogenousWithRandomFactors(2);
+            m.fillExogenousWithRandomFactors();
             extendedMultiStudy = CausalOps.plateau(m, N, this.getNonStudySpecificExoVars());
 
         }
@@ -541,49 +541,6 @@ public class DataIntegrator {
         }
 
 
-
-    }
-
-    public static void main(String[] args) {
-
-        int datasize = 10;
-        RandomUtil.setRandomSeed(1);
-
-        SparseDirectedAcyclicGraph endoDAG = DAGUtil.build("(0,1),(1,2)");
-        SparseDirectedAcyclicGraph causalDAG = DAGUtil.build("(0,1),(1,2),(3,0),(4,1),(5,2)");
-        StructuralCausalModel model = CausalBuilder.of(endoDAG, 2).setCausalDAG(causalDAG).build();
-        model = Cofounding.mergeExoVars(model, new int[][]{new int[]{3,5}});
-        model.fillExogenousWithRandomFactors(3);
-
-        int x = 0, y = 1, z=2; // Variables in the model;
-        int cause = x, effect = z;
-
-        /* Only with observational data */
-        TIntIntMap[] obsData = model.samples(datasize, model.getEndogenousVars());
-
-        TIntIntMap inter0 = ObservationBuilder.observe(x,0);
-        TIntIntMap[] interData0 = model.intervention(inter0).samples(datasize, model.getEndogenousVars());
-
-        TIntIntMap inter1 = ObservationBuilder.observe(x,1);
-        TIntIntMap[] interData1 = model.intervention(inter1).samples(datasize, model.getEndogenousVars());
-
-
-
-        DataIntegrator integrator = DataIntegrator.of(model)
-                //.setObservationalData(obsData)
-                .setData(interData0, inter0)
-                .setData(interData1, inter1)
-                .compile();
-
-        System.out.println(integrator.getExtendedModel());
-        TIntIntMap[] fulldata = integrator.getExtendedData();
-        System.out.println();
-        StructuralCausalModel m = integrator.getExtendedModel();
-        System.out.println(m);
-        StructuralCausalModel m2 = integrator.removeInterventional(m);
-        System.out.println(m);
-
-        System.out.println(m2);
 
     }
 

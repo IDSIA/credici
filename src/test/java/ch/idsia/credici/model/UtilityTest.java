@@ -1,8 +1,8 @@
 package ch.idsia.credici.model;
 
-import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
+
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;

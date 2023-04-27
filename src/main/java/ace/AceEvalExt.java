@@ -174,44 +174,13 @@ public class AceEvalExt {
 
 		for (int v : query) {
 			int veng = outInVarMapping.get(v);
-			double[] d = engine.varPosteriors(veng); // P(v|e)
+			double[] d = engine.varMarginals(veng); // P(v,e)
 			res.put(v, d);
 		}
 		return res;
 	}
 
-	private double lastSetupTime;
-	private double lastQueryTime;
-	private double lastReadTime;
 
-	private void save_timings(String io) {
-		this.lastSetupTime = -1;
-		this.lastQueryTime = -1;
-		this.lastReadTime = -1;
-
-		io.lines().forEach(line -> {
-			if (line.startsWith("  Total Initialization Time (ms) : ")) 
-				this.lastSetupTime = Double.valueOf(line.split(":")[1].trim());
-			else if (line.startsWith("Network Read Time (ms) : ")) 
-				this.lastReadTime = Double.valueOf(line.split(":")[1].trim());
-			else if (line.startsWith("  Total Inference Time (ms) : "))
-				this.lastQueryTime = Double.valueOf(line.split(":")[1].trim());
-		});
-	}
-
-
-	public double getLastQueryTime() {
-		return lastQueryTime;
-	}
-
-	public double getLastReadTime() {
-		return lastReadTime;
-	}
-	public double getLastSetupTime() {
-		return lastSetupTime;
-	}
-	
-	
 
 	// parse the .net network file
 	private void parse_net() {

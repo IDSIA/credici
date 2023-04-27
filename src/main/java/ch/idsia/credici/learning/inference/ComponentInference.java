@@ -10,8 +10,11 @@ import gnu.trove.map.TIntIntMap;
 public interface ComponentInference {
     public BayesianFactor posterior(int U);
 
+	public double pevidence();
+
 	public void set(StructuralCausalModel posteriorModel);
 
 	public void update(TIntIntMap observation) throws Exception;
 
+	public void initialize(StructuralCausalModel posteriorModel);
 }

@@ -1,7 +1,8 @@
-package ch.idsia.credici.inference;
+package ch.idsia.credici.inference.ace;
 
 import ch.idsia.credici.model.tools.CausalOps;
-
+import ch.idsia.credici.inference.CausalInference;
+import ch.idsia.credici.inference.Query;
 import ch.idsia.credici.learning.ve.VE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
@@ -18,14 +19,13 @@ import jdk.jshell.spi.ExecutionControl;
 import org.apache.commons.lang3.ArrayUtils;
 
 
-public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFactor> {
+public class CausalACE extends CausalInference<StructuralCausalModel, BayesianFactor> {
 
 
     private int[] elimOrder;
 
-    public CausalVE(StructuralCausalModel model){
+    public CausalACE(StructuralCausalModel model){
         this.model = model.copy();
-        this.elimOrder = null;
     }
 
     @Override
@@ -45,13 +45,6 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
             q.setCounterfactualMapping(WorldMapping.getMap(infModel));
             target = q.getCounterfactualMapping().getEquivalentVars(1, target);
         }
-        if (simplify) {
-            RemoveBarren removeBarren = new RemoveBarren();
-            infModel = removeBarren
-                    .execute(new CutObserved().execute(infModel, evidence), target, evidence);
-        }
-        if(elimOrder==null)
-            elimOrder = new MinFillOrdering().apply(infModel);
         return infModel;
     }
 
@@ -80,7 +73,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         return elimOrder;
     }
 
-    public CausalVE setElimOrder(int[] elimOrder) {
+    public CausalACE setElimOrder(int[] elimOrder) {
         this.elimOrder = elimOrder;
         return this;
     }
@@ -105,7 +98,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
 
         for(int x: CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
 
-        CausalVE infInternal =  new CausalVE(pns_model);
+        CausalACE infInternal =  new CausalACE(pns_model);
         Query q =  infInternal.causalQuery().setTarget(target);
  /*
         if(evidence != null){

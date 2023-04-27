@@ -2,9 +2,12 @@ package ch.idsia.credici.inference.ace;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import org.apache.commons.math3.util.FastMath;
 
 import ace.AceEvalExt;
 import ch.idsia.credici.model.StructuralCausalModel;
@@ -18,6 +21,12 @@ public class AceInference {
     private AceEvalExt ace; 
     private String acePath; 
     private int[] exo; 
+
+    private Map<Integer, BayesianFactor> factors;
+    
+    private double pe;
+    private boolean dirty = true;
+    private TIntIntMap evidence;
 
 
     public AceInference(String acepath) {
@@ -65,23 +74,37 @@ public class AceInference {
         this.dirty = true;
     }
 
-    private Map<Integer, BayesianFactor> factors;
-    private double pe;
-    private boolean dirty = true;
-    private TIntIntMap evidence;
-
+  
     public void dirty() {
         this.dirty = true;
     }
-    
-    public BayesianFactor posterior(int u) {
+
+    public BayesianFactor marginals(int u) {
         return factors.get(u);
+    }
+
+    public BayesianFactor posterior(int u) {
+        BayesianFactor post = factors.get(u).copy();
+        
+        double[] data = post.getInteralData();
+
+        if (post.isLog()) {
+            double logpe = FastMath.log(pe);
+            for (int id = 0; id < data.length; ++id) {
+                data[id] -= logpe;
+            }
+        } else {
+            for (int id = 0; id < data.length; ++id) {
+                data[id] /= pe;
+            }
+        }
+        
+        return post;
     }
     
     public Map<Integer, BayesianFactor> compute(TIntIntMap evidence) throws Exception {
         if (dirty) {
-            //  ace.commitLmap();
-            
+            //ace.commitLmap();
             
             var res = ace.evaluate(model.getExogenousVars(), evidence);
             factors = new HashMap<>(res.size());
@@ -112,23 +135,4 @@ public class AceInference {
         return pe;
     }
 
-
-
-
-    // String stateName(int node, int state){
-    //     return "s" + state;
-    // }
-    // String nodeName(int node) {
-    //     return "n" + node;
-    // }
-
-    public double getQueryTime() { 
-        return ace.getLastQueryTime();
-    }
-    public double getReadTime() { 
-        return ace.getLastReadTime();
-    }
-    public double getSetupTime() { 
-        return ace.getLastSetupTime();
-    }
 }

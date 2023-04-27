@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.GenericFactor;

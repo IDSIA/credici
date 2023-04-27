@@ -26,6 +26,7 @@ import gnu.trove.map.TIntObjectMap;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.IntStream;
 
@@ -73,8 +74,8 @@ public class Probability {
 	}
 
 
-	public static double likelihood(HashMap<Set<Integer>, BayesianFactor> prob,
-										 HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
+	public static double likelihood(Map<Set<Integer>, BayesianFactor> prob,
+									Map<Set<Integer>, BayesianFactor> emp, int counts) {
 		double L = 1.0;
 		for(Set<Integer> k : emp.keySet())
 			L *= Probability.likelihood((BayesianFactor) prob.get(k), (BayesianFactor)emp.get(k), counts);
@@ -93,8 +94,8 @@ public class Probability {
 
 
 
-	public static double logLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
-										 HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
+	public static double logLikelihood(Map<Set<Integer>, BayesianFactor> prob,
+									  	Map<Set<Integer>, BayesianFactor> emp, int counts) {
 		double l = 0.0;
 		for(Set<Integer> k : emp.keySet())
 			l += Probability.logLikelihood((BayesianFactor) prob.get(k), (BayesianFactor)emp.get(k), counts);
@@ -110,7 +111,7 @@ public class Probability {
 
 
 
-	public static double logLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
+	public static double logLikelihood(Map<Set<Integer>, BayesianFactor> prob,
 									   TIntIntMap[] data) {
 		double l = 0.0;
 		for(Set<Integer> k : prob.keySet())
@@ -129,8 +130,8 @@ public class Probability {
 		return logLikelihood(prob, emp, counts)/logLikelihood(emp, emp, counts);
 	}
 
-	public static double ratioLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
-									HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
+	public static double ratioLikelihood(Map<Set<Integer>, BayesianFactor> prob,
+									Map<Set<Integer>, BayesianFactor> emp, int counts) {
 		return likelihood(prob, emp, counts)/likelihood(emp, emp, counts);
 	}
 
@@ -145,8 +146,8 @@ public class Probability {
 		return logLikelihood(emp, emp, counts)/logLikelihood(prob, emp, counts);
 	}
 
-	public static double ratioLogLikelihood(HashMap<Set<Integer>, BayesianFactor> prob,
-										 HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
+	public static double ratioLogLikelihood(Map<Set<Integer>, BayesianFactor> prob,
+										 	Map<Set<Integer>, BayesianFactor> emp, int counts) {
 		return logLikelihood(emp, emp, counts)/logLikelihood(prob, emp, counts);
 	}
 
@@ -156,7 +157,7 @@ public class Probability {
 
 	}
 
-	public static double maxLogLikelihood(HashMap<Set<Integer>, BayesianFactor> emp, int counts) {
+	public static double maxLogLikelihood(Map<Set<Integer>, BayesianFactor> emp, int counts) {
 		return logLikelihood(emp, emp, counts);
 	}
 
@@ -226,8 +227,8 @@ public class Probability {
 	}
 
 
-	public static double KLsymmetrized(HashMap<Set<Integer>, BayesianFactor> p,
-									   HashMap<Set<Integer>, BayesianFactor> q, boolean... zeroSafe) {
+	public static double KLsymmetrized(Map<Set<Integer>, BayesianFactor> p,
+									   Map<Set<Integer>, BayesianFactor> q, boolean... zeroSafe) {
 		double l = 0.0;
 		for(Set<Integer> k : q.keySet())
 			l += Probability.KLsymmetrized((BayesianFactor) p.get(k), (BayesianFactor)q.get(k), zeroSafe);
@@ -235,8 +236,8 @@ public class Probability {
 		return l;
 	}
 
-	public static double KL(HashMap<Set<Integer>, BayesianFactor> p,
-							HashMap<Set<Integer>, BayesianFactor> q, boolean... zeroSafe) {
+	public static double KL(Map<Set<Integer>, BayesianFactor> p,
+							Map<Set<Integer>, BayesianFactor> q, boolean... zeroSafe) {
 		double l = 0.0;
 		for(Set<Integer> k : q.keySet())
 			l += Probability.KL((BayesianFactor) p.get(k), (BayesianFactor)q.get(k), zeroSafe);
@@ -299,29 +300,5 @@ Probability.vertexInside(t.get(31).getFactor(4), (VertexFactor) this.trueCredalM
 			ll += Math.log(bf.getData()[0]);
 		}
 		return ll;
-	}
-
-
-
-
-
-	public static void main(String[] args) {
-		try {
-			StructuralCausalModel scm;
-			scm = (StructuralCausalModel) IO.readUAI("/Users/dhuber/Development/credici/papers/pgm22/models/synthetic/1000/set4/rand13_mk1_maxDist2_nEndo6_k075_5.uai");
-			//BayesianNetwork bn = scm.toBnet();
-			TIntIntMap[] data = DataUtil.fromCSV("/Users/dhuber/Development/credici/papers/pgm22/models/synthetic/1000/set4/rand13_mk1_maxDist2_nEndo6_k075_5.csv");
-			double ll = LL(scm,data);
-			System.out.println(ll);
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		} catch (CsvException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
 	}
 }

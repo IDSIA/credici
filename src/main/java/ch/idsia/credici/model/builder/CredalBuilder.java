@@ -16,7 +16,7 @@ public abstract class CredalBuilder {
 	protected SparseModel model;
 
 	// abstract methods to implemented
-	abstract public CredalBuilder build(int...exoVars) throws InterruptedException;
+	public abstract CredalBuilder build(int...exoVars) throws InterruptedException;
 
 	// method for getting the generated model.
 	public SparseModel getModel() {

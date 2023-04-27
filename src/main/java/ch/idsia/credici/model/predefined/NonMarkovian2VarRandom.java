@@ -1,9 +1,9 @@
 package ch.idsia.credici.model.predefined;
 // models/ch.idsia.crema.models.causal/NonMarkovian2VarRandom.java
 
-import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
+import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;

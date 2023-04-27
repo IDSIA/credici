@@ -84,7 +84,7 @@ public class StructuralCausalModelTest {
         model = Cofounding.mergeExoParents(model, pairsX);
 
         RandomUtil.setRandomSeed(0);
-        model.fillExogenousWithRandomFactors(2);
+        model.fillExogenousWithRandomFactors();
         return model;
     }
 

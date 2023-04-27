@@ -195,7 +195,7 @@ public class CausalBuilder {
             return;
 
         if(num_decimals > 0) {
-            model.fillExogenousWithRandomFactors(num_decimals);
+            model.fillExogenousWithRandomFactors();
         }
         if(fillRandomEquations) {
             model.fillWithRandomEquations();

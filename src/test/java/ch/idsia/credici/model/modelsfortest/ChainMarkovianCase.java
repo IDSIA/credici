@@ -1,7 +1,6 @@
 package ch.idsia.credici.model.modelsfortest;
 
 import ch.idsia.credici.inference.CausalInference;
-import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
@@ -82,7 +81,7 @@ public class ChainMarkovianCase {
 
         // Run inference
 
-        CausalInference inf1 = new CausalVE(model);
+        CausalInference inf1 = new ch.idsia.credici.inference.CausalVE(model);
         BayesianFactor result1 = (BayesianFactor) inf1.query(target, evidence, intervention);
         System.out.println(result1);
 

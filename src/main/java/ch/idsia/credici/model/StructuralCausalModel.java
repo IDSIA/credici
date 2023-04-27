@@ -348,7 +348,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public void fillWithRandomFactors(int prob_decimals, boolean EqCheck, boolean fillEqs){
 
 		for(int u : this.getExogenousVars()){
-			randomizeExoFactor(u, prob_decimals);
+			randomizeExoFactor(u);
 			if(fillEqs) {
 				do {
 					randomizeEndoChildren(u);
@@ -361,10 +361,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * Attach to each variable (endogenous or exogenous) a random factor.
 	 * @param prob_decimals
 	 */
-	public void fillExogenousWithRandomFactors(int prob_decimals){
+	public void fillExogenousWithRandomFactors(){
 
 		for(int u : this.getExogenousVars()){
-				randomizeExoFactor(u, prob_decimals);
+			randomizeExoFactor(u);
 		}
 	}
 
@@ -378,7 +378,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @param u the variable whos distribution is to be randomized
 	 * @param prob_decimals unused
 	 */
-	public void randomizeExoFactor(int u, int prob_decimals){
+	public void randomizeExoFactor(int u){
 		Strides left = this.getDomain(u);
 		Strides right = this.getDomain(this.getParents(u));
 
@@ -387,13 +387,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		data = x.samples(data.length).toArray(len->new double[len][]);
 		
 		this.setFactor(u, new BayesianFactor(left.concat(right), Doubles.concat(data), false));
-
-		// this.setFactor(u,
-		// 		BayesianFactor.random(this.getDomain(u),
-		// 				this.getDomain(this.getParents(u)),
-		// 				prob_decimals, false)
-		// );
-
 	}
 
 	public void randomizeEndoFactor(int x){
@@ -1090,18 +1083,21 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 	
 	public TIntIntMap sample(TIntIntMap obs, int... vars){
-		for(int v : DAGUtil.getTopologicalOrder(this.getNetwork())){
+		int[] order = DAGUtil.getTopologicalOrder(this.getNetwork());
+		for(int v : order){
 			if(!obs.containsKey(v)) {
 				BayesianFactor f = this.getFactor(v);
 
-				if(f != null)
-					f = f.copy();
+				// if(f != null)
+				// 	f = f.copy();
 
 				for (int pa : this.getParents(v)) {
-					f = f.filter(pa, obs.get(pa));
+					int spa = obs.get(pa);
+					f = f.filter(pa, spa);
 				}
 
-				obs.putAll(sample(f));
+				ObservationBuilder s = sample(f);
+				obs.putAll(s);
 			}
 		}
 
@@ -1478,4 +1474,21 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return subModel;
 	}
 
+
+
+	@Override
+	public boolean equals(Object obj) {
+		if (obj instanceof StructuralCausalModel) {
+			var other = (StructuralCausalModel)obj;
+
+			Set<Integer> thisVars = IntStream.of(getVariables()).boxed().collect(Collectors.toSet());
+			Set<Integer> otherVars = IntStream.of(other.getVariables()).boxed().collect(Collectors.toSet());
+			if (!thisVars.equals(otherVars)) return false;
+
+			
+			
+		}
+		// TODO Auto-generated method stub
+		return super.equals(obj);
+	}
 }

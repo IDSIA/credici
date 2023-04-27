@@ -168,7 +168,7 @@ public class ExogenousReduction {
 
         SparseDirectedAcyclicGraph endoDag = DAGUtil.getSubDAG(model.getNetwork(), model.getEndogenousVars());
         model = CausalBuilder.of(endoDag, 2).setCausalDAG(model.getNetwork()).build();
-        model.fillExogenousWithRandomFactors(3);
+        model.fillExogenousWithRandomFactors();
 
         TIntIntMap[] dataset = model.samples(100, model.getEndogenousVars());
 

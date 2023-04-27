@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -26,7 +27,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
  * the endogenous variables. When querying P(U,e) one needs to remember that e includes 
  * this parents.  
  */
-public class CComponents {
+public class CComponents implements Iterable<StructuralCausalModel> {
     private StructuralCausalModel from; 
 
     public Collection<StructuralCausalModel> apply(StructuralCausalModel model) {
@@ -54,13 +55,14 @@ public class CComponents {
             // now create and copy
             StructuralCausalModel newmodel = createModel(vars, model);
 
-
-            // filter the data table
             int[] exoVars = newmodel.getExogenousVars();
             visited.addAll(Arrays.stream(exoVars).boxed().collect(Collectors.toSet()));
-
+            
+            // filter the data table
+            int[] endoVars = newmodel.getEndogenousVars();
+            
             if (data != null) {
-                results.add(Pair.of(newmodel, data.subtable(exoVars)));
+                results.add(Pair.of(newmodel, data.subtable(endoVars)));
             } else {
                 results.add(Pair.of(newmodel, null));
             }
@@ -174,5 +176,11 @@ public class CComponents {
 
     private static Set<Integer> toSet(int[] data) {
         return IntStream.of(data).boxed().collect(Collectors.toSet());
+    }
+
+    @Override
+    public Iterator<StructuralCausalModel> iterator() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'iterator'");
     }
 }

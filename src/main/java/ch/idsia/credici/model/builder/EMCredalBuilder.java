@@ -129,8 +129,15 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public EMCredalBuilder buildTrajectories() throws InterruptedException {
 		trajectories = new ArrayList<>();
-		for(int i = 0; i< numTrajectories; i++)
+		
+	
+		if (inferenceVariation == 5 && this.method != null){
+			this.method.initialize(causalmodel);
+		}
+
+		for(int i = 0; i < numTrajectories; i++) {
 			trajectories.add(runEM());
+		}
 		return this;
 	}
 
@@ -361,15 +368,17 @@ public class EMCredalBuilder extends CredalBuilder{
 		// 				,trainableVars
 		// );
 		StructuralCausalModel rmodel = reference.copy();
-		//rmodel.initRandom(0);
-		rmodel.fillExogenousWithRandomFactors(0);
+		rmodel.fillExogenousWithRandomFactors();
 		return rmodel;
 	}
 
 	private List<StructuralCausalModel> runEM() throws InterruptedException {
-
+		// if (inferenceVariation == 5 && this.method != null){
+		// 	this.method.initialize(causalmodel);
+		// 	System.out.println("compiled" + causalmodel);
+		// }
 		StructuralCausalModel startingModel = randomModel(causalmodel);
-
+		
 		FrequentistCausalEM em = null;
 		Collection stepArgs = null;
 

@@ -1,7 +1,6 @@
 package ch.idsia.credici.model;
 
 import ch.idsia.credici.IO;
-import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.inference.CredalCausalApproxLP;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
@@ -84,7 +83,7 @@ public class InferenceTest {
 
 		double[] expected, actual;
 
-		CausalVE inf = new CausalVE(m);
+		ch.idsia.credici.inference.CausalVE inf = new ch.idsia.credici.inference.CausalVE(m);
 
 		expected = new double[]{0.9700000000000001, 0.03 };
 		actual = ((BayesianFactor)inf.causalQuery().setTarget(y).setIntervention(x, 0).run()).getData();

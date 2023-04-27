@@ -20,7 +20,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Collection;
 
-public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
+public class CredalCausalVE extends CausalInference<SparseModel<BayesianFactor>, VertexFactor> {
 
 
     public CredalCausalVE(StructuralCausalModel model){

@@ -16,7 +16,6 @@ public class AceMethod implements ComponentInference {
 
     @Override
     public void set(StructuralCausalModel posteriorModel)    {
-        var ace = getAce(posteriorModel);
         ace.update(posteriorModel);
     }
 
@@ -26,15 +25,18 @@ public class AceMethod implements ComponentInference {
         ace.compute(observation);
     }
 
-    private AceInference getAce(StructuralCausalModel posteriorModel)   {
-        if (ace == null) {
-            try {
-                ace = new AceInference("src/resources/ace");
-                ace.init(posteriorModel, true);
-            } catch(Exception e) { 
-                e.printStackTrace();
-            }
+    @Override 
+    public double pevidence() {
+        return ace.pevidence();
+    }
+
+    @Override
+    public void initialize(StructuralCausalModel posteriorModel)   {
+        try {
+            ace = new AceInference("src/resources/ace");
+            ace.init(posteriorModel, true);
+        } catch(Exception e) { 
+            e.printStackTrace();
         }
-        return ace;
     }
 }

@@ -261,7 +261,7 @@ public class CompatibleCausalModelGenerator {
             model = Cofounding.mergeExoVars(model, mergeExoPairs.toArray(int[][]::new));
 
         // This factors will later be resampled, just for avoiding problems with null objects.
-        model.fillExogenousWithRandomFactors(2);
+        model.fillExogenousWithRandomFactors();
 
         logger.info("Initialized SCM structure");
         logger.info("Exo CC: "+ model.exoConnectComponents().stream().map(c -> Arrays.toString(c)).collect(Collectors.joining("|")));
@@ -275,7 +275,7 @@ public class CompatibleCausalModelGenerator {
     /*Step 7*/
     private void sampleExoFactors(){
         logger.info("Sampling exogenous factors");
-        model.fillExogenousWithRandomFactors(5);
+        model.fillExogenousWithRandomFactors();
 
         logger.debug("Sampled SCM:"+model);
 

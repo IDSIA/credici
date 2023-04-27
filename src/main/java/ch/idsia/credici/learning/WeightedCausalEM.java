@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.math3.util.FastMath;
 
 import ch.idsia.credici.inference.ace.AceInference;
 import ch.idsia.credici.model.StructuralCausalModel;
@@ -75,19 +76,22 @@ public class WeightedCausalEM extends FrequentistCausalEM {
         }
 
         clearPosteriorCache();
+  
         if (inferenceVariation == 5 && this.method != null){
-            this.method.set((StructuralCausalModel) posteriorModel);
-        }
-
+			this.method.set((StructuralCausalModel) posteriorModel);
+		}
+        
+        double ll = 0;
 
         for(Pair p : dataWeighted){
             TIntIntMap observation = (TIntIntMap) p.getLeft();
             long w = ((Long) p.getRight()).longValue();
 
             if (inferenceVariation == 5 && this.method != null) {
-                try{
+                try {
                     this.method.update(observation);
                 } catch(Exception ex) {
+                    
                     ex.printStackTrace();
                     StructuralCausalModel scm = (StructuralCausalModel) posteriorModel;
                     for (int e : scm.getExogenousVars()) {
@@ -126,8 +130,11 @@ public class WeightedCausalEM extends FrequentistCausalEM {
                     // Case with missing data
                     BayesianFactor phidden_obs = posteriorInference(hidden, observation);
                     phidden_obs = phidden_obs.scalarMultiply(w);
-                    //System.out.println(phidden_obs);
-                    counts.put(var, counts.get(var).addition(phidden_obs));
+                    
+                    //System.out.println("EXP " + var + "("+observation+") is " + phidden_obs);
+
+                    BayesianFactor bf = counts.get(var);
+                    counts.put(var, bf.addition(phidden_obs));
                 }else{
                     //fully-observable case
                     for(int index : counts.get(var).getDomain().getCompatibleIndexes(observation)){
@@ -136,6 +143,10 @@ public class WeightedCausalEM extends FrequentistCausalEM {
                     }
                 }
             }
+
+            
+            if(inferenceVariation == 5 && method != null)
+                ll += FastMath.log(this.method.pevidence());
         }
 
         return counts;

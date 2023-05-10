@@ -1,11 +1,14 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
+import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import org.apache.commons.lang3.NotImplementedException;
 
 public class Query<M, R extends GenericFactor> {
 
@@ -110,5 +113,28 @@ public class Query<M, R extends GenericFactor> {
 
     public M getInferenceModel() throws InterruptedException {
         return getInferenceModel(true);
+    }
+
+
+    public boolean isIdentifiable(){
+        StructuralCausalModel model = (StructuralCausalModel) this.inf.getModel();
+
+        if (this.isCounterfactual())
+            return false;
+
+        int[] X = this.getIntervention().keys();
+
+        if(X.length==0) return true;
+        if(X.length>1)
+            throw new NotImplementedException("Not implemented for more than one intervention.");
+
+        int chX[] = model.getChildren(X[0]);
+
+        int[] endoComp =
+                model.endoConnectComponents()
+                        .stream()
+                        .filter(c -> ArraysUtil.contains(X[0], c)).findFirst().get();
+        return ArraysUtil.intersection(chX, endoComp).length==0;
+
     }
 }

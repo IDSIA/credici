@@ -4,6 +4,7 @@ import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
+import ch.idsia.credici.model.transform.Cofounding;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.apps.SelectionBias;
 import ch.idsia.credici.utility.reconciliation.DataIntegrator;
@@ -24,7 +25,11 @@ import java.util.stream.Collectors;
  */
 
 public class MuellerExampleHybrid {
+
     public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException, IOException, CsvException {
+
+        int numEMruns = 100;
+        int maxIter = 200;
 
         //// Numeric values identifying the variables and states in the model
 
@@ -44,6 +49,8 @@ public class MuellerExampleHybrid {
 
         // Load the data and the model
         StructuralCausalModel model = (StructuralCausalModel) IO.readUAI(Path.of(dataPath, "consPearl.uai").toString());
+        model = Cofounding.mergeExoParents(model, new int[][]{{T,S}});
+
         TIntIntMap[] dataObs = DataUtil.fromCSV(Path.of(dataPath, "dataPearlObs.csv").toString());
 
         // Load the intervened data
@@ -62,15 +69,15 @@ public class MuellerExampleHybrid {
 
 
         EMCredalBuilder builder = EMCredalBuilder.of(modelExt, dataExt)
-                .setNumTrajectories(20)
+                .setNumTrajectories(numEMruns)
                 .setWeightedEM(true)
                 .setVerbose(false)
-                .setMaxEMIter(200)
+                .setMaxEMIter(maxIter)
                 .build();
 
         // Rebuild a simple model with the learned parameters
-        List selectedPoints = builder.getSelectedPoints().stream().map(m -> m.subModel(model.getVariables())).collect(Collectors.toList());
-
+        StructuralCausalModel finalModel = model;
+        List selectedPoints = builder.getSelectedPoints().stream().map(m -> m.subModel(finalModel.getVariables())).collect(Collectors.toList());
 
         CausalMultiVE inf = new CausalMultiVE(selectedPoints);
         VertexFactor resHybrid = (VertexFactor) inf.probNecessityAndSufficiency(T, S, drug, no_drug, survived, dead);

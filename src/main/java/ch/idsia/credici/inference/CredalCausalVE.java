@@ -4,6 +4,7 @@ import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.tools.CausalInfo;
+import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
@@ -24,22 +25,31 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
 
 
     public CredalCausalVE(StructuralCausalModel model){
+
         this(model.toVCredal(model.getEmpiricalProbs()));
+        this.causalModel = model;
     }
 
 
     public CredalCausalVE(StructuralCausalModel model, BayesianFactor[] empirical){
+
         this(model.toVCredal(empirical));
+        this.causalModel = model;
     }
 
 
     public CredalCausalVE(StructuralCausalModel model, Collection empirical){
         this(model.toVCredal(empirical));
+        this.causalModel = model;
     }
 
     public CredalCausalVE(SparseModel model){
         CausalInfo.assertIsVCredal(model);
         this.model = model;
+    }
+
+    public CredalCausalVE(StructuralCausalModel model, TIntIntMap[] data){
+        this(model, FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data),5).values());
     }
 
 

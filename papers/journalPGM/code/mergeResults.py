@@ -19,6 +19,8 @@ from datetime import datetime
 import sys
 
 MODELS = ["triangolo_causal_biassoft_2", "triangolo_causal_biashard_2"]
+MODELS = ["triangolo_causal"]
+
 modelname = "triangolo_causal_biassoft_2" # party triangolo
 sizes = 1000
 
@@ -76,10 +78,9 @@ print(res_folder)
 print(jar_file)
 
 
-def merge(minsize, maxsize, input, output, cause, effect, seed=0, debug=False, descr=""):
+def merge(maxsize, input, output, cause, effect, seed=0, debug=False, descr=""):
     args = ""
     if debug: args+="--debug "
-    args += f"-m {minsize} "
     args += f"-M {maxsize} "
     args += f"--input {input} "
     args += f"--output {output} "
@@ -107,4 +108,4 @@ for modelname in MODELS:
 
         # 0 = Death, 3 = FAwareness, 9 = PAwareness 7 =Triangolo
 
-        merge(200,200, io_folder, io_folder, cause=c, effect=0, debug=False, descr=f"{modelname}_{c}")
+        merge(100, io_folder, io_folder, cause=c, effect=0, debug=False, descr=f"{modelname}_{c}")

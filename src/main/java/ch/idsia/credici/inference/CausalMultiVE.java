@@ -23,6 +23,8 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 
 	boolean toInterval = false;
 
+	List<StructuralCausalModel> inputModels = null;
+
 
 	private CausalMultiVE(){
 
@@ -30,6 +32,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 
 	public CausalMultiVE(List<StructuralCausalModel> model){
 		this.model=model;
+		inputModels = model;
 		inf = model.stream().map(m-> new CausalVE(m)).collect(Collectors.toList());
 
 	}
@@ -200,5 +203,9 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 			}
 		}
 		return 1;
+	}
+
+	public List<StructuralCausalModel> getInputModels() {
+		return inputModels;
 	}
 }

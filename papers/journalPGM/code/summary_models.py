@@ -32,7 +32,7 @@ data_folder = Path(exp_folder, "data")
 
 
 
-def get_info_table(folder):
+def get_info_table(*folders):
 
     def get_info(r):
 
@@ -45,21 +45,25 @@ def get_info_table(folder):
             model_file = str(Path(model_folder, "/".join(str(r).split("/")[-3:-1]+[m])))
 
 
-
         info_file = model_file.replace(".uai", "_info.csv")
-        print(info_file)
+        print(f"{r}\n\t{info_file}")
         df =  pd.read_csv(info_file)
         df["model_file"] = model_file.split("/")[-1]
         return df
 
-    res_files = []
-    for folderoot,_,files in os.walk(folder):
-        for f in files:
-            if f.endswith(".csv") and  "info" not in f:
-                res_files.append(Path(folderoot, f))
 
-    #res_files = [Path(folder, f) for f in os.listdir(folder) if f.endswith(".csv") and  "info" not in f]
-    info = pd.concat([get_info(r) for r in res_files])
+    def get_result_files(folders):
+        out = []
+        for folder in folders:
+            for folderoot,_,files in os.walk(folder):
+                for f in files:
+                    if f.endswith(".csv") and  "info" not in f:
+                        fullpath = Path(folderoot, f)
+                        print(f"Results at:{fullpath}")
+                        out.append(fullpath)
+        return out
+
+    info = pd.concat([get_info(r) for r in get_result_files(folders)])
 
 
     def get_num_nodes(dag:str):
@@ -91,16 +95,16 @@ def get_summary(info):
     return summary
 
 
-
-folder = Path(res_folder, "hybrid/synthetic/s12")
 #folder = Path(res_folder, "biased/synthetic/s12")
 #folder = res_folder
+#folders = [Path(res_folder,  "biased/synthetic/s12"), Path(res_folder, "hybrid/synthetic/s12c")]
+folders = [ Path(res_folder, "hybrid/synthetic/s12c")]
 
-info_path = Path(folder,"info.csv")
+info_path = Path(res_folder,"info.csv")
 
 
 if gen_info:
-    info = get_info_table(folder)
+    info = get_info_table(*folders)
     info.to_csv(info_path)
 else:
     info = pd.read_csv(info_path)
@@ -115,7 +119,7 @@ summary = get_summary(info)
 
 print(summary)
 
-summary.to_csv(Path(folder,"info_summary.csv"))
+summary.to_csv(Path(res_folder,"info_summary.csv"))
 '''
 Index(['Unnamed: 0', 'avg_exo_card', 'tw', 'exo_dag', 'avg_indegree', 'dag',
        'num_exo_vars', 'exo_cc', 'endo_dag', 'exo_tw', 'endo_tw', 'endo_cc',

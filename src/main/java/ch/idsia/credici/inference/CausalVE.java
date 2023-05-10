@@ -31,6 +31,11 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
     }
 
     @Override
+    public StructuralCausalModel getCausalModel() {
+        return model;
+    }
+
+    @Override
     public StructuralCausalModel getInferenceModel(Query q, boolean simplify) {
 
         target = q.getTarget();

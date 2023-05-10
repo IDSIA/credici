@@ -2,6 +2,7 @@ package ch.idsia.credici.inference;
 
 import java.util.Arrays;
 
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -18,6 +19,8 @@ import jdk.jshell.spi.ExecutionControl;
  * Author:  Rafael Cabañas
  */
 public abstract class CausalInference<M, R extends GenericFactor>{
+
+    protected StructuralCausalModel causalModel;
 
     protected M model;
 
@@ -66,6 +69,10 @@ public abstract class CausalInference<M, R extends GenericFactor>{
         return model;
     }
 
+    public StructuralCausalModel getCausalModel() {
+        return causalModel;
+    }
+
     public abstract M getInferenceModel(Query q, boolean simplify);
 
     public M getInferenceModel(Query q) {
@@ -99,6 +106,47 @@ public abstract class CausalInference<M, R extends GenericFactor>{
         return res;
 
     }
+
+
+    public R probDisablement(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+
+        Query q = this.counterfactualQuery()
+                .setIntervention(cause, falseState)
+                .setEvidence(ObservationBuilder.observe(new int[]{effect}, new int[]{trueState}))
+                .setTarget(effect);
+
+        R res = (R) q.run();
+        int var = q.getCounterfactualMapping().getEquivalentVars(1,effect);
+        res = (R) FactorUtil.filter(res, var, falseState);
+
+        return res;
+
+    }
+    public R probDisablement(int cause, int effect) throws InterruptedException {
+        return probDisablement(cause, effect, 0, 1);
+    }
+
+
+    public R probEnablement(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+
+        Query q = this.counterfactualQuery()
+                .setIntervention(cause, trueState)
+                .setEvidence(ObservationBuilder.observe(new int[]{effect}, new int[]{falseState}))
+                .setTarget(effect);
+
+        R res = (R) q.run();
+        int var = q.getCounterfactualMapping().getEquivalentVars(1,effect);
+        res = (R) FactorUtil.filter(res, var, trueState);
+
+        return res;
+
+    }
+    public R probEnablement(int cause, int effect) throws InterruptedException {
+        return probEnablement(cause, effect, 0, 1);
+    }
+
+
+
 
     public R probSufficiency(int cause, int effect) throws InterruptedException {
         return probSufficiency(cause, effect, 0,1);

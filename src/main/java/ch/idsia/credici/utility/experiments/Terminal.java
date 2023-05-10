@@ -109,6 +109,10 @@ public abstract class Terminal implements Runnable{
 		logger.debug("Available CPUs: "+Runtime.getRuntime().availableProcessors());
 	}
 
+	public boolean isDebug() {
+		return debug;
+	}
+
 	abstract protected void entryPoint() throws Exception;
 
 

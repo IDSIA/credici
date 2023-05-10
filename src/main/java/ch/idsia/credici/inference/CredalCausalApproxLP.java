@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.stream.IntStream;
 
 import ch.idsia.credici.model.tools.CausalInfo;
+import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.InferenceTools;
 import ch.idsia.crema.factor.GenericFactor;
@@ -30,21 +31,26 @@ import gnu.trove.map.hash.TIntIntHashMap;
 
 public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalFactor> {
 
-
     private double epsilon = 0.0;
 
-
     public CredalCausalApproxLP(StructuralCausalModel model){
+
         this(model.toHCredal(model.getEmpiricalProbs()));
+        this.causalModel = model;
     }
 
     public CredalCausalApproxLP(StructuralCausalModel model, BayesianFactor[] empirical){
         this(model.toHCredal(empirical));
-
+        this.causalModel = model;
     }
     public CredalCausalApproxLP(StructuralCausalModel model, Collection empirical){
         this(model.toHCredal(empirical));
+        this.causalModel = model;
 
+    }
+
+    public CredalCausalApproxLP(StructuralCausalModel model, TIntIntMap[] data){
+        this(model, FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data),5).values());
     }
 
     public CredalCausalApproxLP(SparseModel model){

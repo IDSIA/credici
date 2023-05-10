@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 
 public class DrugGenderExampleHybrid {
 
-    static int numruns = 300;
+    static int numruns = 100;//300;
     static int maxiter = 300;
 
     // T = 0, S = 1, G = 2
@@ -86,13 +86,13 @@ public class DrugGenderExampleHybrid {
         datasets = new TIntIntMap[][]{};
 
         int[][] assignments = {
-                {0, 0, 0, 0, 0, 0, 0, 0},
+ /*               {0, 0, 0, 0, 0, 0, 0, 0},
      //         {0, 0, 0, 0, 1, 0, 0, 0},
                 {0, 1, 0, 0, 1, 0, 0, 0},
          //       {0, 1, 0, 1, 1, 0, 0, 0},
                 {0, 1, 0, 1, 1, 0, 1, 0},    // example
           //      {0, 1, 0, 1, 1, 0, 1, 1},
-                {1, 1, 0, 1, 1, 0, 1, 1},
+                {1, 1, 0, 1, 1, 0, 1, 1},*/
                 {1, 1, 0, 1, 1, 1, 1, 1},
                 {1, 1, 1, 1, 1, 1, 1, 1}
         };

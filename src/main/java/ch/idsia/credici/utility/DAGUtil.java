@@ -480,5 +480,27 @@ public class DAGUtil {
         return graph.vertexSet().stream().mapToDouble(x -> graph.getParents(x).length).average().getAsDouble();
     }
 
+    public static int[] ancestors(SparseDirectedAcyclicGraph dag, int x){
+
+        Set ancestors = new HashSet<>();
+        Set checked = new HashSet<>();
+        Stack toCheck = new Stack();
+        toCheck.add(x);
+
+        do {
+            int v = (int) toCheck.pop();
+            int[] paV = dag.getParents(v);
+            for (int p : paV) {
+                ancestors.add(p);
+                if (!checked.contains(p)) toCheck.add(p);
+            }
+            checked.add(v);
+
+        }while(!toCheck.isEmpty());
+
+        return CollectionTools.toIntArray((List<Integer>) ancestors.stream().collect(Collectors.toList()));
+
+    }
+
 
 }

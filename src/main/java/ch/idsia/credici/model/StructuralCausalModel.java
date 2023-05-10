@@ -1,6 +1,8 @@
 package ch.idsia.credici.model;
 
 import ch.idsia.credici.factor.EquationOps;
+import ch.idsia.credici.inference.CausalVE;
+import ch.idsia.credici.inference.Query;
 import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.tools.CausalInfo;
@@ -910,27 +912,46 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return this.getEmpiricalMap(true);
 	}
 
-	@Deprecated
-	public BayesianNetwork getEmpiricalNet(){
 
-		if(this.getExogenousTreewidth()>1)
-			throw new IllegalArgumentException("Non quasi markovian model");
+	/// Based on Tian&Pearl 2003
+
+	public BayesianNetwork getEmpiricalNet(TIntIntMap[] data){
+
+		TIntObjectMap factors = DataUtil.getCFactorsSplittedMap(this, data);
 
 		BayesianNetwork bnet = new BayesianNetwork();
-
 		// Copy the endogenous variables
-		IntStream.of(getEndogenousVars()).forEach( v -> bnet.addVariable(v, this.getSize(v)));
+		IntStream.of(this.getEndogenousVars()).forEach(v -> bnet.addVariable(v, this.getSize(v)));
 
 		// Set the factors
-		for(int v: getEndogenousVars()){
-			bnet.addParents(v, getEndegenousParents(v));
-			bnet.setFactor(v, getProb(v).fixPrecission(5, v));
+		for(int v: this.getEndogenousVars()){
+			BayesianFactor f = (BayesianFactor) factors.get(v);
+			int[] pa = IntStream.of(f.getDomain().getVariables()).filter(x-> x != v).toArray();
+			bnet.addParents(v, pa);
+			bnet.setFactor(v, f);
 		}
 		return bnet;
 	}
 
 
-	/// Based on Tian&Pearl 2003
+	public BayesianNetwork getEmpiricalNet(){
+
+		TIntObjectMap factors = this.getCFactorsSplittedMap();
+
+		BayesianNetwork bnet = new BayesianNetwork();
+		// Copy the endogenous variables
+		IntStream.of(this.getEndogenousVars()).forEach(v -> bnet.addVariable(v, this.getSize(v)));
+
+		// Set the factors
+		for(int v: this.getEndogenousVars()){
+			BayesianFactor f = (BayesianFactor) factors.get(v);
+			int[] pa = IntStream.of(f.getDomain().getVariables()).filter(x-> x != v).toArray();
+			bnet.addParents(v, pa);
+			bnet.setFactor(v, f);
+		}
+		return bnet;
+	}
+
 
 	public List<HashMap> getCFactorsSplittedDomains(int...exoVars){
 		if(this.exoConnectComponents().stream().filter(c -> ArraysUtil.equals(exoVars, c, true, true)).count() != 1)
@@ -1465,6 +1486,17 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public StructuralCausalModel subModel(TIntIntMap[] data){
 		int[] endoVars = DataUtil.variables(data);
 		return subModel(Ints.concat(endoVars, this.getExogenousParents(endoVars)));
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public boolean identifiableIntervention(int... interVars){
+		TIntIntHashMap inter = new TIntIntHashMap();
+		for(int x : interVars) inter.put(x, 0);
+		Query q = new CausalVE(this).causalQuery().setIntervention(inter);
+		return q.isIdentifiable();
 	}
 
 }

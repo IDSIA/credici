@@ -103,7 +103,7 @@ public class DataUtil {
 				throw new IllegalArgumentException("Overlapping domains");
 		BayesianFactor joint = getCounts(data, left.concat(right));
 		BayesianFactor jointRight = getCounts(data, right);
-		return joint.divide(jointRight).replaceNaN(0.0);
+		return joint.divide(jointRight).replaceNaN(1.0/left.getCombinations());
 	}
 
 
@@ -200,9 +200,13 @@ public class DataUtil {
 	}
 
 	public static List<HashMap<String, String>> fromCSVtoStrMap(String filename) throws IOException, CsvException {
+		return fromCSVtoStrMap(filename,',');
+	}
+
+	public static List<HashMap<String, String>> fromCSVtoStrMap(String filename, char sep) throws IOException, CsvException {
 
 		CSVReader reader = new CSVReaderBuilder(new FileReader(filename))
-				.withCSVParser(new CSVParserBuilder().withSeparator(',').build())
+				.withCSVParser(new CSVParserBuilder().withSeparator(sep).build())
 				.build();
 
 		String[] varnames = reader.readNext();

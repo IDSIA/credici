@@ -40,6 +40,7 @@ public class ExactCredalBuilder extends CredalBuilder {
 
 
 
+
     public ExactCredalBuilder(StructuralCausalModel causalModel){
         this.causalmodel = causalModel;
     }
@@ -126,9 +127,10 @@ public class ExactCredalBuilder extends CredalBuilder {
             try {
                 buildExoFactor(u);
             }catch (NoFeasibleSolutionException e){
-                if(raiseNoFeasible)
+                if(raiseNoFeasible) {
+                    System.out.println("Error in variable: "+u);
                     throw new NoFeasibleSolutionException();
-
+                }
 
             }
         }
@@ -248,8 +250,6 @@ public class ExactCredalBuilder extends CredalBuilder {
         }
         return true;
     }
-
-   
 
 
 }

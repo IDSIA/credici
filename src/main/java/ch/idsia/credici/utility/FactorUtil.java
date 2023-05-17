@@ -23,7 +23,7 @@ import java.util.stream.Stream;
 public class FactorUtil {
 
 
-	public static final int DEFAULT_DECIMALS = 5;
+	public static int DEFAULT_DECIMALS = 5;
 
 	public static VertexFactor mergeFactors(List<BayesianFactor> factors, int leftvar, boolean applyConvexhull){
 		VertexFactor vf = VertexFactor.mergeVertices(

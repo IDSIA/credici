@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.stream.IntStream;
 
+import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
@@ -49,8 +50,12 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
 
     }
 
-    public CredalCausalApproxLP(StructuralCausalModel model, TIntIntMap[] data){
-        this(model, FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data),5).values());
+
+    public CredalCausalApproxLP(StructuralCausalModel model, TIntIntMap[] data, int... exoVars){
+        Collection empirical = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data),FactorUtil.DEFAULT_DECIMALS).values();
+        SparseModel vmodel = ExactCredalBuilder.of(model).setEmpirical(empirical).setToHalfSpace().build(exoVars).getModel();
+        this.model = vmodel;
+        this.causalModel = model;
     }
 
     public CredalCausalApproxLP(SparseModel model){

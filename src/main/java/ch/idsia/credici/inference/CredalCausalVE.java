@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
@@ -38,6 +39,8 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
     }
 
 
+
+
     public CredalCausalVE(StructuralCausalModel model, Collection empirical){
         this(model.toVCredal(empirical));
         this.causalModel = model;
@@ -48,8 +51,11 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
         this.model = model;
     }
 
-    public CredalCausalVE(StructuralCausalModel model, TIntIntMap[] data){
-        this(model, FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data),5).values());
+    public CredalCausalVE(StructuralCausalModel model, TIntIntMap[] data, int... exoVars){
+        Collection empirical = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data),FactorUtil.DEFAULT_DECIMALS).values();
+        SparseModel vmodel = ExactCredalBuilder.of(model).setEmpirical(empirical).setToVertex().build(exoVars).getModel();
+        this.model = vmodel;
+        this.causalModel = model;
     }
 
 

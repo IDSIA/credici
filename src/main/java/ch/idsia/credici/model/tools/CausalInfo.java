@@ -98,7 +98,7 @@ public class CausalInfo {
 
     public static void assertIsVCredal(SparseModel m){
         for(int v : m.getVariables())
-            if(!(m.getFactor(v) instanceof VertexFactor))
+            if(m.getFactor(v) != null && !(m.getFactor(v) instanceof VertexFactor))
                 throw new IllegalArgumentException("Model should be V-CREDAL");
 
     }

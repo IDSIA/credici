@@ -221,7 +221,7 @@ public class CausalBuilder {
                 }
             }
         } else {
-            model.fillWithRandomEquations();    // Eqs in NQM components will remain random
+            //model.fillWithRandomEquations();    // Eqs in NQM components will remain random
             for(int[] exoVars : model.exoConnectComponents()) setEquations(exoVars);
         }
     }

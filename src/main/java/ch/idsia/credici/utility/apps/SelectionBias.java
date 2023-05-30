@@ -79,7 +79,7 @@ public class SelectionBias {
 	public static TIntIntMap[] applySelector(TIntIntMap[] dataX, StructuralCausalModel model, int selectorVar){
 
 		int X[] = IntStream.of(model.getEndogenousVars()).filter(x -> x!=selectorVar).toArray();
-		int Xselecting[] = model.getEndegenousParents(selectorVar);
+		int Xselecting[] = model.getEndogenousParents(selectorVar);
 		// Add the value of S
 		TIntIntMap[] data =  Stream.of(dataX).map(d -> {
 			TIntIntHashMap dnew = new TIntIntHashMap(d);

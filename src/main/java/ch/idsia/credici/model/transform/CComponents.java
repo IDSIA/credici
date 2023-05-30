@@ -3,6 +3,7 @@ package ch.idsia.credici.model.transform;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -10,16 +11,19 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
+import org.apache.commons.math3.random.SobolSequenceGenerator;
 
 import ch.idsia.credici.Table;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.utility.CombinationsIterator;
 
 /**
  * Convert a model into its Connected components submodels.
@@ -28,14 +32,27 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
  * this parents.  
  */
 public class CComponents implements Iterable<StructuralCausalModel> {
+    private Random random;
+
+    public void initRandom() { 
+        random = new Random();
+    }
+
+    public void initRandom(int seed) { 
+        random = new Random(seed);
+    }
+    
     private StructuralCausalModel from; 
 
-    public Collection<StructuralCausalModel> apply(StructuralCausalModel model) {
+    public List<StructuralCausalModel> apply(StructuralCausalModel model) {
         var res = apply(model, null);
         return res.stream().map(Pair<StructuralCausalModel, Table>::getLeft).collect(Collectors.toList());
     }
 
-    public Collection<Pair<StructuralCausalModel, Table>> apply(StructuralCausalModel model, Table data) {
+    public List<Pair<StructuralCausalModel, Table>> apply(StructuralCausalModel model, Table data) {
+        results = Collections.synchronizedMap(new HashMap<>());
+        initRandom();
+
         from = model;
         Set<Integer> exo = IntStream.of(model.getExogenousVars()).boxed().collect(Collectors.toSet());
 
@@ -43,7 +60,8 @@ public class CComponents implements Iterable<StructuralCausalModel> {
         endo.removeAll(exo);
 
         Set<Integer> visited = new HashSet<>();
-        List<Pair<StructuralCausalModel, Table>> results = new ArrayList<>();
+
+        List<Pair<StructuralCausalModel, Table>> models = new ArrayList<>();
         
         for (Integer exoVar : exo) {
             
@@ -54,7 +72,7 @@ public class CComponents implements Iterable<StructuralCausalModel> {
     
             // now create and copy
             StructuralCausalModel newmodel = createModel(vars, model);
-
+            
             int[] exoVars = newmodel.getExogenousVars();
             visited.addAll(Arrays.stream(exoVars).boxed().collect(Collectors.toSet()));
             
@@ -62,14 +80,31 @@ public class CComponents implements Iterable<StructuralCausalModel> {
             int[] endoVars = newmodel.getEndogenousVars();
             
             if (data != null) {
-                results.add(Pair.of(newmodel, data.subtable(endoVars)));
+                models.add(Pair.of(newmodel, data.subtable(endoVars)));
             } else {
-                results.add(Pair.of(newmodel, null));
+                models.add(Pair.of(newmodel, null));
             }
         }
 
-        return results;
+        return models;
     }
+
+
+    Map<String, List<StructuralCausalModel>> results;
+
+    public void addResults(String name, List<StructuralCausalModel> models) {
+        if (!results.get(name).isEmpty()) { 
+            System.out.println("WOW");
+        }
+        results.put(name, models);
+    }
+
+    public void addResult(StructuralCausalModel model) {
+        var list = results.get(model.getName());
+        list.add(model);
+        results.put(model.getName(), list);
+    }
+
 
     public StructuralCausalModel revert(Collection<StructuralCausalModel> models) {
         StructuralCausalModel target = from.copy();
@@ -97,10 +132,16 @@ public class CComponents implements Iterable<StructuralCausalModel> {
         var newEndo = vars.getMiddle();
         var spurious = vars.getRight();
 
-        StructuralCausalModel newmodel = new StructuralCausalModel();
+        String name = newExo.toString();
+        results.put(name, new ArrayList<>());
+
+        StructuralCausalModel newmodel = new StructuralCausalModel("" + name);
+        // same random source
+        newmodel.setRandomSource(model.getRandomSource());
+
         for (int newExoVar : newExo) {
             newmodel.addVariable(newExoVar, model.getSize(newExoVar), true);
-            newmodel.setFactor(newExoVar, model.getFactor(newExoVar));
+            newmodel.setFactor(newExoVar, model.getFactor(newExoVar).copy());
         }
 
         // visit all children, but put in open only their exogenous parents
@@ -122,8 +163,8 @@ public class CComponents implements Iterable<StructuralCausalModel> {
 
         // add parenting and factors
         for (int newEndoVar : newEndo) {
-            newmodel.addParents(newEndoVar, model.getParents(newEndoVar));
-            newmodel.setFactor(newEndoVar, model.getFactor(newEndoVar));
+            newmodel.addParents(newEndoVar, model.getParents(newEndoVar).clone());
+            newmodel.setFactor(newEndoVar, model.getFactor(newEndoVar).copy());
         }
 
         // additional x
@@ -178,9 +219,71 @@ public class CComponents implements Iterable<StructuralCausalModel> {
         return IntStream.of(data).boxed().collect(Collectors.toSet());
     }
 
+
+    public Iterator<StructuralCausalModel> sobolIterator() {
+        
+        return new Iterator<StructuralCausalModel>() {
+            SobolSequenceGenerator generator = new SobolSequenceGenerator(results.size());    
+
+            @Override
+            public boolean hasNext() {
+                return true;
+            }
+
+            @Override
+            public StructuralCausalModel next() {
+                double[] sobol = generator.nextVector();
+                ArrayList<StructuralCausalModel> sample = new ArrayList<>();
+                int offset = 0;
+                for (var item : results.entrySet()) {
+                    List<StructuralCausalModel> nets = item.getValue();
+                    int value = (int)(nets.size() * sobol[offset++]);
+                    sample.add(nets.get(value));
+                }
+                return revert(sample);
+            }
+        };
+    }
+
+
+    public Iterator<StructuralCausalModel> exaustiveIterator() {
+        final Collection<Collection<StructuralCausalModel>> data = results.values().stream().map(a -> {return (Collection<StructuralCausalModel>) a; }).collect(Collectors.toList());
+        return new Iterator<StructuralCausalModel>() {
+
+            CombinationsIterator<StructuralCausalModel> iter = new CombinationsIterator<>(data);
+        
+            @Override
+            public boolean hasNext() {
+                return iter.hasNext();
+            }
+
+            @Override
+            public StructuralCausalModel next() {
+                var current = iter.next();
+                return revert(current);
+            }
+        };
+    }
+
+
     @Override
     public Iterator<StructuralCausalModel> iterator() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'iterator'");
+        int max = results.values().stream().mapToInt(List::size).max().getAsInt();
+        return new Iterator<StructuralCausalModel>() {
+            int index = 0;
+            @Override
+            public boolean hasNext() {
+                return index < max;
+            }
+            @Override
+            public StructuralCausalModel next() {
+                List<StructuralCausalModel> models = new ArrayList<>();
+                for (var list : results.values()) {
+                    models.add(list.get(index % max));
+                }
+                ++index;
+                return revert(models);
+            }
+        };
     }
 }

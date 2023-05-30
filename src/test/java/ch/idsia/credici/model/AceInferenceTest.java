@@ -144,9 +144,4 @@ public class AceInferenceTest {
     }
 
 
-    @Test
-    public void x() {
-        System.out.println()
-        ;
-    }
 }

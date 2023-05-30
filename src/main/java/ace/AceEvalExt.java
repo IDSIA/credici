@@ -70,6 +70,20 @@ public class AceEvalExt {
 	private boolean table = false;
 
 	/**
+	 * Create from a compiled engine like the one provided
+	 * @param engine
+	 * @throws Exception
+	 */
+	public AceEvalExt(AceEvalExt copy) throws Exception {
+		this.outInVarMapping = new HashMap<>(copy.outInVarMapping);
+		this.inOutVarMapping = new HashMap<>(copy.inOutVarMapping);
+
+		String ac = copy.engine.getAcfilename();
+		m_lmap_file = copy.engine.getLmfilename();
+		this.engine = new CrediciEngine(m_lmap_file, ac, true);
+	}
+
+	/**
 	 * @param net_file string representing the location of the .NET file
 	 * @param variables int[] variables whose CPTs may be modified during training
 	 * @param exepath the location of the ace executables
@@ -122,7 +136,7 @@ public class AceEvalExt {
 		engine = new CrediciEngine(m_lmap_file, m_net_file + ".ac", true);	
 		storeNameMap();
 	}
-
+	
 	Map<Integer, Integer> outInVarMapping;
 	Map<Integer, Integer> inOutVarMapping;
 	private void storeNameMap() {
@@ -142,7 +156,7 @@ public class AceEvalExt {
 		Variable var = n2v.get(u);
 		for (int i = 0; i < params.length; i++) {
 			int idx = var.getAbsoluteIndex(i);
-			var.get_factors().get(i).set_value(params[i]);
+			//var.get_factors().get(i).set_value(params[i]);
 			engine.updateFactor(idx, params[i]);
 		}
 	}

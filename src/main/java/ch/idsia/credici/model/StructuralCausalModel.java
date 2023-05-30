@@ -36,6 +36,9 @@ import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
+
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 import org.apache.commons.rng.UniformRandomProvider;
@@ -138,7 +141,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public void initRandom(long seed) {
 		randomSource = RandomSource.JDK.create(seed);
 	}
+	
+	public void setRandomSource(UniformRandomProvider randomSource) {
+		this.randomSource = randomSource;
+	}
 
+	public UniformRandomProvider getRandomSource() {
+		return randomSource;
+	}
 
 	/**
 	 * Constructs a makovian equationless SCM from a bayesian network
@@ -170,7 +180,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		StructuralCausalModel copy = new StructuralCausalModel();
 		copy.randomSource = this.randomSource;
 		for (int v: this.getVariables()){
-			int vid = copy.addVariable(v, this.getSize(v), this.isExogenous(v));
+			copy.addVariable(v, this.getSize(v), this.isExogenous(v));
 		}
 
 		for (int v : copy.getVariables()){
@@ -254,11 +264,11 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	public int[] getEndogenousVars() {
-		Set<Integer> endogenousVars = new HashSet<Integer>();
+		Set<Integer> endogenousVars = new HashSet<>();
 
 		for(int v : this.getVariables())
 			if(!this.exogenousVars.contains(v))
-				endogenousVars.add(v)	;
+				endogenousVars.add(v);
 		return Ints.toArray(endogenousVars);
 	}
 
@@ -285,7 +295,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 
-	public int[] getEndegenousParents(int... vars){
+	public int[] getEndogenousParents(int... vars){
 		return ArraysUtil.unique(Ints.concat(
 				IntStream.of(vars)
 						.mapToObj(v -> ArraysUtil.intersection(this.getEndogenousVars(), this.getParents(v)))
@@ -404,6 +414,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		}
 	}
+
 	public void randomizeEndoChildren(int u){
 		for (int x : getEndogenousChildren(u)) {
 			randomizeEndoFactor(x);
@@ -467,7 +478,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		BayesianFactor pvar = null;
 
 
-		if(CausalInfo.of(this).isMarkovian() || (vars.length==1 && this.getEndegenousParents(vars).length==0)) {
+		if(CausalInfo.of(this).isMarkovian() || (vars.length==1 && this.getEndogenousParents(vars).length==0)) {
 			for (int var : vars) {
 				BayesianFactor p = this.getFactor(var);
 				if (pvar == null) pvar = p;
@@ -484,7 +495,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		}else{
 			VariableElimination inf = new FactorVariableElimination(new MinFillOrdering().apply(this));
 			inf.setFactors(this.getFactors());
-			pvar = (BayesianFactor) inf.conditionalQuery(vars, this.getEndegenousParents(vars));
+			pvar = (BayesianFactor) inf.conditionalQuery(vars, this.getEndogenousParents(vars));
 
 		}
 
@@ -599,7 +610,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			BayesianFactor pv = (BayesianFactor) Stream.of(empiricalProbs).filter(f ->
 					ImmutableSet.copyOf(Ints.asList(f.getDomain().getVariables()))
 							.equals(ImmutableSet.copyOf(
-									Ints.asList(Ints.concat(new int[]{x}, this.getEndegenousParents(x))))))
+									Ints.asList(Ints.concat(new int[]{x}, this.getEndogenousParents(x))))))
 					.toArray()[0];
 
 			double[] vals = pv.getData();
@@ -672,7 +683,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			BayesianFactor pv = (BayesianFactor) Stream.of(empiricalProbs).filter(f ->
 					ImmutableSet.copyOf(Ints.asList(f.getDomain().getVariables()))
 							.equals(ImmutableSet.copyOf(
-									Ints.asList(Ints.concat(ch_u, this.getEndegenousParents(ch_u))))
+									Ints.asList(Ints.concat(ch_u, this.getEndogenousParents(ch_u))))
 							))
 					.toArray()[0];
 
@@ -867,7 +878,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			HashMap dom = new HashMap();
 			int x = ch[k];
 			int[] previous = IntStream.range(0, k).map(i -> ch[i]).toArray();
-			int[] right = ArraysUtil.unionSet(previous, this.getEndegenousParents(ArraysUtil.append(previous, x)));
+			int[] right = ArraysUtil.unionSet(previous, this.getEndogenousParents(ArraysUtil.append(previous, x)));
 			dom.put("left", x);
 			dom.put("right", right);
 			domains.add(dom);
@@ -938,7 +949,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 		// Set the factors
 		for(int v: getEndogenousVars()){
-			bnet.addParents(v, getEndegenousParents(v));
+			bnet.addParents(v, getEndogenousParents(v));
 			bnet.setFactor(v, getProb(v).fixPrecission(5, v));
 		}
 		return bnet;
@@ -968,7 +979,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				int x = chU[k];
 				int[] finalChU = chU;
 				int[] previous = IntStream.range(0, k).map(i -> finalChU[i]).toArray();
-				int[] right = ArraysUtil.unionSet(previous, this.getEndegenousParents(ArraysUtil.append(previous, x)));
+				int[] right = ArraysUtil.unionSet(previous, this.getEndogenousParents(ArraysUtil.append(previous, x)));
 				//dom.put("left", x);
 				//dom.put("right", right);
 				//System.out.println(x+"|"+ Arrays.toString(right));
@@ -1234,7 +1245,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public SparseDirectedAcyclicGraph getExogenousDAG(){
 		SparseDirectedAcyclicGraph dag = this.getNetwork().copy();
 		for(int x : this.getEndogenousVars()){
-			for(int y: this.getEndegenousParents(x)){
+			for(int y: this.getEndogenousParents(x)){
 				dag.removeLink(y,x);
 			}
 		}
@@ -1333,14 +1344,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return builder.getUnfeasibleNodes().stream().filter(u -> ArraysUtil.contains(u, exoVars)).collect(Collectors.toList());
 	}
 
-	public List<int[]> endoConnectComponents(){
+	public List<int[]> endoConnectComponents() {
 		return DAGUtil.connectComponents(this.getExogenousDAG())
 				.stream()
 				.map(c-> IntStream.of(c).filter(i -> this.isEndogenous(i)).toArray())
 				.collect(Collectors.toList());
 	}
 
-	public List<int[]> exoConnectComponents(){
+	public List<int[]> exoConnectComponents() {
 		return DAGUtil.connectComponents(this.getExogenousDAG())
 				.stream()
 				.map(c-> IntStream.of(c).filter(i -> this.isExogenous(i)).toArray())
@@ -1373,7 +1384,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public boolean isConservative(){
 		for(int u: this.getExogenousVars()) {
 			int[] X = this.getChildren(u);
-			int[] Y = this.getEndegenousParents(X);
+			int[] Y = this.getEndogenousParents(X);
 			BayesianFactor fjoint = BayesianFactor.combineAll(this.getFactors(X));
 			if(!EquationOps.isConservative(fjoint, u, X))
 				return false;
@@ -1386,7 +1397,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		boolean conservative = true;
 		for(int u: this.getExogenousVars()) {
 			int[] X = this.getChildren(u);
-			int[] Y = this.getEndegenousParents(X);
+			int[] Y = this.getEndogenousParents(X);
 			BayesianFactor fjoint = BayesianFactor.combineAll(this.getFactors(X));
 			System.out.print("f_"+Arrays.toString(X)+" ");
 			List missingX = EquationOps.getMissingToConservative(fjoint, u, X);
@@ -1476,19 +1487,32 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 
 
+	/**
+	 * current implementation is never true ????
+	 */
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof StructuralCausalModel) {
 			var other = (StructuralCausalModel)obj;
+			if (!name.equals(other.name)) return false;
 
-			Set<Integer> thisVars = IntStream.of(getVariables()).boxed().collect(Collectors.toSet());
-			Set<Integer> otherVars = IntStream.of(other.getVariables()).boxed().collect(Collectors.toSet());
-			if (!thisVars.equals(otherVars)) return false;
+			//// vars tested by cardinalities as well
+			// TIntSet thisVars = new TIntHashSet(getVariables());
+			// TIntSet otherVars = new TIntHashSet(other.getVariables());
+			// if (!thisVars.equals(otherVars)) return false;
 
-			
-			
+			if (!other.cardinalities.equals(cardinalities)) return false;
+
+			for (int i : getVariables()) {
+				var thisFactor = factors.get(i);
+				var otherFactor = other.factors.get(i);
+				
+				if (!Arrays.equals(thisFactor.getDomain().getVariables(), otherFactor.getDomain().getVariables())) return false;
+				if (!Arrays.equals(thisFactor.getInteralData(), otherFactor.getInteralData())) return false;
+			}
+			return true;
 		}
-		// TODO Auto-generated method stub
+
 		return super.equals(obj);
 	}
 }

@@ -107,7 +107,7 @@ public class EquationBuilder {
             throw new IllegalArgumentException("Only marvokvian case is allowed");
         }
 
-        int n = model.getDomain(model.getEndegenousParents(var)).getCombinations();
+        int n = model.getDomain(model.getEndogenousParents(var)).getCombinations();
         int[] states = IntStream.range(0, model.getSize(var)).toArray();
         return from2DArray(var, Combinatorial.getCombinations(n, states));
     }
@@ -141,7 +141,7 @@ public class EquationBuilder {
         List<List<Integer>> S = new ArrayList<>();
         for(int v : this.model.getEndogenousChildren(exoVar)){
             List<Integer> dom = IntStream.range(0, this.model.getDomain(v).getCardinality(v)).boxed().collect(Collectors.toList());
-            int endoPaCard = this.model.getDomain(this.model.getEndegenousParents(v)).getCombinations();
+            int endoPaCard = this.model.getDomain(this.model.getEndogenousParents(v)).getCombinations();
             for(int i=0; i< endoPaCard; i++){
                 S.add(dom);
             }
@@ -153,7 +153,7 @@ public class EquationBuilder {
             int j = 0;
             for(int v : this.model.getEndogenousChildren(exoVar)){
                 BayesianFactor f = eqs.get(v);
-                Strides endoPaDom = this.model.getDomain(this.model.getEndegenousParents(v));
+                Strides endoPaDom = this.model.getDomain(this.model.getEndogenousParents(v));
                 IndexIterator it = endoPaDom.getIterator();
                 while(it.hasNext()){
                     int idx = it.next();

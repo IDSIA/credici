@@ -88,7 +88,7 @@ public class ReverseHMM {
 	}
 
 	private int getExoCard(StructuralCausalModel model, int... X){
-		int card = model.getDomain(Ints.concat(X, model.getEndegenousParents(X))).getCombinations();
+		int card = model.getDomain(Ints.concat(X, model.getEndogenousParents(X))).getCombinations();
 		if(this.doubleCard)
 			return card*2;
 		return card+1;

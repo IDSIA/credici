@@ -18,6 +18,7 @@ import org.apache.commons.math3.util.FastMath;
 import ch.idsia.credici.inference.ace.AceInference;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.GraphicalModel;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -44,10 +45,11 @@ public class WeightedCausalEM extends FrequentistCausalEM {
 
     }
 
+    double maxll;
     @Override
     public void run(Collection stepArgs, int iterations) throws InterruptedException {
         setData((TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new));
-
+        
         List<Pair> pairs = Arrays.asList(DataUtil.getCounts(data));
         super.run(pairs, iterations);
     }
@@ -57,15 +59,19 @@ public class WeightedCausalEM extends FrequentistCausalEM {
     @Override
     protected void stepPrivate(Collection stepArgs) throws InterruptedException {
         try {
+//            maxll = Probability.maxLogLikelihood((StructuralCausalModel)posteriorModel, data);
+
             // E-stage
             TIntObjectMap<BayesianFactor> counts = expectation(stepArgs);
             // M-stage
+  //          System.out.println(ll + "/" + maxll);
             maximization(counts);
         } catch (IOException ex) {
             ex.printStackTrace();
         }
     }
 
+    private double ll;
 
     NumberFormat nf = NumberFormat.getNumberInstance();
     protected TIntObjectMap<BayesianFactor> expectation(Collection<Pair> dataWeighted) throws InterruptedException, IOException {
@@ -75,13 +81,14 @@ public class WeightedCausalEM extends FrequentistCausalEM {
             counts.put(variable, new BayesianFactor(posteriorModel.getFactor(variable).getDomain(), false));
         }
 
-        clearPosteriorCache();
-  
-        if (inferenceVariation == 5 && this.method != null){
-			this.method.set((StructuralCausalModel) posteriorModel);
-		}
         
-        double ll = 0;
+        if (inferenceVariation == 5 && this.method != null){
+            this.method.set((StructuralCausalModel) posteriorModel);
+		} else {
+            clearPosteriorCache();
+        }
+
+        ll = 0;
 
         for(Pair p : dataWeighted){
             TIntIntMap observation = (TIntIntMap) p.getLeft();
@@ -93,60 +100,60 @@ public class WeightedCausalEM extends FrequentistCausalEM {
                 } catch(Exception ex) {
                     
                     ex.printStackTrace();
-                    StructuralCausalModel scm = (StructuralCausalModel) posteriorModel;
-                    for (int e : scm.getExogenousVars()) {
-                        BayesianFactor bf = scm.getFactor(e);
+                    // StructuralCausalModel scm = (StructuralCausalModel) posteriorModel;
+                    // for (int e : scm.getExogenousVars()) {
+                    //     BayesianFactor bf = scm.getFactor(e);
 
-                        System.out.print("Var " + e + "\t");
-                        System.out.println(Arrays.stream(bf.getData()).<String>mapToObj(nf::format).collect(Collectors.joining(",")));
-                    }
-                    var ace = new AceInference("src/resources/ace");
-                    File model = ace.init(scm, true);
-                    System.out.println(model);
+                    //     System.out.print("Var " + e + "\t");
+                    //     System.out.println(Arrays.stream(bf.getData()).<String>mapToObj(nf::format).collect(Collectors.joining(",")));
+                    // }
+                    // var ace = new AceInference("src/resources/ace");
+                    // File model = ace.init(scm, true);
+                    // System.out.println(model);
 
-                    String buffer = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<instantiation date=\"Jun 4, 2005 7:07:21 AM\">\n";
-                    for (var k : observation.keySet().toArray()) {
+                    // String buffer = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<instantiation date=\"Jun 4, 2005 7:07:21 AM\">\n";
+                    // for (var k : observation.keySet().toArray()) {
 
-                        String var_name = "n"+k;
-                        String val = "s" + observation.get(k);
-                        buffer += "<inst id=\"";
-                        buffer += var_name;
-                        buffer += "\" value=\"";
-                        buffer += val;
-                        buffer += "\"/>\n";
-                    }
-                    buffer += "</instantiation>\n";
-                    Files.writeString(Path.of("n1.inst"), buffer);
+                    //     String var_name = "n"+k;
+                    //     String val = "s" + observation.get(k);
+                    //     buffer += "<inst id=\"";
+                    //     buffer += var_name;
+                    //     buffer += "\" value=\"";
+                    //     buffer += val;
+                    //     buffer += "\"/>\n";
+                    // }
+                    // buffer += "</instantiation>\n";
+                    // Files.writeString(Path.of("n1.inst"), buffer);
                     System.exit(-1);
                 }
+                ll += FastMath.log(this.method.pevidence()) * w;
             }
-
+            
             for (int var : trainableVars) {
 
                 int[] relevantVars = ArraysUtil.addToSortedArray(posteriorModel.getParents(var), var);
                 int[] hidden =  IntStream.of(relevantVars).filter(x -> !observation.containsKey(x)).toArray();
 
-                if(hidden.length>0){
+                if(hidden.length==1) {
                     // Case with missing data
                     BayesianFactor phidden_obs = posteriorInference(hidden, observation);
-                    phidden_obs = phidden_obs.scalarMultiply(w);
                     
-                    //System.out.println("EXP " + var + "("+observation+") is " + phidden_obs);
+                    // multiply by the number of rows in the data
+                    // we are multiplying here as we are using the P for the counts
+                    phidden_obs = phidden_obs.scalarMultiply(w);
 
                     BayesianFactor bf = counts.get(var);
                     counts.put(var, bf.addition(phidden_obs));
-                }else{
+                } else if (hidden.length == 0) {
                     //fully-observable case
                     for(int index : counts.get(var).getDomain().getCompatibleIndexes(observation)){
                         double x = counts.get(var).getValueAt(index) + w;
                         counts.get(var).setValueAt(x, index);
                     }
+                } else {
+                    throw new RuntimeException("Unsupported");
                 }
             }
-
-            
-            if(inferenceVariation == 5 && method != null)
-                ll += FastMath.log(this.method.pevidence());
         }
 
         return counts;

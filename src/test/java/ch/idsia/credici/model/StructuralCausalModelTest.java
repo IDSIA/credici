@@ -177,7 +177,7 @@ public class StructuralCausalModelTest {
             StructuralCausalModel m = do_models[world-1];
             for(int x: m.getEndogenousVars()){
                assertEquals(m.getParents(x).length, cfmodel.getParents(cfmodel.getMap().getEquivalentVars(world, x)).length);
-               assertArrayEquals(cfmodel.getMap().getEquivalentVars(world, m.getEndegenousParents(x)), cfmodel.getEndegenousParents(cfmodel.getMap().getEquivalentVars(world, x)));
+               assertArrayEquals(cfmodel.getMap().getEquivalentVars(world, m.getEndogenousParents(x)), cfmodel.getEndogenousParents(cfmodel.getMap().getEquivalentVars(world, x)));
                assertArrayEquals(m.getExogenousParents(x), cfmodel.getExogenousParents(cfmodel.getMap().getEquivalentVars(world, x)));
 
             }
@@ -220,7 +220,7 @@ public class StructuralCausalModelTest {
         assertArrayEquals(model.getExogenousParents(2),  new int[]{5, 6});
 
         //Edgogenous parents
-        assertArrayEquals(model.getEndegenousParents(2),  new int[]{1});
+        assertArrayEquals(model.getEndogenousParents(2),  new int[]{1});
 
         // Endogenous children
         assertArrayEquals(model.getEndogenousChildren(5),  new int[]{2, 3});

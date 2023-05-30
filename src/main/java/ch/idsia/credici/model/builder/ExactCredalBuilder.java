@@ -75,7 +75,7 @@ public class ExactCredalBuilder extends CredalBuilder {
         inf.setFactors(bnet.getFactors());
 
         for(int x: causalmodel.getEndogenousVars()){
-            BayesianFactor f = (BayesianFactor) inf.conditionalQuery(x, causalmodel.getEndegenousParents(x));
+            BayesianFactor f = (BayesianFactor) inf.conditionalQuery(x, causalmodel.getEndogenousParents(x));
             f = f.fixPrecission(10, x);
             factors.add(f);
         }
@@ -201,7 +201,7 @@ public class ExactCredalBuilder extends CredalBuilder {
                 Stream.of(factors).filter(f ->
                         ImmutableSet.copyOf(Ints.asList(f.getDomain().getVariables()))
                         .equals(ImmutableSet.copyOf(
-                                Ints.asList(Ints.concat(ch_u, causalmodel.getEndegenousParents(ch_u))))
+                                Ints.asList(Ints.concat(ch_u, causalmodel.getEndogenousParents(ch_u))))
                         ))
                         .toArray(BayesianFactor[]::new);
 

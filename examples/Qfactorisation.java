@@ -3,12 +3,14 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 
+import java.io.IOException;
 import java.nio.file.Path;
 
 public class Qfactorisation {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, CsvException {
 
         int T = 0;  //  Treatment
         int S = 1;  // Survival

@@ -70,7 +70,11 @@ public class DAGUtil {
         }
         return out;
     }
-
+    public static SparseDirectedAcyclicGraph ancestralDAG(SparseDirectedAcyclicGraph dag, int... nodes) {
+        int[] relevant = Ints.concat(ancestors(dag, nodes),nodes);
+        relevant = IntStream.of(relevant).distinct().toArray();
+        return getSubDAG(dag, relevant);
+    }
 
     public static void main2(String[] args) {
         BayesianNetwork bnet = new BayesianNetwork();
@@ -185,6 +189,7 @@ public class DAGUtil {
         for(int x : dag.getVariables())
             moral.addVertex(x);
 
+        // Delete incoming arcs to observations
         for(int x: dag.getVariables()){
             for(int y: dag.getParents(x)){
                 moral.addEdge(y,x);
@@ -214,7 +219,10 @@ public class DAGUtil {
             return false;
 
 
-        Graph moral = DAGUtil.moral(dag);
+        int[] relevant = {a,b};
+        relevant = Ints.concat(relevant, obs);
+
+        Graph moral = DAGUtil.moral(DAGUtil.ancestralDAG(dag, relevant));
         for(int v : obs) {
             if(v!=a && v!=b)
                 moral.removeVertex(v);
@@ -478,6 +486,11 @@ public class DAGUtil {
 
     public static double avgIndegree(SparseDirectedAcyclicGraph graph){
         return graph.vertexSet().stream().mapToDouble(x -> graph.getParents(x).length).average().getAsDouble();
+    }
+
+
+    public static int[] ancestors(SparseDirectedAcyclicGraph dag, int... nodes) {
+        return IntStream.of(nodes).flatMap(x-> Arrays.stream(DAGUtil.ancestors(dag, x))).distinct().toArray();
     }
 
     public static int[] ancestors(SparseDirectedAcyclicGraph dag, int x){

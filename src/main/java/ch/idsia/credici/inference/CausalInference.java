@@ -92,6 +92,9 @@ public abstract class CausalInference<M, R extends GenericFactor>{
     public R probNecessity(int cause, int effect) throws InterruptedException {
         return probNecessity(cause, effect, 0,1);
     }
+
+
+
     public R probNecessity(int cause, int effect, int trueState, int falseState) throws InterruptedException {
 
         Query q = this.counterfactualQuery()

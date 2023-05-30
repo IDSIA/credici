@@ -30,6 +30,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 
 	}
 
+
 	public CausalMultiVE(List<StructuralCausalModel> model){
 		this.model=model;
 		inputModels = model;
@@ -164,6 +165,45 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 			double psn = i.probNecessityAndSufficiency(cause, effect, causeTrue, causeFalse, effectTrue, effectFalse).getValue(0);
 			if (psn > max) max = psn;
 			if (psn < min) min = psn;
+		}
+
+		double[][][] vals = new double[1][2][1];
+		vals[0][0][0] = min;
+		vals[0][1][0] = max;
+
+		return new VertexFactor(Strides.empty(), Strides.empty(), vals);
+	}
+
+
+	public GenericFactor probNecessity(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+
+		double max = Double.NEGATIVE_INFINITY;
+		double min = Double.POSITIVE_INFINITY;
+
+
+		for (CausalVE i : this.getInferenceList()) {
+			double p = i.probNecessity(cause, effect, trueState, falseState).getValue(0);
+			if (p > max) max = p;
+			if (p < min) min = p;
+		}
+
+		double[][][] vals = new double[1][2][1];
+		vals[0][0][0] = min;
+		vals[0][1][0] = max;
+
+		return new VertexFactor(Strides.empty(), Strides.empty(), vals);
+	}
+
+	public GenericFactor probSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+
+		double max = Double.NEGATIVE_INFINITY;
+		double min = Double.POSITIVE_INFINITY;
+
+
+		for (CausalVE i : this.getInferenceList()) {
+			double p = i.probSufficiency(cause, effect, trueState, falseState).getValue(0);
+			if (p > max) max = p;
+			if (p < min) min = p;
 		}
 
 		double[][][] vals = new double[1][2][1];

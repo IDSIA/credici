@@ -74,7 +74,7 @@ public class Jov_RSME {
                 .setEvidence(X,1)
                 .run();
 
-        System.out.println(resExact);
+        System.out.println("Result exact: "+resExact);
 
         EMCredalBuilder builder = EMCredalBuilder.of(m, data2)
                 .setWeightedEM(true)
@@ -92,6 +92,7 @@ public class Jov_RSME {
 
         System.out.println(resApporx);
 
+        System.out.println(resApporx.sampleVertex());
 
         builder.getSelectedPoints().stream().map(p -> ArraysUtil.remove(p.getFactor(U).getData(), 3)).forEach(p -> System.out.println(Arrays.toString(p)));
 

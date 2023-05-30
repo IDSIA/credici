@@ -23,12 +23,17 @@ import static ch.idsia.credici.utility.EncodingUtil.getRandomSeqIntMask;
 public class CausalEMVE extends CausalMultiVE{
 
 	public CausalEMVE(StructuralCausalModel model, TIntIntMap[] data, int runs, int maxiter) throws InterruptedException {
+		this(model, data, model.getExogenousVars(), runs, maxiter);
+	}
+
+
+	public CausalEMVE(StructuralCausalModel model, TIntIntMap[] data, int[] exoVars, int runs, int maxiter) throws InterruptedException {
 		super(EMCredalBuilder.of(model, data).setWeightedEM(true).setNumTrajectories(runs)
 				.setTrainableVars(model.getExogenousVars())
 				.setStopCriteria(FrequentistCausalEM.StopCriteria.KL)
 				.setThreshold(0.0)
+				.setTrainableVars(exoVars)
 				.setMaxEMIter(maxiter).build().getSelectedPoints());
+		//this.toInterval = true;
 	}
-
-
 }

@@ -2,11 +2,13 @@ package ch.idsia.credici.model.tools;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
+import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.SeparatelySpecified;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseModel;
@@ -351,5 +353,19 @@ public class CausalOps {
         return (SparseModel) counterfactualModel((GenericSparseModel) model, intervention);
     }
 
+    public static SparseModel multiCounterfactualModel(SparseModel model, TIntIntMap...interventions){
+        SparseModel[] alternative = Arrays.stream(interventions).map(i -> CausalOps.applyInterventions(model, i)).toArray(SparseModel[]::new);
+        return merge(model, alternative);
+    }
+    public static StructuralCausalModel multiCounterfactualModel(StructuralCausalModel model, TIntIntMap...interventions){
+        StructuralCausalModel[] alternative = Arrays.stream(interventions).map(i -> CausalOps.applyInterventions(model, i)).toArray(StructuralCausalModel[]::new);
+        return merge(model, alternative);
+    }
+
+    public static boolean exogenityCheck(StructuralCausalModel model, int X, int Y ){
+        StructuralCausalModel extModel = CausalOps.multiCounterfactualModel(model, ObservationBuilder.observe(X,0));;
+        int Yx = extModel.getMap().getEquivalentVars(1,Y);
+        return DAGUtil.dseparated(extModel.getNetwork(),Yx, X);
+    }
 
 }

@@ -316,5 +316,39 @@ public class FactorUtil {
 	}
 
 
+	public static VertexFactor scalarMultiply(VertexFactor f, double scalar){
+		double[][][] values = ArraysUtil.deepClone(f.getData());
+		for(int i=0; i<values.length; i++) {
+			for (int j = 0; j < values[i].length; j++) {
+				for (int k = 0; k < values[i][j].length; k++) {
+					values[i][j][k]=values[i][j][k]*scalar;
+				}
+			}
+		}
+		return new VertexFactor(f.getDataDomain(), f.getSeparatingDomain(), values);
+	}
 
+
+
+	public static IntervalFactor scalarMultiply(IntervalFactor f, double scalar){
+
+
+		double[][] valuesUp = ArraysUtil.deepClone(f.getDataUpper());
+		double[][] valuesLow = ArraysUtil.deepClone(f.getDataLower());
+
+		for(int i=0; i<valuesUp.length; i++) {
+			for (int j = 0; j < valuesUp[i].length; j++) {
+				valuesUp[i][j]=valuesUp[i][j]*scalar;
+			}
+		}
+
+
+		for(int i=0; i<valuesLow.length; i++) {
+			for (int j = 0; j < valuesLow[i].length; j++) {
+				valuesLow[i][j]=valuesLow[i][j]*scalar;
+			}
+		}
+
+		return new IntervalFactor(f.getDataDomain(), f.getSeparatingDomain(), valuesLow, valuesUp);
+	}
 }

@@ -41,10 +41,10 @@ public class Qfactorisation {
         model.getCFactorsSplittedMap();
 
         // From a dataset and the causal structure in a model, get the c-factors associated to each endogenous variables (as a hashmap)
-        DataUtil.getCFactorsSplittedMap(model, data)
+        DataUtil.getCFactorsSplittedMap(model, data);
 
         // Get a list with all the c-factors (one per endogenous variable) associated to the c-component of Ut in a FS-SCM
-        model.getCFactorsSplitted(Ut)
+        model.getCFactorsSplitted(Ut);
 
         // The log-likelihood of a SCM wrt to a dataset
         double llk = model.logLikelihood(data);

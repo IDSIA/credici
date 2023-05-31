@@ -16,7 +16,7 @@ import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.*;
@@ -75,7 +75,7 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
 
             // iterate over each state in the markov blanket
             for (int i = 0; i < blanket.getCombinations(); i++) {
-                TIntIntHashMap obs = ObservationBuilder.observe(blanket.getVariables(), blanket.statesOf(i));
+                FIntIntHashMap obs = new FIntIntHashMap(blanket.getVariables(), blanket.statesOf(i));
                 double emp_i = emp.filter(obs).getValueAt(0);
                 if (emp_i > 0)
                     pu = pu.addition(((BayesianFactor) inferenceEngine.apply(posteriorModel, u, obs)).scalarMultiply(emp_i));
@@ -102,7 +102,7 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
         List out = new ArrayList();
         for(int u: model.getExogenousVars()){
             Strides blanket = model.endogenousMarkovBlanket(u);
-            out.add(inferenceEngine.apply(model, blanket.getVariables(), new TIntIntHashMap()));
+            out.add(inferenceEngine.apply(model, blanket.getVariables(), new FIntIntHashMap()));
         }
 
         return out;

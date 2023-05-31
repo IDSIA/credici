@@ -12,7 +12,7 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.predefined.Party;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Arrays;
@@ -27,7 +27,7 @@ public class Example9 {
 
         StructuralCausalModel m0 = Party.buildModel();
 
-        TIntIntHashMap evidence = new TIntIntHashMap();
+        FIntIntHashMap evidence = new FIntIntHashMap();
         evidence.put(x2, 1);
         int target = x4;
 
@@ -218,9 +218,9 @@ public class Example9 {
         // P(X4' | X2'=1, X2=0)
 
         target = x4_;
-        evidence = new TIntIntHashMap();
+        evidence = new FIntIntHashMap();
         evidence.put(x2,0);
-        TIntIntHashMap intervention = new TIntIntHashMap();
+        FIntIntHashMap intervention = new FIntIntHashMap();
         intervention.put(x2_,1);
 
         SparseModel do_csmodel = CausalOps.intervention(m3, intervention.keys()[0], intervention.values()[0]);
@@ -232,7 +232,7 @@ public class Example9 {
 
         System.out.println(Arrays.toString(removeBarren.getDeleted()));
 
-        TIntIntHashMap filteredEvidence = new TIntIntHashMap();
+        FIntIntHashMap filteredEvidence = new FIntIntHashMap();
         // update the evidence
         for(int v: evidence.keys()){
             if(ArrayUtils.contains(do_csmodel.getVariables(), v)){

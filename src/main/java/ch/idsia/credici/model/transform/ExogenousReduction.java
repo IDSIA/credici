@@ -18,8 +18,8 @@ import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
+import ch.idsia.credici.collections.FIntObjectHashMap;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -60,7 +60,7 @@ public class ExogenousReduction {
 
     public ExogenousReduction removeRedundant() {
 
-        TIntObjectMap toRemove = new TIntObjectHashMap();
+        TIntObjectMap toRemove = new FIntObjectHashMap<>();
         for(int exoVar : model.getExogenousVars()) {
             int[] leftVars = model.getEndogenousChildren(exoVar);
             BayesianFactor f = BayesianFactor.combineAll(model.getFactors(leftVars));
@@ -87,7 +87,7 @@ public class ExogenousReduction {
         if(this.empProbs==null)
             throw new IllegalArgumentException("Empirical probabilities are required");
 
-        TIntIntMap minDim = new TIntIntHashMap();
+        TIntIntMap minDim = new FIntIntHashMap();
         for(int exoVar : model.getExogenousVars())
             minDim.put(exoVar, (int) (k* model.getDomain(exoVar).getCardinality(exoVar)));
 

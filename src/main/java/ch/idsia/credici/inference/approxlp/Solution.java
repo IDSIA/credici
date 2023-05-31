@@ -1,12 +1,15 @@
 package ch.idsia.credici.inference.approxlp;
 
+import ch.idsia.credici.collections.FIntObjectHashMap;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
+
 
 
 public class Solution {
 
-	private final TIntObjectHashMap<BayesianFactor> data;
+	private final TIntObjectMap<BayesianFactor> data;
 	private final int free;
 
 	private double scorecache;
@@ -17,7 +20,7 @@ public class Solution {
 	 * @param data
 	 * @param score
 	 */
-	Solution(TIntObjectHashMap<BayesianFactor> data, double score) {
+	Solution(TIntObjectMap<BayesianFactor> data, double score) {
 		this.scorecache = score;
 		this.data = data;
 		this.free = -1;
@@ -25,7 +28,7 @@ public class Solution {
 
 	Solution(Solution source, Move move) {
 		// shallow copy
-		this.data = new TIntObjectHashMap<>(source.data);
+		this.data = new FIntObjectHashMap<BayesianFactor>(source.data);
 
 		if (move.getValues() == null)
 			throw new IllegalArgumentException("The provided move has never been evaluated");
@@ -44,7 +47,7 @@ public class Solution {
 	 *
 	 * @return
 	 */
-	TIntObjectHashMap<BayesianFactor> getData() {
+	TIntObjectMap<BayesianFactor> getData() {
 		return data;
 	}
 

@@ -15,7 +15,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import gnu.trove.impl.hash.TIntIntHash;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 
 /**
@@ -50,7 +50,7 @@ public class Table implements Iterable<Map.Entry<int[], Integer>> {
         ArrayList<TIntIntMap> res = new ArrayList<>();
 
         for (Map.Entry<int[], Integer> entry : dataTable.entrySet()) {
-            TIntIntHashMap map = new TIntIntHashMap(columns, entry.getKey());
+            FIntIntHashMap map = new FIntIntHashMap(columns, entry.getKey());
             for (int i = 0; i < entry.getValue(); i++) {
                 res.add(map);
             }
@@ -198,7 +198,7 @@ public class Table implements Iterable<Map.Entry<int[], Integer>> {
                     @Override
                     public Pair<TIntIntMap, Integer> next() {
                         var nextVal = iter.next();
-                        TIntIntMap ret = new TIntIntHashMap(columns, nextVal.getKey());
+                        TIntIntMap ret = new FIntIntHashMap(columns, nextVal.getKey());
                         return Pair.of(ret, nextVal.getValue());
                     }
                 };

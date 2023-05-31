@@ -12,7 +12,7 @@ import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
 
 import java.util.stream.IntStream;
@@ -101,8 +101,8 @@ public class BiasSelectIncremental {
 
 		// Add the value of S
 		TIntIntMap[] data =  Stream.of(dataX).map(d -> {
-			TIntIntHashMap dnew = new TIntIntHashMap(d);
-			int valS = (int) prior.getFactor(s).filter((TIntIntHashMap) d).getData()[1];
+			FIntIntHashMap dnew = new FIntIntHashMap(d);
+			int valS = (int) prior.getFactor(s).filter((FIntIntHashMap) d).getData()[1];
 			dnew.put(s, valS);
 			return dnew;
 		}).toArray(TIntIntMap[]::new);

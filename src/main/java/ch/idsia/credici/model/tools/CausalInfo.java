@@ -1,5 +1,6 @@
 package ch.idsia.credici.model.tools;
 
+import ch.idsia.credici.collections.FIntObjectHashMap;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.predefined.Party;
 import ch.idsia.crema.factor.credal.linear.SeparateHalfspaceFactor;
@@ -7,7 +8,7 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.TIntObjectMap;
 
 import java.util.Arrays;
 import java.util.stream.IntStream;
@@ -25,7 +26,7 @@ public class CausalInfo {
     }
 
 
-    private static TIntObjectHashMap<CausalInfo> builders = new TIntObjectHashMap<>();
+    private static TIntObjectMap<CausalInfo> builders = new FIntObjectHashMap<>();
 
     public static CausalInfo of(GenericSparseModel model){
 

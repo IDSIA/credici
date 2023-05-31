@@ -20,7 +20,7 @@ import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -60,7 +60,7 @@ public class EMforCausal {
             // query info
             target = causalModel.getExogenousVars().length - 1;
             intervention = ObservationBuilder.observe(0, 1);
-            //intervention = new TIntIntHashMap();
+            //intervention = new FIntIntHashMap();
 
             System.out.println(causalModel);
             // Exact query

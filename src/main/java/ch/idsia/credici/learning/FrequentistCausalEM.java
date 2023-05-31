@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -29,8 +30,9 @@ import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import ch.idsia.credici.collections.FIntHashSet;
+import ch.idsia.credici.collections.FIntIntHashMap;
+import ch.idsia.credici.collections.FIntObjectHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
@@ -45,7 +47,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     protected int inferenceVariation = 2;
 
-    protected TIntObjectHashMap<BayesianFactor> replacedFactors = null;
+    protected TIntObjectMap<BayesianFactor> replacedFactors = null;
 
     protected StopCriteria stopCriteria = StopCriteria.KL;
 
@@ -58,7 +60,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     public enum StopCriteria {
         KL,
         L1,
-        LLratio
+        LLratio, 
+        MAX_ITER
     }
 
     private JoinInference<BayesianFactor,BayesianFactor> getInference(GraphicalModel<BayesianFactor> model, int[] elimSeq) {
@@ -105,7 +108,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     protected TIntObjectMap<BayesianFactor> expectation(TIntIntMap[] observations) throws InterruptedException, IOException {
 
-        TIntObjectMap<BayesianFactor> counts = new TIntObjectHashMap<>();
+        TIntObjectMap<BayesianFactor> counts = new FIntObjectHashMap<>();
         for (int variable : posteriorModel.getVariables()) {
             counts.put(variable, new BayesianFactor(posteriorModel.getFactor(variable).getDomain(), false));
         }
@@ -138,12 +141,11 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     void maximization(TIntObjectMap<BayesianFactor> counts){
 
-        replacedFactors = new TIntObjectHashMap();
+        replacedFactors = new FIntObjectHashMap<>();
         updated = false;
      
         for (int var : trainableVars) {
             BayesianFactor countVar = counts.get(var);
-
 
             if(regularization>0.0) {
                 BayesianFactor reg = posteriorModel.getFactor(var).scalarMultiply(regularization);
@@ -155,16 +157,13 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 countVar.setData(Arrays.stream(countVar.getData()).map(v -> v+S).toArray());
             }
 
-
             BayesianFactor f = countVar.divide(countVar.marginalize(var));
 
             // Store the previous factor and set the new one
             replacedFactors.put(var, posteriorModel.getFactor(var));
             posteriorModel.setFactor(var, f);
-            
-//            System.out.println(currentIteration + ")  Var + " + var + " = "+ Arrays.toString(f.getData()));
-
         }
+        
         // Determine which trainable variables should not be trained anymore
         if(stopAtConvergence)
             for (int[] exoCC : getTrainableExoCC())
@@ -189,8 +188,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                 return TrajectoryAnalyser.hasConvergedL1((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
         }else if(stopCriteria == StopCriteria.LLratio){
             return TrajectoryAnalyser.hasConvergedLLratio((StructuralCausalModel) posteriorModel, data, threshold, exoCC);
-        //} else if(stopCriteria == StopCriteria.newLL) {
-        
+        } else if(stopCriteria == StopCriteria.MAX_ITER) {
+            return false;
         }else{
             throw new IllegalArgumentException("Wrong stopping Criteria");
         }
@@ -229,19 +228,21 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     }
 
 
-    private TIntObjectMap<TIntSet> dconnected = new TIntObjectHashMap<>();
+    private Map<String, TIntSet> dconnected = new HashMap<>();
     TIntIntMap getFilteredObs(int var, TIntIntMap obs) {
         StructuralCausalModel model = (StructuralCausalModel) priorModel;
         TIntSet connected;
+        
+        String mapkey = "" + var+ "," + Arrays.toString(obs.keys());
 
-        if (dconnected.containsKey(var)) {
-            connected = dconnected.get(var);
+        if (dconnected.containsKey(mapkey)) {
+            connected = dconnected.get(mapkey);
         } else {
             int[] keys = obs.keys();
             int[] conkey = IntStream.of(keys).filter(key -> !DAGUtil.dseparated(model.getNetwork(), var, key, keys)).toArray();
     
-            connected = new TIntHashSet(conkey);
-            dconnected.put(var, connected);
+            connected = new FIntHashSet(conkey);
+            dconnected.put(mapkey, connected);
         }
 
         // Consider only d-connected observed variables
@@ -253,13 +254,13 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
                     obs.keys()))
                 .toArray();
 
-        TIntSet con = new TIntHashSet(obsVars);
+        TIntSet con = new FIntHashSet(obsVars);
        
         boolean x = con.equals(connected);
         if(!x) 
             System.out.println("xxx");
 
-        TIntIntMap filteredObs = new TIntIntHashMap(obs);
+        TIntIntMap filteredObs = new FIntIntHashMap(obs);
         
         filteredObs.retainEntries((key, value) -> connected.contains(key));
         return filteredObs;
@@ -329,7 +330,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         GraphicalModel infModel = new CutObserved().execute(posteriorModel, obs);
         infModel = new RemoveBarren().execute(infModel, query, obs);
 
-        TIntIntMap newObs = new TIntIntHashMap();
+        TIntIntMap newObs = new FIntIntHashMap();
         for(int x: obs.keys())
             if(ArraysUtil.contains(x, infModel.getVariables()))
                 newObs.put(x, obs.get(x));
@@ -358,7 +359,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
             }
         }
 
-        TIntIntMap newObs = new TIntIntHashMap();
+        TIntIntMap newObs = new FIntIntHashMap();
         for(int x: obs.keys())
             if(ArraysUtil.contains(x, infModel.getVariables()))
                 newObs.put(x, obs.get(x));
@@ -378,7 +379,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         factors.add(posteriorModel.getFactor(U));
 
         for(int X: chU){
-            TIntIntHashMap newObs = new TIntIntHashMap();
+            FIntIntHashMap newObs = new FIntIntHashMap();
             BayesianFactor fx = posteriorModel.getFactor(X);
             for(int x: obs.keys()) {
                 if (ArraysUtil.contains(x, fx.getDomain().getVariables()))
@@ -411,7 +412,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         }else {
             ArrayList<BayesianFactor> factors = new ArrayList<>();
             for (int X : chU) {
-                TIntIntHashMap newObs = new TIntIntHashMap();
+                FIntIntHashMap newObs = new FIntIntHashMap();
                 BayesianFactor fx = posteriorModel.getFactor(X);
                 for (int x : obs.keys()) {
                     if (ArraysUtil.contains(x, fx.getDomain().getVariables()))

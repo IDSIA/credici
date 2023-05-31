@@ -8,7 +8,7 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 
 public class RandomChainGlobalU {
@@ -54,9 +54,9 @@ public class RandomChainGlobalU {
 
         int[] X = model.getEndogenousVars();
 
-        TIntIntHashMap evidence = new TIntIntHashMap();
+        FIntIntHashMap evidence = new FIntIntHashMap();
 
-        TIntIntHashMap intervention = new TIntIntHashMap();
+        FIntIntHashMap intervention = new FIntIntHashMap();
         intervention.put(X[0], 0);
 
         int target = X[n-1];

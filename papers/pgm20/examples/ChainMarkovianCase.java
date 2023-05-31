@@ -7,7 +7,7 @@ import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.utility.RandomUtil;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 public class ChainMarkovianCase {
     public static void main(String[] args) throws InterruptedException {
@@ -45,7 +45,7 @@ public class ChainMarkovianCase {
 
         int[] X = model.getEndogenousVars();
 
-        TIntIntHashMap evidence = new TIntIntHashMap();
+        FIntIntHashMap evidence = new FIntIntHashMap();
 
         int obsvar = X[0];
         //obsvar = -1;
@@ -53,7 +53,7 @@ public class ChainMarkovianCase {
 
        if(obsvar!=-1) evidence.put(obsvar, 1);
 
-        TIntIntHashMap intervention = new TIntIntHashMap();
+        FIntIntHashMap intervention = new FIntIntHashMap();
         if(dovar!=-1) intervention.put(X[0], 0);
 
 

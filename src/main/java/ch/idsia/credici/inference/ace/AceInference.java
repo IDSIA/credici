@@ -13,7 +13,7 @@ import ace.AceEvalExt;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 public class AceInference {
     private File networkFile;
@@ -120,7 +120,7 @@ public class AceInference {
             }
             
             
-            this.evidence = new TIntIntHashMap(evidence);
+            this.evidence = new FIntIntHashMap(evidence);
             dirty = false;
             return factors;
         } else { 

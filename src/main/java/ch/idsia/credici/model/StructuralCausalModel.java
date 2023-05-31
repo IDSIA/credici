@@ -34,8 +34,8 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
+import ch.idsia.credici.collections.FIntObjectHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
@@ -180,7 +180,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		StructuralCausalModel copy = new StructuralCausalModel();
 		copy.randomSource = this.randomSource;
 		for (int v: this.getVariables()){
-			copy.addVariable(v, this.getSize(v), this.isExogenous(v));
+			copy.addVariable(v, this.getSize(v), this.isExogenous(v), this.isSpurious(v));
 		}
 
 		for (int v : copy.getVariables()){
@@ -212,14 +212,43 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public int addVariable(int vid, int size, boolean exogenous){
+		return addVariable(vid, size, exogenous, false);
+	}
+
+
+	private TIntSet spuriousVars = new TIntHashSet();
+	
+	/**
+	 * check whether variable is to be considered an endogenous variable
+	 * @param variable
+	 * @return
+	 */
+	public boolean isSpurious(int variable) {
+		return spuriousVars.contains(variable);
+	}
+
+	/**
+	 * Add a variable to the network. Flags can be set to 
+	 * @param vid
+	 * @param size
+	 * @param exogenous
+	 * @param spuriousendo true if the variable is not to be considered part of the model
+	 * @return
+	 */
+	public int addVariable(int vid, int size, boolean exogenous, boolean spuriousendo){
 		if(vid>max) max = vid;
 		max++;
 		this.cardinalities.put(vid, size);
 		network.addVariable(vid, size);
 		if(exogenous)
 			this.exogenousVars.add(vid);
+
+		if (spuriousendo) 
+			this.spuriousVars.add(vid);
+
 		return vid;
 	}
+
 
 	/**
 	 * Removes a variable from the model
@@ -454,8 +483,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		model.fillWithRandomFactors(prob_decimals);
 
 
-		TIntObjectMap<BayesianFactor> equations  = new TIntObjectHashMap<>();
-		TIntObjectMap<BayesianFactor> empirical  = new TIntObjectHashMap<>();
+		TIntObjectMap<BayesianFactor> equations  = new FIntObjectHashMap<>();
+		TIntObjectMap<BayesianFactor> empirical  = new FIntObjectHashMap<>();
 
 		for(int v : model.getEndogenousVars()){
 			equations.put(v, model.getFactor(v));
@@ -1009,7 +1038,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	public TIntObjectMap<BayesianFactor> getCFactorsSplittedMap() {
 
-		TIntObjectMap factors = new TIntObjectHashMap();
+		TIntObjectMap factors = new FIntObjectHashMap();
 
 		for(Conditional dom : this.getAllCFactorsSplittedDomains()){
 			int left = dom.getLeft();//(int) dom.get("left");
@@ -1035,7 +1064,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	public TIntObjectMap<BayesianFactor> getCFactorsSplittedMap(int... exoVars) {
 
-		TIntObjectMap factors = new TIntObjectHashMap();
+		TIntObjectMap factors = new FIntObjectHashMap();
 
 		for(Conditional dom : this.getCFactorsSplittedDomains(exoVars)){
 			int left = dom.getLeft();//(int) dom.get("left");
@@ -1082,7 +1111,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public TIntIntMap sample(int... vars) {
-		return sample(new TIntIntHashMap(), vars);
+		return sample(new FIntIntHashMap(), vars);
 	}
 
 
@@ -1246,7 +1275,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		SparseDirectedAcyclicGraph dag = this.getNetwork().copy();
 		for(int x : this.getEndogenousVars()){
 			for(int y: this.getEndogenousParents(x)){
-				dag.removeLink(y,x);
+				if(!isSpurious(y))
+					dag.removeLink(y,x);
 			}
 		}
 		return dag;
@@ -1497,8 +1527,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 			if (!name.equals(other.name)) return false;
 
 			//// vars tested by cardinalities as well
-			// TIntSet thisVars = new TIntHashSet(getVariables());
-			// TIntSet otherVars = new TIntHashSet(other.getVariables());
+			// TIntSet thisVars = new FIntHashSet(getVariables());
+			// TIntSet otherVars = new FIntHashSet(other.getVariables());
 			// if (!thisVars.equals(otherVars)) return false;
 
 			if (!other.cardinalities.equals(cardinalities)) return false;

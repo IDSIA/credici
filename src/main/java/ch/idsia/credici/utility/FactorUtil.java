@@ -14,7 +14,7 @@ import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -96,7 +96,7 @@ public class FactorUtil {
 			//while (it.hasNext()){
 			//	int i = it.next();
 			int[] states = dom.statesOf(i);
-			TIntIntMap assignament = new TIntIntHashMap();
+			TIntIntMap assignament = new FIntIntHashMap();
 
 			String strAssig = "";
 			for (int j = vars.length-1; j >= 0; j--) {
@@ -249,7 +249,7 @@ public class FactorUtil {
 
 	}
 
-	public static double getValue(BayesianFactor factor, TIntIntHashMap obs){
+	public static double getValue(BayesianFactor factor, FIntIntHashMap obs){
 
 		int[] states =  new int[factor.getDomain().getSize()];
 		for(int i=0; i< states.length; i++) {
@@ -261,7 +261,7 @@ public class FactorUtil {
 		return factor.getValue(states);
 	}
 
-	public static void setValue(BayesianFactor factor, TIntIntHashMap obs, double value){
+	public static void setValue(BayesianFactor factor, FIntIntHashMap obs, double value){
 
 		int[] states =  new int[factor.getDomain().getSize()];
 		for(int i=0; i< states.length; i++) {

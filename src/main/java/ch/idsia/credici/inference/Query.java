@@ -5,7 +5,7 @@ import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.graphical.GenericSparseModel;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 public class Query<M, R extends GenericFactor> {
 
@@ -17,9 +17,9 @@ public class Query<M, R extends GenericFactor> {
 
     private int[] target;
 
-    private TIntIntMap evidence = new TIntIntHashMap();
+    private TIntIntMap evidence = new FIntIntHashMap();
 
-    private TIntIntMap intervention = new TIntIntHashMap();
+    private TIntIntMap intervention = new FIntIntHashMap();
 
     private double epsilon = 0.0;
 

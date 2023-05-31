@@ -4,7 +4,7 @@ import ch.idsia.crema.model.graphical.GenericSparseModel;
 import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import java.util.*;
 import java.util.stream.IntStream;
@@ -178,7 +178,7 @@ public class WorldMapping {
 
 
     public TIntIntMap mapObservation(int world, TIntIntMap obs){
-        TIntIntMap newObs = new TIntIntHashMap();
+        TIntIntMap newObs = new FIntIntHashMap();
         for(int v : obs.keys()){
             newObs.put(this.getEquivalentVars(v)[0], obs.get(v));
         }

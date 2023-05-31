@@ -9,7 +9,7 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.utility.InvokerWithTimeout;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import org.apache.commons.cli.*;
 
@@ -30,7 +30,7 @@ public class RunExperiments {
 
     static StructuralCausalModel model;
 
-    static TIntIntHashMap evidence, intervention;
+    static FIntIntHashMap evidence, intervention;
     static int target;
     static double eps;
 
@@ -157,10 +157,10 @@ public class RunExperiments {
 
             int[] X = model.getEndogenousVars();
 
-            evidence = new TIntIntHashMap();
+            evidence = new FIntIntHashMap();
             if (obsvar >= 0) evidence.put(obsvar, 0);
 
-            intervention = new TIntIntHashMap();
+            intervention = new FIntIntHashMap();
             if (dovar >= 0) intervention.put(dovar, 0);
 
             System.out.println("Running experiments...");

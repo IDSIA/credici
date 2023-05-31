@@ -129,7 +129,6 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public EMCredalBuilder buildTrajectories() throws InterruptedException {
 		trajectories = new ArrayList<>();
-		
 	
 		if (inferenceVariation == 5 && this.method != null){
 			this.method.initialize(causalmodel);
@@ -362,14 +361,32 @@ public class EMCredalBuilder extends CredalBuilder{
 		return aceSetupTime;
 	}
 
+
+	private LinkedList<StructuralCausalModel> randomModels;
+
+	/**
+	 * Sequence of Structural Causal Models to be used as reference.
+	 * @param models
+	 */
+	public EMCredalBuilder setRandomModels(StructuralCausalModel reference, StructuralCausalModel[] models) {
+		this.randomModels = new LinkedList<>(Arrays.stream(models).map(m->{
+			StructuralCausalModel model =  reference.copy();
+			for (int exo : model.getExogenousVars()) {
+				model.setFactor(exo, m.getFactor(exo).copy());
+			}
+			return model;
+		}).collect(Collectors.toCollection(LinkedList<StructuralCausalModel>::new)));
+		return this;
+	}
+
 	private StructuralCausalModel randomModel(StructuralCausalModel reference) {
-		// return (StructuralCausalModel) BayesianFactor.randomModel(
-		// 				causalmodel, 10, false
-		// 				,trainableVars
-		// );
-		StructuralCausalModel rmodel = reference.copy();
-		rmodel.fillExogenousWithRandomFactors();
-		return rmodel;
+		if (randomModels != null && !randomModels.isEmpty()) {
+			return randomModels.removeFirst();
+		} else {
+			StructuralCausalModel rmodel = reference.copy();
+			rmodel.fillExogenousWithRandomFactors();
+			return rmodel;
+		}
 	}
 
 	private List<StructuralCausalModel> runEM() throws InterruptedException {

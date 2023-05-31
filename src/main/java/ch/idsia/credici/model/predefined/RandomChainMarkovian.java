@@ -7,7 +7,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import java.util.Arrays;
 
@@ -55,10 +55,10 @@ public class RandomChainMarkovian {
         int[] X = model.getEndogenousVars();
 
         // without evidence this is not working
-        TIntIntHashMap evidence = new TIntIntHashMap();
+        FIntIntHashMap evidence = new FIntIntHashMap();
         evidence.put(X[X.length-1], 0);
 
-        TIntIntHashMap intervention = new TIntIntHashMap();
+        FIntIntHashMap intervention = new FIntIntHashMap();
         intervention.put(X[0], 0);
 
         int target = X[1];

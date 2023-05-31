@@ -7,17 +7,18 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
+import ch.idsia.credici.collections.FIntObjectHashMap;
 import ch.idsia.crema.factor.GenericFactor;
-import gnu.trove.map.hash.TIntObjectHashMap;
+
 
 public class FactorQueue<F extends GenericFactor> implements Iterator<ArrayList<F>> {
 	
-	private TIntObjectHashMap<ArrayList<F>> data;
+	private FIntObjectHashMap<ArrayList<F>> data;
 	private int[] sequence;
 	private ArrayList<F> results;
 
 	public FactorQueue(int[] sequence) {
-		this.data = new TIntObjectHashMap<ArrayList<F>>();
+		this.data = new FIntObjectHashMap<ArrayList<F>>();
 		this.sequence = sequence;
         this.results = new ArrayList<>();
 

@@ -13,7 +13,7 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -53,10 +53,10 @@ public class ChainNonMarkovianCase {
 
         int[] X = model.getEndogenousVars();
 
-        TIntIntHashMap evidence = new TIntIntHashMap();
+        FIntIntHashMap evidence = new FIntIntHashMap();
         evidence.put(X[N-1], 0);
 
-        TIntIntHashMap intervention = new TIntIntHashMap();
+        FIntIntHashMap intervention = new FIntIntHashMap();
         intervention.put(X[0], 0);
 
         int target = X[1];

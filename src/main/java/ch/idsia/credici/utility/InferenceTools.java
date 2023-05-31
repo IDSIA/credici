@@ -4,7 +4,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.GraphicalModel;
 import ch.idsia.crema.model.graphical.SparseModel;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import java.util.stream.IntStream;
 
@@ -28,7 +28,7 @@ public class InferenceTools {
             if(fvalues[svalue]==1.0)
                 break;
 
-        TIntIntMap obs = new TIntIntHashMap();
+        TIntIntMap obs = new FIntIntHashMap();
         obs.put(s, svalue);
         return obs;
 

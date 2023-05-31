@@ -13,7 +13,7 @@ import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.HashMap;
@@ -52,7 +52,7 @@ public class CausalBuilder {
 
     public CausalBuilder(SparseDirectedAcyclicGraph empiricalDAG, int[] endoVarSizes) {
         this.empiricalDAG = empiricalDAG;
-        this.endoVarSizes = new TIntIntHashMap();
+        this.endoVarSizes = new FIntIntHashMap();
         int i = 0;
         for(int x: empiricalDAG.getVariables()){
             this.endoVarSizes.put(x, endoVarSizes[i]);
@@ -137,7 +137,7 @@ public class CausalBuilder {
     private void calculateExoVarSizes(){
         if(exoVarSizes_ != null) {
             if(exoVarSizes != null) throw new IllegalArgumentException("exoVarSizes set twice");
-            exoVarSizes = new TIntIntHashMap();
+            exoVarSizes = new FIntIntHashMap();
             int i = 0;
             for(int u : DAGUtil.nodesDifference(causalDAG, empiricalDAG)){
                 exoVarSizes.put(u, exoVarSizes_[i]);
@@ -146,7 +146,7 @@ public class CausalBuilder {
         }
         else if(equations != null) {
             //Compute U sizes form equations
-            exoVarSizes = new TIntIntHashMap();
+            exoVarSizes = new FIntIntHashMap();
             // set of exogenous variabels
             int[] U = DAGUtil.nodesDifference(causalDAG, empiricalDAG);
             // for each u find an equation where present and determine the size
@@ -160,7 +160,7 @@ public class CausalBuilder {
             // todo: compute in non-markovian equationless case
      //       throw new NotImplementedException("");
         }else{
-            exoVarSizes = new TIntIntHashMap();
+            exoVarSizes = new FIntIntHashMap();
 
             for(int[] exoVars : CausalGraphTools.exoConnectComponents(causalDAG)){
                 if(exoVars.length==1){

@@ -1,5 +1,7 @@
 package ch.idsia.credici.inference.approxlp;
 
+import ch.idsia.credici.collections.FIntHashSet;
+import ch.idsia.credici.collections.FIntObjectHashMap;
 import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.ExtensiveLinearToRandomBayesianFactor;
@@ -9,7 +11,7 @@ import ch.idsia.crema.factor.credal.linear.SeparateLinearFactor;
 import ch.idsia.crema.model.GraphicalModel;
 import ch.idsia.crema.search.NeighbourhoodFunction;
 import gnu.trove.list.array.TIntArrayList;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import gnu.trove.map.TIntObjectMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
@@ -23,7 +25,7 @@ public class Neighbourhood implements NeighbourhoodFunction<Move, Solution> {
 
 	public Neighbourhood(GraphicalModel<? extends GenericFactor> model, int... locked) {
 		this.model = model;
-		initialize(new TIntHashSet(locked));
+		initialize(new FIntHashSet(locked));
 	}
 
 	@Override
@@ -40,7 +42,7 @@ public class Neighbourhood implements NeighbourhoodFunction<Move, Solution> {
 
 	@Override
 	public Solution random() {
-		TIntObjectHashMap<BayesianFactor> factors = new TIntObjectHashMap<>();
+		TIntObjectMap<BayesianFactor> factors = new FIntObjectHashMap<>();
 		for (int var : model.getVariables()) {
 			// lets assume the model has factors for all variables!
 			BayesianFactor r = random(model.getFactor(var));

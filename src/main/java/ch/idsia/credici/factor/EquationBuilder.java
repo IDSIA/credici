@@ -1,5 +1,7 @@
 package ch.idsia.credici.factor;
 
+import ch.idsia.credici.collections.FIntIntHashMap;
+import ch.idsia.credici.collections.FIntObjectHashMap;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.Combinatorial;
 import ch.idsia.credici.utility.DomainUtil;
@@ -11,7 +13,6 @@ import ch.idsia.crema.utility.IndexIterator;
 import ch.javasoft.util.ints.IntHashMap;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class EquationBuilder {
         this.model = model;
     }
 
-    private static TIntObjectHashMap<EquationBuilder> builders = new TIntObjectHashMap<>();
+    private static TIntObjectMap<EquationBuilder> builders = new FIntObjectHashMap<>();
 
     public static EquationBuilder of(StructuralCausalModel model){
         int hash = model.hashCode();
@@ -219,8 +220,8 @@ public class EquationBuilder {
                 int[] xval = IntStream.range(0, domX.getSize()).map(j ->  confX[finalK *domX.getSize() + j]).toArray();
                 EquationOps.setValue(
                         f,
-                        ObservationBuilder.observe(Uvar, i),
-                        ObservationBuilder.observe(endoParents, (int[]) Yspace.get(k)),
+                        new FIntIntHashMap(ObservationBuilder.observe(Uvar, i)),
+                        new FIntIntHashMap(ObservationBuilder.observe(endoParents, (int[]) Yspace.get(k))),
                         vars,
                         xval
                 );

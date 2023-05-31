@@ -7,7 +7,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class TrajectoryAnalyser {
 
 
-    public static boolean hasConvergedKL(StructuralCausalModel model, TIntObjectHashMap replacedFactors, double epsilon, int...exoCC){
+    public static boolean hasConvergedKL(StructuralCausalModel model, TIntObjectMap replacedFactors, double epsilon, int...exoCC){
         for (int u : exoCC) {
             if (Probability.KLsymmetrized(model.getFactor(u), (BayesianFactor) replacedFactors.get(u), true) >= epsilon) {
                 return false;
@@ -26,7 +26,7 @@ public class TrajectoryAnalyser {
         }
         return true;
     }
-    public static boolean hasConvergedL1(StructuralCausalModel model, TIntObjectHashMap replacedFactors, double epsilon, int...exoCC){
+    public static boolean hasConvergedL1(StructuralCausalModel model, TIntObjectMap replacedFactors, double epsilon, int...exoCC){
         for (int u : exoCC) {
             if (Probability.manhattanDist(model.getFactor(u), (BayesianFactor) replacedFactors.get(u)) >= epsilon) {
                 return false;

@@ -4,7 +4,7 @@ import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +28,7 @@ public class IntegrationChecker {
 
 
         this.interventions = new ArrayList<>(List.of(interventions));
-        this.interventions.add(0,new TIntIntHashMap());
+        this.interventions.add(0,new FIntIntHashMap());
 
 
         // Global integrator

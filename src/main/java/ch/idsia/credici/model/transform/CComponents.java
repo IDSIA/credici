@@ -32,14 +32,12 @@ import ch.idsia.crema.utility.CombinationsIterator;
  * this parents.  
  */
 public class CComponents implements Iterable<StructuralCausalModel> {
-    private Random random;
 
-    public void initRandom() { 
-        random = new Random();
+    public CComponents() { 
+        initRandom();
     }
 
-    public void initRandom(int seed) { 
-        random = new Random(seed);
+    public void initRandom() { 
     }
     
     private StructuralCausalModel from; 
@@ -51,7 +49,7 @@ public class CComponents implements Iterable<StructuralCausalModel> {
 
     public List<Pair<StructuralCausalModel, Table>> apply(StructuralCausalModel model, Table data) {
         results = Collections.synchronizedMap(new HashMap<>());
-        initRandom();
+
 
         from = model;
         Set<Integer> exo = IntStream.of(model.getExogenousVars()).boxed().collect(Collectors.toSet());
@@ -157,7 +155,7 @@ public class CComponents implements Iterable<StructuralCausalModel> {
             newmodel.addVariable(newEndoVar, model.getSize(newEndoVar), false);
             spurious.addAll(parents);
             for (int p:parents) {
-                newmodel.addVariable(p, model.getSize(p), false);
+                newmodel.addVariable(p, model.getSize(p), false, true);
             }
         }
 
@@ -170,6 +168,7 @@ public class CComponents implements Iterable<StructuralCausalModel> {
         // additional x
         for (int x : spurious) {
             int size = model.getSize(x);
+            double[] dta = new double[size];
             BayesianFactor f = new BayesianFactor(model.getDomain(x), new double[size], true);
             newmodel.setFactor(x, f);
         }

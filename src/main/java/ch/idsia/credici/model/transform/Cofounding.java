@@ -9,8 +9,10 @@ import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.ArraysUtil;
+import gnu.trove.map.TIntIntMap;
+
 import com.google.common.primitives.Ints;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -86,7 +88,7 @@ public class Cofounding {
 
 
     private static StructuralCausalModel fixVariableIDs(StructuralCausalModel model) {
-        TIntIntHashMap map = new TIntIntHashMap();
+        FIntIntHashMap map = new FIntIntHashMap();
         int i = 0;
         for (int v = 0; v <= Arrays.stream(model.getVariables()).max().getAsInt(); v++) {
             if (ArraysUtil.contains(v, model.getVariables())) {
@@ -149,9 +151,9 @@ public class Cofounding {
 
         int i = 0;
         for(int[] uv : DomainUtil.getEventSpace(domU,domV)){
-            TIntIntHashMap valT = ObservationBuilder.observe(T,i);
-            TIntIntHashMap valU = ObservationBuilder.observe(exoVar1,uv[0]);
-            TIntIntHashMap valV = ObservationBuilder.observe(exoVar2,uv[1]);
+            TIntIntMap valT = FIntIntHashMap.of(T, i);
+            TIntIntMap valU = FIntIntHashMap.of(exoVar1,uv[0]);
+            TIntIntMap valV = FIntIntHashMap.of(exoVar2,uv[1]);
 
             EquationOps.setValues(f1, valT, endoChild1, EquationOps.getValue(fu, valU, new int[]{endoChild1}));
             EquationOps.setValues(f2, valT, endoChild2, EquationOps.getValue(fv, valV, new int[]{endoChild2}));

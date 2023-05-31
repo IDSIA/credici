@@ -11,7 +11,7 @@ import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import org.eclipse.persistence.internal.libraries.asm.tree.TypeInsnNode;
 
 import java.util.Arrays;
@@ -82,8 +82,8 @@ public class SelectionBias {
 		int Xselecting[] = model.getEndogenousParents(selectorVar);
 		// Add the value of S
 		TIntIntMap[] data =  Stream.of(dataX).map(d -> {
-			TIntIntHashMap dnew = new TIntIntHashMap(d);
-			int valS = (int) model.getFactor(selectorVar).filter((TIntIntHashMap) DataUtil.select(d, Xselecting)).getData()[1];
+			FIntIntHashMap dnew = new FIntIntHashMap(d);
+			int valS = (int) model.getFactor(selectorVar).filter((FIntIntHashMap) DataUtil.select(d, Xselecting)).getData()[1];
 			dnew.put(selectorVar, valS);
 			return dnew;
 		}).toArray(TIntIntMap[]::new);

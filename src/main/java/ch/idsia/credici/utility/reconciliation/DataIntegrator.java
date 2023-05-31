@@ -15,7 +15,7 @@ import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 
 import java.util.*;
@@ -125,7 +125,7 @@ public class DataIntegrator {
     /** Set the observational data */
     public DataIntegrator setObservationalData(TIntIntMap[] data, int... study){
         // Observational data is stored together with the rest of datasets and its key is an empty intervention: {} -> obsData
-        setData(data, new TIntIntHashMap(), new int[]{}, study);
+        setData(data, new FIntIntHashMap(), new int[]{}, study);
         return this;
     }
 
@@ -197,7 +197,7 @@ public class DataIntegrator {
      */
     public DataIntegrator setData(TIntIntMap[] data, int[] intervenedVars, int... study) {
         if(intervenedVars.length==0) throw new IllegalArgumentException("Wrong number of interventions");
-        setData(data, new TIntIntHashMap(), intervenedVars, study);
+        setData(data, new FIntIntHashMap(), intervenedVars, study);
         return this;
     }
 
@@ -275,7 +275,7 @@ public class DataIntegrator {
                 Arrays.stream(extData).map(t -> {
                     if(!t.containsKey(S))
                         return t;
-                    TIntIntMap new_t = new TIntIntHashMap();
+                    TIntIntMap new_t = new FIntIntHashMap();
                     int s = t.get(S);
                     for(int v:t.keys()){
                         if(v != S)
@@ -289,7 +289,7 @@ public class DataIntegrator {
 
     }
     public TIntIntMap[] getObservationalData(){
-        return datasets.get(new TIntIntHashMap());
+        return datasets.get(new FIntIntHashMap());
     }
 
     private TIntIntMap[] transformData(TIntIntMap intervention, TIntIntMap[] data){
@@ -333,7 +333,7 @@ public class DataIntegrator {
 
     public boolean hasObservational(){
         try{
-            getInterventionIndex(new TIntIntHashMap());
+            getInterventionIndex(new FIntIntHashMap());
         }catch (Exception e){
             return false;
         }

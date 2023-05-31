@@ -26,7 +26,7 @@ import ch.idsia.crema.preprocess.BinarizeEvidence;
 import ch.idsia.crema.preprocess.CutObservedSepHalfspace;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalFactor> {
 
@@ -102,7 +102,7 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
 
         SparseModel infModel = getInferenceModel(q);
 
-        TIntIntHashMap filteredEvidence = new TIntIntHashMap();
+        FIntIntHashMap filteredEvidence = new FIntIntHashMap();
 
         // update the evidence
         for(int v: q.getEvidence().keys()){

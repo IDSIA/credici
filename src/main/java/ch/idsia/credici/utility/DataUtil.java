@@ -8,6 +8,7 @@ import ch.idsia.crema.data.ReaderCSV;
 import ch.idsia.crema.data.WriterCSV;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.ObservationBuilder;
+//import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.InvokerWithTimeout;
@@ -15,8 +16,9 @@ import com.opencsv.*;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
+import ch.idsia.credici.collections.FIntObjectHashMap;
+
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -25,6 +27,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -41,7 +44,7 @@ public class DataUtil {
 
 			int[] states = dom.statesOf(i);
 
-			TIntIntMap assignament = new TIntIntHashMap();
+			TIntIntMap assignament = new FIntIntHashMap();
 			for (int j = 0; j < vars.length; j++)
 				assignament.put(vars[j], states[j]);
 
@@ -53,10 +56,26 @@ public class DataUtil {
 	}
 
 	public static Pair<TIntIntMap, Long>[] getCounts(TIntIntMap[] data){
-		ArrayList counts = new ArrayList();
-		for(TIntIntMap instance : DataUtil.unique(data))
-			counts.add(new ImmutablePair(instance, Arrays.stream(data).filter(s -> DataUtil.instanceEquals(s,instance)).count()));
-		return (Pair<TIntIntMap, Long>[]) counts.toArray(Pair[]::new);
+		
+		if (data.length == 0) return new Pair[0];
+		
+		Map<String, Pair<TIntIntMap, Long>> counts = new HashMap<>(); 
+
+		int[] keys = data[0].keys().clone();
+		for (TIntIntMap obs : data) {
+			// get the values of the observation in the keys order and combine them in a string.
+			String mk = Arrays.stream(keys).map(obs::get).boxed().<String>map(x->x.toString()).collect(Collectors.joining( "," ));
+			// use this string as a key to find the pair
+			var p = counts.get(mk);
+			if (p == null) { 
+				p = Pair.of(obs, 0l);
+			} else {
+				p = Pair.of(obs, p.getValue() + 1);
+			}
+			counts.put(mk, p);
+		}
+
+		return counts.values().toArray(Pair[]::new);
 	}
 
 	public static TIntIntMap[] dataFromCounts(BayesianFactor counts){
@@ -77,7 +96,7 @@ public class DataUtil {
 			int n = (int) counts.getValue(states);
 
 			for(int k=0; k<n; k++){
-				TIntIntMap assignament = new TIntIntHashMap();
+				TIntIntMap assignament = new FIntIntHashMap();
 				for (int j = 0; j < vars.length; j++)
 					assignament.put(vars[j], states[j]);
 				data.add(assignament);
@@ -140,7 +159,7 @@ public class DataUtil {
 
 
 	public static TIntObjectMap<BayesianFactor> getCFactorsSplittedMap(StructuralCausalModel model, TIntIntMap[] data ){
-		TIntObjectMap<BayesianFactor> cfactors = new TIntObjectHashMap<>();
+		TIntObjectMap<BayesianFactor> cfactors = new FIntObjectHashMap<>();
 
 		for (Conditional dom : model.getAllCFactorsSplittedDomains()) {
 			int left = dom.getLeft();
@@ -154,7 +173,7 @@ public class DataUtil {
 	}
 
 	public static TIntObjectMap<BayesianFactor> getCFactorsSplittedMap(StructuralCausalModel model, TIntIntMap[] data, int... exoVars){
-		TIntObjectMap<BayesianFactor> cfactors = new TIntObjectHashMap<>();
+		TIntObjectMap<BayesianFactor> cfactors = new FIntObjectHashMap<>();
 
 		for (Conditional dom : model.getCFactorsSplittedDomains(exoVars)) {
 			int left = dom.getLeft();
@@ -194,9 +213,24 @@ public class DataUtil {
 	}
 
 
+	private static TIntIntMap[] observe(String[] vars, double[][] data) {
+		int[] keys = Stream.of(vars).mapToInt(v -> Integer.valueOf(v)).toArray();
+
+		TIntIntMap[] obs = new TIntIntMap[data.length];
+		for(int i=0; i<data.length; i++) {
+		
+			int[] valid = ArraysUtil.where(data[i], x -> !Double.isNaN(x));
+			obs[i] = new FIntIntHashMap(
+					ArraysUtil.slice(keys, valid),
+					DoubleStream.of(ArraysUtil.slice(data[i], valid)).mapToInt(v -> (int) v).toArray()
+			);
+		}
+		return obs;
+	}
+
 	public static TIntIntMap[] fromCSV(String filename) throws IOException, CsvException {
 		ReaderCSV reader = new ReaderCSV(filename).read();
-		return ObservationBuilder.observe(reader.getVarNames(), reader.getData());
+		return observe(reader.getVarNames(), reader.getData());
 	}
 
 	public static List<HashMap<String, String>> fromCSVtoStrMap(String filename) throws IOException, CsvException {
@@ -225,24 +259,9 @@ public class DataUtil {
 		return Arrays.stream(s1.keys()).allMatch(v -> s1.get(v) == s2.get(v));
 	}
 
-	public static TIntIntMap[] unique(TIntIntMap[] data){
-		Set<TIntIntMap> xx = new HashSet<>(Arrays.asList(data));
-		return xx.toArray(TIntIntMap[]::new);
-		// for (TIntIntMap m : xx) {
-		// 	System.out.println(m);
-		// }
-
-		// ArrayList out = new ArrayList();
-		// for(TIntIntMap instance: data){
-		// 	if(!out.stream().anyMatch(s-> DataUtil.instanceEquals((TIntIntMap) s, instance)) ){
-		// 		out.add(instance);
-		// 	}
-		// }
-		// return (TIntIntMap[]) out.toArray(TIntIntMap[]::new);
-	}
 
 	public static TIntIntMap select(TIntIntMap d, int... keys){
-		TIntIntMap dnew = new TIntIntHashMap();
+		TIntIntMap dnew = new FIntIntHashMap();
 		for(int k : keys){
 			if(d.containsKey(k)){
 				dnew.put(k,d.get(k));
@@ -251,7 +270,7 @@ public class DataUtil {
 		return dnew;
 	}
 	public static TIntIntMap remove(TIntIntMap d, int... keys){
-		TIntIntMap dnew = new TIntIntHashMap(d);
+		TIntIntMap dnew = new FIntIntHashMap(d);
 		for(int k : keys){
 			if(d.containsKey(k)){
 				dnew.remove(k);
@@ -324,9 +343,9 @@ public class DataUtil {
 	}
 
 	public static TIntIntMap[] renameVars(TIntIntMap[]data, int[] oldVars, int[] newVars){
-		final TIntIntMap map = ObservationBuilder.observe(oldVars, newVars);
+		final TIntIntMap map = new FIntIntHashMap(oldVars, newVars);
 		return Arrays.stream(data).map(t -> {
-			TIntIntMap newTuple = new TIntIntHashMap();
+			TIntIntMap newTuple = new FIntIntHashMap();
 			for(int v : t.keys()) {
 				if(map.containsKey(v))
 					newTuple.put(map.get(v), t.get(v));
@@ -352,11 +371,11 @@ public class DataUtil {
 	}
 
 
-	public static ObservationBuilder observe(int...varsAndValues){
+	public static TIntIntMap observe(int...varsAndValues){
 		if(varsAndValues.length % 2 != 0)
 			throw new IllegalArgumentException("Number of arguments should be pair");
 
-		return ObservationBuilder.observe(
+		return new FIntIntHashMap(
 				IntStream.range(0, varsAndValues.length).filter(i -> i%2==0).map(i -> varsAndValues[i]).toArray(),
 				IntStream.range(0, varsAndValues.length).filter(i -> i%2==1).map(i -> varsAndValues[i]).toArray()
 		);
@@ -382,7 +401,7 @@ public class DataUtil {
 		HashMap <String, List> domains = DataUtil.getDomains(data, vars);
 		List newData = new ArrayList();
 		for(HashMap t : (List<HashMap<String, String>>)data) {
-			TIntIntMap tNew = new TIntIntHashMap();
+			TIntIntMap tNew = new FIntIntHashMap();
 			for(String var : (Set<String>)t.keySet()) {
 				String state = (String) t.get(var);
 				int varNum = Arrays.stream(vars).collect(Collectors.toList()).indexOf(var);
@@ -395,7 +414,7 @@ public class DataUtil {
 	}
 
 	public static TIntIntMap[] deepCopy(TIntIntMap[] data) {
-		return Arrays.stream(data).map(t -> new TIntIntHashMap(t)).toArray(TIntIntMap[]::new);
+		return Arrays.stream(data).map(t -> new FIntIntHashMap(t)).toArray(TIntIntMap[]::new);
 	}
 
 

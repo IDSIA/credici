@@ -7,12 +7,14 @@ import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DomainUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.ObservationBuilder;
+//import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
 import ch.idsia.crema.utility.ArraysUtil;
+import gnu.trove.map.TIntIntMap;
+
 import com.google.common.primitives.Ints;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import org.jgrapht.graph.DirectedAcyclicGraph;
 
 import java.util.ArrayList;
@@ -25,9 +27,9 @@ public class EquationOps {
 
 	private EquationOps() {}
 	
-	public static void setValue(BayesianFactor f, TIntIntHashMap exoPaValues, TIntIntHashMap endoPaValues, int var, int value){
+	public static void setValue(BayesianFactor f, TIntIntMap exoPaValues, TIntIntMap endoPaValues, int var, int value){
 
-		TIntIntHashMap conf = new TIntIntHashMap();
+		FIntIntHashMap conf = new FIntIntHashMap();
 
 		for(int y : endoPaValues.keys())
 			conf.put(y, endoPaValues.get(y));
@@ -49,9 +51,9 @@ public class EquationOps {
 
 
 
-	public static void setValue(BayesianFactor f, TIntIntHashMap exoPaValues, TIntIntHashMap endoPaValues, int[] vars, int[] value){
+	public static void setValue(BayesianFactor f, TIntIntMap exoPaValues, TIntIntMap endoPaValues, int[] vars, int[] value){
 
-		TIntIntHashMap conf = new TIntIntHashMap();
+		FIntIntHashMap conf = new FIntIntHashMap();
 
 		for(int y : endoPaValues.keys())
 			conf.put(y, endoPaValues.get(y));
@@ -73,7 +75,7 @@ public class EquationOps {
 		}
 	}
 
-	public static void setValues(BayesianFactor f, TIntIntHashMap exoPaValues, int leftVar, int... values) {
+	public static void setValues(BayesianFactor f, TIntIntMap exoPaValues, int leftVar, int... values) {
 
 		int[] endoParents = IntStream.of(f.getDomain().getVariables())
 				.filter(v -> v != leftVar && !exoPaValues.containsKey(v))
@@ -86,17 +88,17 @@ public class EquationOps {
 
 		for(int i = 0; i< values.length; i++){
 			int[] paValue = (int[]) endoPaSpace.get(i);
-			TIntIntHashMap endoPaValues = new TIntIntHashMap();
+			TIntIntMap endoPaValues = new FIntIntHashMap();
 			if(paValue.length>0)
-				endoPaValues = ObservationBuilder.observe(endoParents, paValue);
+				endoPaValues = new FIntIntHashMap(endoParents, paValue);
 			EquationOps.setValue(f, exoPaValues, endoPaValues, leftVar, values[i]);
 		}
 
 	}
 
-	public static int[] getValue(BayesianFactor f, TIntIntHashMap exoPaValues, TIntIntHashMap endoPaValues, int[] vars) {
+	public static int[] getValue(BayesianFactor f, TIntIntMap exoPaValues, TIntIntMap endoPaValues, int[] vars) {
 
-		TIntIntHashMap conf = new TIntIntHashMap();
+		FIntIntHashMap conf = new FIntIntHashMap();
 		for (int y : endoPaValues.keys())
 			conf.put(y, endoPaValues.get(y));
 		for (int u : exoPaValues.keys())
@@ -111,7 +113,7 @@ public class EquationOps {
 		throw new IllegalArgumentException("Non-valid equation for "+conf);
 	}
 
-	public static int[] getValue(BayesianFactor f, TIntIntHashMap exoPaValues, int leftVar) {
+	public static int[] getValue(BayesianFactor f, TIntIntMap exoPaValues, int leftVar) {
 
 		int[] endoParents = IntStream.of(f.getDomain().getVariables())
 				.filter(v -> v != leftVar && !exoPaValues.containsKey(v))
@@ -121,18 +123,18 @@ public class EquationOps {
 
 		for(int i = 0; i< values.length; i++){
 			int[] paValue = (int[]) endoPaSpace.get(i);
-			TIntIntHashMap endoPaValues = new TIntIntHashMap();
+			TIntIntMap endoPaValues = new FIntIntHashMap();
 			if(paValue.length>0)
-				endoPaValues = ObservationBuilder.observe(endoParents, paValue);
+				endoPaValues = new FIntIntHashMap(endoParents, paValue);
 			values[i] = EquationOps.getValue(f, exoPaValues, endoPaValues, new int[]{leftVar})[0];
 		}
 		return values;
 	}
 
 
-		// getValue: BayesianFactor f, TIntIntHashMap exoPaValues, int[] vars
+		// getValue: BayesianFactor f, FIntIntHashMap exoPaValues, int[] vars
 
-	public static int[] getValue(BayesianFactor f, TIntIntHashMap exoPaValues, int[] vars) {
+	public static int[] getValue(BayesianFactor f, TIntIntMap exoPaValues, int[] vars) {
 
 		if(exoPaValues.size()!=1) throw new IllegalArgumentException("Wrong number of exogenous variables");
 		int Uvar = exoPaValues.keys()[0];
@@ -140,7 +142,7 @@ public class EquationOps {
 		int[] endoPa = Arrays.stream(f.getDomain().getVariables()).filter(v -> v != Uvar && !ArraysUtil.contains(v, vars)).toArray();
 		int[] xvalues = new int[0];
 		for (int[] v : DomainUtil.getEventSpace(DomainUtil.subDomain(f.getDomain(), endoPa))) {
-			int[] xval = EquationOps.getValue(f, exoPaValues, ObservationBuilder.observe(endoPa, v), vars);
+			int[] xval = EquationOps.getValue(f, exoPaValues, new FIntIntHashMap(endoPa, v), vars);
 			xvalues = Ints.concat(xvalues, xval);
 		}
 		return xvalues;
@@ -159,7 +161,7 @@ public class EquationOps {
 
 		List Xvalues =
 				IntStream.range(0,Usize).mapToObj(u ->
-						EquationOps.getValue(f, ObservationBuilder.observe(exoVar,  u), leftVars)
+						EquationOps.getValue(f, FIntIntHashMap.of(exoVar,  u), leftVars)
 				).collect(Collectors.toList());
 
 		for(int[] confX : DomainUtil.getEventSpace(IntStream.range(0,m).mapToObj(k->domX).toArray(Strides[]::new))){
@@ -181,7 +183,7 @@ public class EquationOps {
 
 		List Xvalues =
 				IntStream.range(0,Usize).mapToObj(u ->
-						EquationOps.getValue(f, ObservationBuilder.observe(exoVar,  u), leftVars)
+						EquationOps.getValue(f, FIntIntHashMap.of(exoVar,  u), leftVars)
 				).collect(Collectors.toList());
 
 		for(int[] confX : DomainUtil.getEventSpace(IntStream.range(0,m).mapToObj(k->domX).toArray(Strides[]::new))){
@@ -206,7 +208,7 @@ public class EquationOps {
 
 		int[][] Xvalues =
 				IntStream.range(0,Usize).mapToObj(u ->
-						EquationOps.getValue(f, ObservationBuilder.observe(exoVar,  u), leftVars)
+						EquationOps.getValue(f, FIntIntHashMap.of(exoVar,  u), leftVars)
 				).toArray(int[][]::new);
 
 		List redundant = new ArrayList();
@@ -302,8 +304,8 @@ public class EquationOps {
 				try {
 					xvals = EquationOps.getValue(
 							f,
-							ObservationBuilder.observe(exoVar, uval[0]),
-							ObservationBuilder.observe(Y, yval),
+							FIntIntHashMap.of(exoVar, uval[0]),
+							FIntIntHashMap.of(Y, yval),
 							leftVars
 					);
 				}catch (Exception e){

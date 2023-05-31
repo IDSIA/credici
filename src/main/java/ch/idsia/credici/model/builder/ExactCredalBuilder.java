@@ -1,5 +1,6 @@
 package ch.idsia.credici.model.builder;
 
+import ch.idsia.credici.collections.FIntObjectHashMap;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.ConstraintsOps;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
@@ -16,7 +17,7 @@ import ch.idsia.crema.utility.ArraysUtil;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntObjectHashMap;
+
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
 
 import java.util.ArrayList;
@@ -54,7 +55,7 @@ public class ExactCredalBuilder extends CredalBuilder {
     }
 
     public ExactCredalBuilder setEmpirical(BayesianFactor[] factors){
-        empiricalFactors = new TIntObjectHashMap();
+        empiricalFactors = new FIntObjectHashMap();
         for(int u: causalmodel.getExogenousVars()){
             empiricalFactors.put(u, getAssociatedEmpirical(u, factors));
         }

@@ -8,7 +8,7 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 
 public class NonMarkovian2VarRandom {
@@ -50,7 +50,7 @@ public class NonMarkovian2VarRandom {
         StructuralCausalModel model = buildModel(new int[]{2,2});
         int x = 0, y = 1;
 
-        TIntIntHashMap intervention = new TIntIntHashMap();
+        FIntIntHashMap intervention = new FIntIntHashMap();
         intervention.put(x,0);
 
 

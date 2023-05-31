@@ -11,7 +11,7 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
 
 /**
@@ -38,16 +38,16 @@ public abstract class CausalInference<M, R extends GenericFactor>{
     }
 
     public R query(int target) throws InterruptedException {
-        return query(new int[]{target}, new TIntIntHashMap(), new TIntIntHashMap());
+        return query(new int[]{target}, new FIntIntHashMap(), new FIntIntHashMap());
     }
     public R query(int[] target) throws InterruptedException {
-        return query(target, new TIntIntHashMap(), new TIntIntHashMap());
+        return query(target, new FIntIntHashMap(), new FIntIntHashMap());
     }
     public R query(int target,  TIntIntMap evidence) throws InterruptedException {
-        return query(new int[]{target}, evidence, new TIntIntHashMap());
+        return query(new int[]{target}, evidence, new FIntIntHashMap());
     }
     public R query(int[] target,  TIntIntMap evidence) throws InterruptedException {
-        return query(target, evidence, new TIntIntHashMap());
+        return query(target, evidence, new FIntIntHashMap());
     }
     public R query(int target,  TIntIntMap evidence, TIntIntMap intervention) throws InterruptedException {
         return query(new int[]{target}, evidence, intervention);
@@ -55,11 +55,11 @@ public abstract class CausalInference<M, R extends GenericFactor>{
 
 
     public R doQuery(int target, TIntIntMap intervention) throws InterruptedException {
-        return query(new int[]{target}, new TIntIntHashMap(), intervention);
+        return query(new int[]{target}, new FIntIntHashMap(), intervention);
     }
 
     public R doQuery(int[] target, TIntIntMap intervention) throws InterruptedException {
-        return query(target, new TIntIntHashMap(), intervention);
+        return query(target, new FIntIntHashMap(), intervention);
     }
 
     public M getModel() {
@@ -89,7 +89,7 @@ public abstract class CausalInference<M, R extends GenericFactor>{
 
         Query q = this.counterfactualQuery()
                 .setIntervention(cause, falseState)
-                .setEvidence(ObservationBuilder.observe(new int[]{effect, cause}, new int[]{trueState, trueState}))
+                .setEvidence(new FIntIntHashMap(ObservationBuilder.observe(new int[]{effect, cause}, new int[]{trueState, trueState})))
                 .setTarget(effect);
 
         R res = (R) q.run();

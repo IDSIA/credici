@@ -7,7 +7,7 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 import java.io.IOException;
 
@@ -27,7 +27,7 @@ public class EquationlessFromFile {
 
 
         // Set query
-        TIntIntMap intervention = new TIntIntHashMap();
+        TIntIntMap intervention = new FIntIntHashMap();
         intervention.put(0,1);
         int target = 1;
 

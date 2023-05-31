@@ -27,9 +27,9 @@ import ch.idsia.crema.model.math.FactorOperation;
 import ch.idsia.crema.model.math.Operation;
 import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntHashSet;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import gnu.trove.set.TIntSet;
-import gnu.trove.set.hash.TIntHashSet;
 
 public class VE<F extends Factor<F>> implements JoinInference<F, F> {
 
@@ -75,7 +75,7 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
      * @param sequence
      */
     public void setSequence(int[] sequence) {
-        order = new TIntIntHashMap();
+        order = new FIntIntHashMap();
         for (int i = 0; i < sequence.length; ++i) {
             order.put(sequence[i], i);
         }
@@ -175,7 +175,7 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
 
 
     private int[] union(int[] first, int[]... others) {
-        TIntSet set = new TIntHashSet(first);
+        TIntSet set = new FIntHashSet(first);
         for (int[] other : others) {
             set.addAll(other);
         }
@@ -197,7 +197,7 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
  
 
     public F conditionalQuery(int target, int... conditioning) {
-        return conditionalQuery(new int[]{target},  new TIntIntHashMap(), conditioning);
+        return conditionalQuery(new int[]{target},  new FIntIntHashMap(), conditioning);
     }
 
 
@@ -271,7 +271,7 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
         bf.setData(new double[]{0.5,0.5});
         bn.setFactor(C, bf);
 
-        TIntIntHashMap ev = new TIntIntHashMap();
+        FIntIntHashMap ev = new FIntIntHashMap();
         ev.put(e1, 0);
         ev.put(e2, 0);
 

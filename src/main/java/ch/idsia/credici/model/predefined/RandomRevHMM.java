@@ -7,7 +7,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.RandomUtil;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 
 public class RandomRevHMM {
@@ -70,12 +70,12 @@ public class RandomRevHMM {
         System.out.println(model.getNetwork());
         int[] X = model.getEndogenousVars();
 
-        TIntIntHashMap evidence = new TIntIntHashMap();
+        FIntIntHashMap evidence = new FIntIntHashMap();
         //evidence.put(X[2*n-1], 0);
         evidence.put(5, 1);
 
 
-        TIntIntHashMap intervention = new TIntIntHashMap();
+        FIntIntHashMap intervention = new FIntIntHashMap();
        // intervention.put(X[0], 0);
         intervention.put(0, 0);
 

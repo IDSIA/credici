@@ -23,7 +23,7 @@ import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.model.math.FactorOperation;
 import gnu.trove.map.TIntObjectMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 
 public class AceInferenceTest {
     @Test
@@ -102,13 +102,13 @@ public class AceInferenceTest {
             System.out.println(Files.readString(f.toPath()));
             assertTrue(true);
             ai.update(model);
-            ai.compute(new TIntIntHashMap());
+            ai.compute(new FIntIntHashMap());
 
             BayesianFactor bf = ai.posterior(z);//new int[]{x}, new int[]{0}));
             
             System.out.println(Arrays.toString(bf.getData()));
 
-            ai.compute(new TIntIntHashMap(new int[]{x}, new int[]{0}));
+            ai.compute(new FIntIntHashMap(new int[]{x}, new int[]{0}));
             double xxx = ai.pevidence();
 
             System.out.println(xxx);
@@ -123,7 +123,7 @@ public class AceInferenceTest {
 
             start = System.currentTimeMillis();
             ve.setNormalize(false);
-            fac = ve.apply(bnet, new int[0], new TIntIntHashMap(new int[]{x}, new int[]{0}));
+            fac = ve.apply(bnet, new int[0], new FIntIntHashMap(new int[]{x}, new int[]{0}));
             end = System.currentTimeMillis();
             System.out.println("P(e) took "+ (end - start) + "ms");
             System.out.println(Arrays.toString(fac.getData()));
@@ -135,7 +135,7 @@ public class AceInferenceTest {
             System.out.println("P(e) took "+ (end - start) + "ms");
             System.out.println(Arrays.toString(ff.getData()));
 
-            //TIntObjectMap<double[]> ma = ai.getPosteriors(new TIntIntHashMap(new int[]{x}, new int[]{0}));
+            //TIntObjectMap<double[]> ma = ai.getPosteriors(new FIntIntHashMap(new int[]{x}, new int[]{0}));
             
         } catch (Exception e) {
             // TODO Auto-generated catch block

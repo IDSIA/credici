@@ -13,7 +13,7 @@ import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.TIntIntMap;
-import gnu.trove.map.hash.TIntIntHashMap;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -59,7 +59,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
 
         StructuralCausalModel infModel = getInferenceModel(q);
 
-        TIntIntHashMap filteredEvidence = new TIntIntHashMap();
+        FIntIntHashMap filteredEvidence = new FIntIntHashMap();
         // update the evidence
         for(int v: q.getEvidence().keys()){
             if(ArrayUtils.contains(model.getVariables(), v)){

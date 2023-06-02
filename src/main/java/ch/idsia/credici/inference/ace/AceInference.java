@@ -38,7 +38,7 @@ public class AceInference {
         networkFile = File.createTempFile("CrediciAceModel", ".net");
         networkFile.deleteOnExit();
         
-        Logger.getGlobal().info(networkFile.toString());
+        //Logger.getGlobal().info(networkFile.toString());
 
         try(NetworkWriter writer = new NetworkWriter(networkFile, "n", "s")) {
             writer.write(network.toBnet());

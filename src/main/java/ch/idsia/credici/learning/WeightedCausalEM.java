@@ -9,17 +9,16 @@ import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.util.FastMath;
 
 import ch.idsia.credici.collections.FIntObjectHashMap;
-import ch.idsia.credici.inference.ace.AceInference;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.DataUtil;
-import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.GraphicalModel;
 import ch.idsia.crema.utility.ArraysUtil;
@@ -33,6 +32,7 @@ public class WeightedCausalEM extends FrequentistCausalEM {
 
     public WeightedCausalEM(GraphicalModel<BayesianFactor> model) {
         super(model);
+        logger = Logger.getGlobal();
     }
 
 
@@ -49,10 +49,11 @@ public class WeightedCausalEM extends FrequentistCausalEM {
     @Override
     public void run(Collection stepArgs, int iterations) throws InterruptedException {
         setData((TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new));
-        
-        List<Pair> pairs = Arrays.asList(DataUtil.getCounts(data));
+        List<Pair> pairs = Arrays.asList(DataUtil.getCounts(data));       
         super.run(pairs, iterations);
     }
+    
+    Logger logger;
 
 
 
@@ -60,8 +61,11 @@ public class WeightedCausalEM extends FrequentistCausalEM {
     protected void stepPrivate(Collection stepArgs) throws InterruptedException {
         try {
             // E-stage
+            //logger.logp(Level.INFO, "WeightedCausalEM", "stepPrivate", "Expectation");
             TIntObjectMap<BayesianFactor> counts = expectation(stepArgs);
+
             // M-stage
+            //logger.logp(Level.INFO, "WeightedCausalEM", "stepPrivate", "Maximization");
             maximization(counts);
         } catch (IOException ex) {
             ex.printStackTrace();
@@ -135,8 +139,7 @@ public class WeightedCausalEM extends FrequentistCausalEM {
                     // Case with missing data
                     BayesianFactor phidden_obs = posteriorInference(hidden, observation);
                     
-                    //System.out.println(hidden[0] + ": " +currentIteration+" -> " + Arrays.toString(phidden_obs.getData()));
-
+                    
                     // multiply by the number of rows in the data
                     // we are multiplying here as we are using the P for the counts
                     phidden_obs = phidden_obs.scalarMultiply(w);

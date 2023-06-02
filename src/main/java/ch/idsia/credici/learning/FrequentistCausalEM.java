@@ -67,6 +67,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     private JoinInference<BayesianFactor,BayesianFactor> getInference(GraphicalModel<BayesianFactor> model, int[] elimSeq) {
         return (m, query, obs) ->
         {
+            obs = new FIntIntHashMap(obs); //copy
             CutObserved co = new CutObserved();
             GraphicalModel<BayesianFactor> coModel = co.execute(m, obs);
 
@@ -260,7 +261,8 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         if(!x) 
             System.out.println("xxx");
 
-        TIntIntMap filteredObs = new FIntIntHashMap(obs);
+        TIntIntMap filteredObs = new FIntIntHashMap();
+        filteredObs.putAll(obs);
         
         filteredObs.retainEntries((key, value) -> connected.contains(key));
         return filteredObs;

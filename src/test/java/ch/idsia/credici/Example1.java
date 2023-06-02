@@ -1,21 +1,32 @@
 package ch.idsia.credici;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.DecimalFormat;
+import java.text.NumberFormat;
+import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiFunction;
+import java.util.function.DoubleFunction;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
+
+import org.apache.commons.collections.IteratorUtils;
+import org.apache.commons.lang3.ArrayUtils;
 
 import com.opencsv.exceptions.CsvException;
 
-import cern.colt.Arrays;
+
 import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.learning.FrequentistCausalEM.StopCriteria;
-
+import ch.idsia.credici.learning.inference.AceMethod;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
@@ -56,6 +67,19 @@ public class Example1 {
         }
     }
 
+    private static NumberFormat format;
+    private static NumberFormat getFormat() {
+        if (format == null) {
+            format = new DecimalFormat("0.000");
+        }
+        return format;
+    };
+    
+    private static String toString(double[] data){
+        NumberFormat format = getFormat();
+        return DoubleStream.of(data).<String>mapToObj(format::format).collect(Collectors.joining(", "));
+    }
+
     // 5: 5450
     // 3: 5800
 
@@ -82,13 +106,14 @@ public class Example1 {
         System.out.println(map1.equals(map2));
     }
 
-    public static void main(String[] args) throws Exception {    
+    public static void main1(String[] args) throws Exception {    
         //String filename = "/Users/dhuber/Development/credici-dev/papers/21why/examples/consPearl.uai";
         String filename = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai";
         String dataname = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.csv";
-
-        // filename = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.uai";
-        // dataname = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.csv";
+        System.setProperty("java.util.logging.SimpleFormatter.format", 
+        "%4$s %2$s %5$s%6$s%n");
+        filename = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.uai";
+        dataname = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.csv";
         // filename="/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n13_mid3_d1000_05_mr098_r10_53.uai";
         // dataname="/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n13_mid3_d1000_05_mr098_r10_53.csv";
         
@@ -99,140 +124,141 @@ public class Example1 {
         //filename = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n13_mid3_d1000_05_mr098_r10_53.uai";
         StructuralCausalModel// model = generate();
         model = new CausalUAIParser(filename).parse();
-            
-        //  StructuralCausalModel model = new
-        //  CausalUAIParser("/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n13_mid3_d1000_05_mr098_r10_53.uai").parse();
-        Logger gl = Logger.getAnonymousLogger();
-        Handler[] h = gl.getHandlers();
 
-        gl.info("Sampling");
 
-        TIntIntMap[] samples = model.samples(100, model.getEndogenousVars());
-        Table table = new Table(samples);
 
-        System.out.println(table.toString());
-        table = new Table(DataUtil.fromCSV(dataname));
+        try { 
+            ExecutorService executor = Executors.newFixedThreadPool(10);  
+            executor.shutdown();
+            executor.awaitTermination(1, TimeUnit.HOURS);
+        } catch(Exception ex) { 
 
+        }
+        
+    }
+
+
+    public static List<StructuralCausalModel> inferenceCC(int method, int maxIter, int runs, Table table, StructuralCausalModel model, StructuralCausalModel[] random) {
+        CComponents cc = new CComponents();
+        for (var x : cc.apply(model, table)) {
+            var cmodel = x.getLeft();
+            var csamples = x.getRight();
+
+            try {
+                EMCredalBuilder builder = EMCredalBuilder.of(cmodel, csamples.convert())
+                        .setMaxEMIter(maxIter)
+                        .setNumTrajectories(runs)
+                        .setThreshold(0)
+                        .setStopCriteria(StopCriteria.MAX_ITER)
+                        .setInferenceVariation(method)
+                        .setInference(new AceMethod())
+                        .setRandomModels(cmodel, random)
+                        .build();
+
+                cc.addResults(cmodel.getName(), builder.getSelectedPoints());
+                
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+        return IteratorUtils.toList(cc.iterator(), runs);
+    }
+
+    public static List<StructuralCausalModel> inferenceFull(int method, int maxIter, int runs, Table table, StructuralCausalModel model, StructuralCausalModel[] random) {
+            var cmodel = model;
+            var csamples = table;
+
+            try {
+                EMCredalBuilder builder = EMCredalBuilder.of(cmodel, csamples.convert())
+                        .setMaxEMIter(maxIter)
+                        .setNumTrajectories(runs)
+                        .setThreshold(0)
+                        .setStopCriteria(StopCriteria.MAX_ITER)
+                        .setInferenceVariation(method)
+                        .setInference(new AceMethod())
+                        .setRandomModels(cmodel, random)
+                        .build();
+
+                return builder.getSelectedPoints();
+                
+            } catch (Exception ex) {
+                ex.printStackTrace();
+                return null;
+            }
+    }
+
+
+    public static void main(String[] args) throws FileNotFoundException, IOException, CsvException {
+        System.setProperty("java.util.logging.SimpleFormatter.format", 
+        "%4$s %2$s %5$s%6$s%n");
+
+        String filename = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.uai";
+        String dataname = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.csv";
+        
+        StructuralCausalModel// model = generate();
+        model = new CausalUAIParser(filename).parse();
+
+        Table table = new Table(DataUtil.fromCSV(dataname));
         model.initRandom(0);
 
-        int cause = 5;//8;
-        int effect = 0;//5;
-        int runs = 2;
+        int runs = 100;
 
         StructuralCausalModel[] random = IntStream.range(0,runs).mapToObj(a->{
             var m = model.copy();
             m.fillExogenousWithRandomFactors();
             return m;
         }).toArray(StructuralCausalModel[]::new);
+
+        
         int[] exo = model.getExogenousVars();
         for (int e : exo) {
-            System.out.println(e+": -> " +Arrays.toString(model.getFactor(e).getData()));
+            System.out.println(e + ": -> " + toString(model.getFactor(e).getData()));
         }
-        System.out.println("----------- FULL --");
-        if (true) {
-            long start = System.currentTimeMillis();
-    
-            EMCredalBuilder builder = EMCredalBuilder.of(model, samples)
-                    .setMaxEMIter(100)
-                    .setNumTrajectories(runs)
-                    .setThreshold(0)
-                    .setStopCriteria(StopCriteria.MAX_ITER)
-                    .setInferenceVariation(0)
-                    .setWeightedEM(true)
-                    .setRandomModels(model, random)
-                    .build();
+        for (boolean full : new boolean[] { false, true }) {
+            String name = full ? "FULL" : "CC";
+            
+            for (int method : new int[] { 0, 5}) {
+                System.out.println("------------------- "+name+" " + method + " ----------");
+                for (int maxIter : new int[] {10, 20, 50, 100, 150, 200, 300, 400, 500, 800, 1000}) {
                     
-            System.out.println((System.currentTimeMillis() - start));
-            double min = 1;
-            double max = 0;
-            for (var m : builder.getSelectedPoints()) {
-                for (int e : exo) {
-                    System.out.println(e + ": -> " +Arrays.toString(m.getFactor(e).getData()));
-                }
-                CausalVE inf = new CausalVE(m);
-                double pns = inf.probNecessityAndSufficiency(cause, effect).getData()[0];
-                if (pns > max)
-                    max = pns;
-                if (pns < min)
-                    min = pns;
-            }
-            System.out.println(min + " " + max);
-        }
-
-        System.out.println("-------------------------------- CC ----------");
-
-        if (true) {
-            CComponents cc = new CComponents();
-
-            long start = System.currentTimeMillis();
-            ExecutorService executor = Executors.newFixedThreadPool(10);
-
-            for (var x : cc.apply(model, table)) {
-
-                var runnable = new Runnable() {
-                    public void run() {
-                        var cmodel = x.getLeft();
-                        var csamples = x.getRight();
-
-                        try {
-                            EMCredalBuilder builder = EMCredalBuilder.of(cmodel, csamples.convert())
-                                    .setMaxEMIter(5)
-                                    .setNumTrajectories(runs)
-                                    .setThreshold(0)
-                                    .setStopCriteria(StopCriteria.MAX_ITER)
-                                    .setInferenceVariation(0)
-                                    //.setInference(new AceMethod())
-                                    .setRandomModels(cmodel, random)
-                                    .build();
-
-                            System.out.println(cmodel.getName());
-                            cc.addResults(cmodel.getName(), builder.getSelectedPoints());
-                            
-                        } catch (Exception ex) {
-                             ex.printStackTrace();
-                        }
+                    long start = System.currentTimeMillis();
+                    List<StructuralCausalModel> models;
+                    if (full)
+                        models = inferenceFull(method, maxIter, runs, table, model, random);
+                     else 
+                        models = inferenceCC(method, maxIter, runs, table, model, random);
+                        
+                    start = (System.currentTimeMillis() - start);
+                
+                    double d = 0;
+                    for (StructuralCausalModel m : models) {
+                        d += diff(model, m);    
                     }
-                };
-                //executor.execute(runnable);
-                runnable.run();
-            }
-
-            try { 
-                executor.shutdown();
-                executor.awaitTermination(1, TimeUnit.HOURS);
-            } catch(Exception ex) { 
-
-            }
-
-            System.out.println((System.currentTimeMillis() - start));
-            
-            double min = 1;
-            double max = 0;
-            var iter = cc.iterator();
-
-            //StructuralCausalModel k = iter.next();
-            //System.out.println(serialize.run(k));
-
-            for (int i = 0; iter.hasNext() && i < 10000; i++) {
-                if (!iter.hasNext()) System.out.println("STOOOOP");
-                StructuralCausalModel m = iter.next();
-                for (int e : exo) {
-                    System.out.println(e+": -> " +Arrays.toString(m.getFactor(e).getData()));
+                    
+                    System.out.println(maxIter + " Time: " + start + " Diff: " + d);
                 }
-
-                CausalVE inf = new CausalVE(m);
-                double pns = inf.probNecessityAndSufficiency(cause, effect).getData()[0];
-                if (pns > max)
-                    max = pns;
-                if (pns < min)
-                    min = pns;
             }
-            
-            System.out.println(min + " " + max);
         }
 
-              
     }
 
+    static interface BiDoubleFunc {
+        public double exec(double a1, double a2);
+    }
+
+    private static double elem(double[] d1, double[] d2, BiDoubleFunc f) {
+        double d =0;
+        for (int i = 0; i < d1.length; i++){
+            d += f.exec(d1[i], d2[i]);
+        }
+        return d;
+    }
+    private static double diff(StructuralCausalModel m1, StructuralCausalModel m2) {
+        double d = 0;
+        for (int exo : m1.getExogenousVars()) {
+            d += elem(m1.getFactor(exo).getData(), m2.getFactor(exo).getData(), (a,b)->Math.abs(a-b));
+        }
+        return d;
+    }
 }
 // 0.276778846706142

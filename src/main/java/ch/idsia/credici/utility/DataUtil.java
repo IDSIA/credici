@@ -19,7 +19,6 @@ import gnu.trove.map.TIntObjectMap;
 import ch.idsia.credici.collections.FIntIntHashMap;
 import ch.idsia.credici.collections.FIntObjectHashMap;
 
-import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.commons.lang3.tuple.Pair;
 
 import java.io.FileReader;
@@ -55,6 +54,16 @@ public class DataUtil {
 		return counts;
 	}
 
+	public static TIntIntMap[] unique(TIntIntMap[] data){
+		ArrayList out = new ArrayList();
+		for(TIntIntMap instance: data){
+			if(!out.stream().anyMatch(s-> DataUtil.instanceEquals((TIntIntMap) s, instance)) ){
+				out.add(instance);
+			}
+		}
+		return (TIntIntMap[]) out.toArray(TIntIntMap[]::new);
+	}
+
 	public static Pair<TIntIntMap, Long>[] getCounts(TIntIntMap[] data){
 		
 		if (data.length == 0) return new Pair[0];
@@ -68,7 +77,7 @@ public class DataUtil {
 			// use this string as a key to find the pair
 			var p = counts.get(mk);
 			if (p == null) { 
-				p = Pair.of(obs, 0l);
+				p = Pair.of(obs, 1l);
 			} else {
 				p = Pair.of(obs, p.getValue() + 1);
 			}
@@ -254,6 +263,12 @@ public class DataUtil {
 	}
 
 	public static boolean instanceEquals(TIntIntMap s1, TIntIntMap s2){
+		if (s1 instanceof FIntIntHashMap && s2 instanceof FIntIntHashMap)
+			return s1.equals(s2);
+		else {
+			
+		}
+		
 		if(ArraysUtil.difference(s1.keys(), s2.keys()).length != 0)
 			return false;
 		return Arrays.stream(s1.keys()).allMatch(v -> s1.get(v) == s2.get(v));

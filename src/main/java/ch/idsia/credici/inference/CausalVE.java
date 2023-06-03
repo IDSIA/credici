@@ -102,8 +102,8 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         WorldMapping map = WorldMapping.getMap(pns_model);
         int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
 
-
-        for(int x: CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
+        int[] endo = reality.getEndogenousVars();
+        for(int x: endo) pns_model.removeVariable(x);
 
         CausalVE infInternal =  new CausalVE(pns_model);
         Query q =  infInternal.causalQuery().setTarget(target);

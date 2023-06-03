@@ -31,7 +31,7 @@ import ch.idsia.crema.utility.CombinationsIterator;
  * the endogenous variables. When querying P(U,e) one needs to remember that e includes 
  * this parents.  
  */
-public class CComponents implements Iterable<StructuralCausalModel> {
+public class CComponents {
 
     public CComponents() { 
         initRandom();
@@ -41,6 +41,8 @@ public class CComponents implements Iterable<StructuralCausalModel> {
     }
     
     private StructuralCausalModel from; 
+    
+  
 
     public List<StructuralCausalModel> apply(StructuralCausalModel model) {
         var res = apply(model, null);
@@ -90,7 +92,7 @@ public class CComponents implements Iterable<StructuralCausalModel> {
 
     Map<String, List<StructuralCausalModel>> results;
 
-    public void addResults(String name, List<StructuralCausalModel> models) {
+    public synchronized void addResults(String name, List<StructuralCausalModel> models) {
         if (!results.get(name).isEmpty()) { 
             System.out.println("WOW");
         }
@@ -264,9 +266,8 @@ public class CComponents implements Iterable<StructuralCausalModel> {
         };
     }
 
-
-    @Override
-    public Iterator<StructuralCausalModel> iterator() {
+    
+    public Iterator<StructuralCausalModel> alignedIterator() {
         int max = results.values().stream().mapToInt(List::size).max().getAsInt();
         return new Iterator<StructuralCausalModel>() {
             int index = 0;

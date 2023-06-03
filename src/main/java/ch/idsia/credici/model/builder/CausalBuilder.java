@@ -16,6 +16,7 @@ import gnu.trove.map.TIntIntMap;
 import ch.idsia.credici.collections.FIntIntHashMap;
 import org.apache.commons.lang3.NotImplementedException;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
@@ -351,7 +352,8 @@ public class CausalBuilder {
 
     public static StructuralCausalModel transformFrom(BayesianNetwork bnet){
 
-        for(int x: CausalInfo.of(bnet).getEndogenousVars()) {
+        int[] endo = Arrays.stream(bnet.getVariables()).filter(v->bnet.getParents(v).length > 0).toArray();
+        for(int x: endo) {
             if (!bnet.getFactor(x).isDeterministic(bnet.getParents(x)))
                 throw new IllegalArgumentException("Variable " + x + " does not contain a deterministic function as factor");
         }
@@ -359,7 +361,7 @@ public class CausalBuilder {
         StructuralCausalModel model = new StructuralCausalModel();
 
         for(int v: bnet.getVariables()){
-            model.addVariable(v, bnet.getSize(v), CausalInfo.of(bnet).isExogenous(v));
+            model.addVariable(v, bnet.getSize(v), bnet.getParents(v).length == 0);
         }
 
         for(int v: bnet.getVariables()) {

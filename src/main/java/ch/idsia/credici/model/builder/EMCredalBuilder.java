@@ -370,7 +370,7 @@ public class EMCredalBuilder extends CredalBuilder{
 	 */
 	public EMCredalBuilder setRandomModels(StructuralCausalModel reference, StructuralCausalModel[] models) {
 		this.randomModels = new LinkedList<>(Arrays.stream(models).map(m->{
-			StructuralCausalModel model =  reference.copy();
+			StructuralCausalModel model = reference.copy();
 			for (int exo : model.getExogenousVars()) {
 				model.setFactor(exo, m.getFactor(exo).copy());
 			}
@@ -420,15 +420,18 @@ public class EMCredalBuilder extends CredalBuilder{
 
 			stepArgs = (Collection) Arrays.asList(data);
 		}
-
+		boolean intermediate = false;
 		em.setVerbose(verbose)
-				.setRecordIntermediate(true)
+				.setRecordIntermediate(intermediate)
 				.setTrainableVars(this.trainableVars)
 				.setInferenceMethod(method);
 
 		em.run(stepArgs, maxEMIter);
 
-		List<StructuralCausalModel> t = em.getIntermediateModels().stream().map(n->(StructuralCausalModel)n).collect(Collectors.toList());
+
+		List<StructuralCausalModel> t = intermediate ? 
+			em.getIntermediateModels().stream().map(n->(StructuralCausalModel)n).collect(Collectors.toList()):
+			Arrays.asList((StructuralCausalModel) em.getPosterior());
 
 		if(verbose)
 			System.out.println(" calculated EM trajectory of "+(t.size()-1));

@@ -18,6 +18,7 @@ import ch.idsia.credici.collections.FIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
 import org.apache.commons.lang3.ArrayUtils;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 public class CredalCausalVE extends CausalInference<SparseModel<BayesianFactor>, VertexFactor> {
@@ -107,7 +108,9 @@ public class CredalCausalVE extends CausalInference<SparseModel<BayesianFactor>,
 
         WorldMapping map = WorldMapping.getMap(pns_model);
         int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
-        for(int x:CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
+
+        int[] endo = Arrays.stream(reality.getVariables()).filter(v -> reality.getParents(v).length > 0).toArray();
+        for(int x:endo) pns_model.removeVariable(x);
 
         for(int v: pns_model.getVariables()){
             if (pns_model.getFactor(v) instanceof BayesianFactor)

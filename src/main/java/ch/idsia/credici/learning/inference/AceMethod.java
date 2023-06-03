@@ -8,6 +8,18 @@ import gnu.trove.map.TIntIntMap;
 public class AceMethod implements ComponentInference {
 
     private AceInference ace = null;
+    private boolean useTableCompiler = true;
+    private String acepath;
+    
+    public AceMethod() {
+        this("src/resources/ace/compile", true);
+    }
+
+    public AceMethod(String acepath, boolean useTable) {
+        this.acepath = acepath;
+        this.useTableCompiler = useTable;
+    }
+
 
     @Override
     public BayesianFactor posterior(int u) {
@@ -33,10 +45,15 @@ public class AceMethod implements ComponentInference {
     @Override
     public void initialize(StructuralCausalModel posteriorModel)   {
         try {
-            ace = new AceInference("src/resources/ace");
-            ace.init(posteriorModel, true);
+            ace = new AceInference(acepath);
+            ace.init(posteriorModel, useTableCompiler);
         } catch(Exception e) { 
             e.printStackTrace();
         }
+    }
+
+
+    public AceInference getAceInference() { 
+        return ace;
     }
 }

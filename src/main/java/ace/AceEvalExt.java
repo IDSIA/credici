@@ -83,22 +83,32 @@ public class AceEvalExt {
 		this.engine = new CrediciEngine(m_lmap_file, ac, true);
 	}
 
+	public String getACFileName() {
+		return  m_net_file + ".ac";
+	}
+
+	public String getLMAPFileName() {
+		return m_lmap_file;
+	}
+	
+
 	/**
 	 * @param net_file string representing the location of the .NET file
 	 * @param variables int[] variables whose CPTs may be modified during training
-	 * @param exepath the location of the ace executables
+	 * @param compexepath the location of the ace compile executable
 	 * @param table boolean indicating whether to use the java implemntation (true) or the native c2d compile (false)
 	 */
-	public AceEvalExt(String net_file,  int[] variables, String exepath, boolean table) throws Exception {
+	public AceEvalExt(String net_file,  int[] variables, String compexepath, boolean table) throws Exception {
 
 		// for constructing the network
 		m_net_file = net_file;
 		this.table = table;
+
 		// create a dummy net file
 		m_dummy_net_file = m_net_file.substring(0, m_net_file.length() - 4) + "_dummy.net";
 		m_dummy_lmap_file = m_dummy_net_file + ".lmap";
 		m_lmap_file = m_net_file + ".lmap";
-		m_compile_file = exepath + "/compile";
+		m_compile_file = compexepath;
 		
 		m_variables = IntStream.of(variables).boxed().collect(Collectors.toCollection(HashSet::new));
 

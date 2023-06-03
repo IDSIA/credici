@@ -185,8 +185,9 @@ public class CausalOps {
         }
 
         // get the new variables
+        int[] endo = Arrays.stream(reality.getVariables()).filter(v->reality.getParents(v).length > 0).toArray();
         int[] merged_vars = IntStream.range(0,
-                reality.getVariables().length + models.length * CausalInfo.of(reality).getEndogenousVars().length)
+                reality.getVariables().length + models.length * endo.length)
                 .toArray();
 
         //counterfactual mapping
@@ -194,17 +195,16 @@ public class CausalOps {
 
         // add variables of world 0 (reality)
         SparseModel merged = (SparseModel) reality.copy();
-        IntStream.of(CausalInfo.of(reality).getEndogenousVars())
-                .forEach(v->map.set(v,0,v));
+        IntStream.of(endo).forEach(v->map.set(v,0,v));
 
-        IntStream.of(CausalInfo.of(reality).getExogenousVars())
-                .forEach(v->map.set(v, WorldMapping.ALL,v));
+        // exo
+        IntStream.of(reality.getRoots()).forEach(v->map.set(v, WorldMapping.ALL,v));
 
         int w = 1;
         for(SparseModel m: models){
 
             int[] m_endogenous =  ArraysUtil.intersection(
-                    CausalInfo.of(reality).getEndogenousVars(),
+                    endo,
                     m.getVariables());
 
             // Add all the endogenous variables

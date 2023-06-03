@@ -495,6 +495,17 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	}
 
+	public boolean isMarkovian() {
+		return IntStream.of(getExogenousVars())
+                .allMatch(u -> this.getChildren(u).length <= 1);
+	}
+
+	public boolean isQuasiMarkovian() {
+		return IntStream.of(getEndogenousVars())
+			.allMatch(x -> getExogenousParents(x).length == 1);
+	}
+
+	
 	/**
 	 * Gets the empirical probability of a endogenous variable by marginalizing out
 	 * all its exogenous parents. In case of more than one input variable, returns

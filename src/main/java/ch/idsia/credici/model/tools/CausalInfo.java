@@ -25,24 +25,12 @@ public class CausalInfo {
         this.model = model;
     }
 
-
-    private static TIntObjectMap<CausalInfo> builders = new FIntObjectHashMap<>();
-
     public static CausalInfo of(GenericSparseModel model){
-
-        //assertIsCredal(model);
-
-        int hash = model.hashCode();
-        if(!builders.containsKey(hash))
-            builders.put(hash, new CausalInfo(model)) ;
-        return builders.get(hash);
+        return new CausalInfo(model);
     }
 
     public static CausalInfo of(StructuralCausalModel model){
-        int hash = model.hashCode();
-        if(!builders.containsKey(hash))
-            builders.put(hash, new CausalInfo(model)) ;
-        return builders.get(hash);
+        return new CausalInfo(model);
     }
 
 

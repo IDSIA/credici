@@ -24,6 +24,7 @@ import com.opencsv.exceptions.CsvException;
 
 
 import ch.idsia.credici.factor.EquationBuilder;
+import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.learning.FrequentistCausalEM.StopCriteria;
 import ch.idsia.credici.learning.inference.AceMethod;
@@ -32,6 +33,7 @@ import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.model.transform.CComponents;
 import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import gnu.trove.map.TIntIntMap;
 import ch.idsia.credici.collections.FIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl.NotImplementedException;
@@ -85,19 +87,30 @@ public class Example1 {
 
     private static StructuralCausalModel generate() {
         StructuralCausalModel model = new StructuralCausalModel("test");
-        int U = model.addVariable(2, 4, true, false);
-        int x1 = model.addVariable(0,2,false);
-        int x2 = model.addVariable(5,2,false);
-        model.addParent(x1, U);
-        model.addParents(x2 ,U);
-        var xx = EquationBuilder.of(model).conservative(U);
-        model.setFactor(x1, xx.get(x1));
-        model.setFactor(x2, xx.get(x2));
+        int U1 = model.addVariable(2, 2, true, false);
+        int U2 = model.addVariable(3, 4, true, false);
+        
+        int v1 = model.addVariable(0,2,false);
+        int v2 = model.addVariable(5,2,false);
+
+        model.addParent(v1, U1);
+        model.addParents(v2, U2, v1);
+        
+        var xx = EquationBuilder.of(model).conservative(U1, U2);
+        model.setFactor(v1, xx.get(v1));
+        model.setFactor(v2, xx.get(v2));
+        
         model.fillExogenousWithRandomFactors();
         return model;
     }
 
-    
+    public static void main21(String[] args) {
+        StructuralCausalModel model = generate();
+        AceMethod m = new AceMethod();
+        m.initialize(model);
+        String ac = m.getAceInference().getCircuitFileName();
+       // new File(ax)
+    }
     public static void xx(String[] args) throws IOException, InterruptedException, NotImplementedException, CsvException {
         FIntIntHashMap map1 = new FIntIntHashMap();
         FIntIntHashMap map2 = new FIntIntHashMap();
@@ -138,30 +151,48 @@ public class Example1 {
     }
 
 
-    public static List<StructuralCausalModel> inferenceCC(int method, int maxIter, int runs, Table table, StructuralCausalModel model, StructuralCausalModel[] random) {
+    public static List<StructuralCausalModel> inferenceCC(int method, int maxIter, int runs, Table table, StructuralCausalModel model, StructuralCausalModel[] random, boolean parallel) {
+        ExecutorService executor = parallel ? 
+            Executors.newFixedThreadPool(16):
+            Executors.newSingleThreadExecutor();
+
         CComponents cc = new CComponents();
-        for (var x : cc.apply(model, table)) {
-            var cmodel = x.getLeft();
-            var csamples = x.getRight();
+        
+        for (final var x : cc.apply(model, table)) {
+            Runnable trace = new Runnable() {
+                StructuralCausalModel cmodel = x.getLeft();
+                Table csamples = x.getRight();
+            
+                public void run() {
+                    try {
+                        EMCredalBuilder builder = EMCredalBuilder.of(cmodel, csamples.convert())
+                                .setMaxEMIter(maxIter)
+                                .setNumTrajectories(runs)
+                                .setThreshold(0)
+                                .setStopCriteria(StopCriteria.MAX_ITER)
+                                .setInferenceVariation(method)
+                                .setInference(new AceMethod())
+                                .setRandomModels(cmodel, random)
+                                .build();
 
-            try {
-                EMCredalBuilder builder = EMCredalBuilder.of(cmodel, csamples.convert())
-                        .setMaxEMIter(maxIter)
-                        .setNumTrajectories(runs)
-                        .setThreshold(0)
-                        .setStopCriteria(StopCriteria.MAX_ITER)
-                        .setInferenceVariation(method)
-                        .setInference(new AceMethod())
-                        .setRandomModels(cmodel, random)
-                        .build();
-
-                cc.addResults(cmodel.getName(), builder.getSelectedPoints());
-                
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
+                        cc.addResults(cmodel.getName(), builder.getSelectedPoints());
+                        
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            };
+            executor.submit(trace);
         }
-        return IteratorUtils.toList(cc.iterator(), runs);
+
+        try{
+            executor.shutdown();
+            executor.awaitTermination(1, TimeUnit.HOURS);
+        } catch(InterruptedException ex) { 
+            ex.printStackTrace();
+        }
+
+        return IteratorUtils.toList(cc.alignedIterator(), runs);
     }
 
     public static List<StructuralCausalModel> inferenceFull(int method, int maxIter, int runs, Table table, StructuralCausalModel model, StructuralCausalModel[] random) {
@@ -188,13 +219,18 @@ public class Example1 {
     }
 
 
-    public static void main(String[] args) throws FileNotFoundException, IOException, CsvException {
-        System.setProperty("java.util.logging.SimpleFormatter.format", 
-        "%4$s %2$s %5$s%6$s%n");
+    public static void main4(String[] args) throws FileNotFoundException, IOException, CsvException, NotImplementedException, InterruptedException {
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s %2$s %5$s%6$s%n");
+
 
         String filename = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.uai";
         String dataname = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.csv";
-        
+         filename="/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n13_mid3_d1000_05_mr098_r10_53.uai";
+         dataname="/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n13_mid3_d1000_05_mr098_r10_53.csv";
+        ///Users/dhuber/Development/credici-dev/papers/JoCI/output/synthetic/s1/random_mc2_n8_mid3_d1000_05_mr098_r10_88_uai_kl_th00_mIter500_wtrue_x300_nh0_0.csv
+        ///Users/dhuber/Development/credici-dev/papers/journalEM/output/synthetic/s3/random_mc2_n5_mid3_d1000_05_mr098_r10_100_uai_emcc_kl_th00_mIter500_wtrue_x200_0.csv
+         filename = "/Users/dhuber/Development/credici-dev/papers/journalEM/models/synthetic/s3/random_mc2_n5_mid3_d1000_05_mr098_r10_100.uai";
+         dataname = "/Users/dhuber/Development/credici-dev/papers/journalEM/models/synthetic/s3/random_mc2_n5_mid3_d1000_05_mr098_r10_100.csv";
         StructuralCausalModel// model = generate();
         model = new CausalUAIParser(filename).parse();
 
@@ -214,34 +250,111 @@ public class Example1 {
         for (int e : exo) {
             System.out.println(e + ": -> " + toString(model.getFactor(e).getData()));
         }
-        for (boolean full : new boolean[] { false, true }) {
+        DotSerialize ds = new DotSerialize();
+        System.out.println(ds.run(model));
+
+        for (int method : new int[] {  5, 0}) {
+            for (boolean full : new boolean[] { false, true }) {
             String name = full ? "FULL" : "CC";
-            
-            for (int method : new int[] { 0, 5}) {
-                System.out.println("------------------- "+name+" " + method + " ----------");
-                for (int maxIter : new int[] {10, 20, 50, 100, 150, 200, 300, 400, 500, 800, 1000}) {
-                    
-                    long start = System.currentTimeMillis();
-                    List<StructuralCausalModel> models;
-                    if (full)
-                        models = inferenceFull(method, maxIter, runs, table, model, random);
-                     else 
-                        models = inferenceCC(method, maxIter, runs, table, model, random);
+         
+            boolean[] parallel = full ? new boolean[]{false} : new boolean[] {false, true};
+                for (var pexec : parallel) {
+                    System.out.println("------------------- "+name+" " + method + " " + pexec + " ----------");
+                    for (int maxIter : new int[] {10, 10, 10, 20, 50, 100, 150, 200, 300, 400}) {
                         
-                    start = (System.currentTimeMillis() - start);
-                
-                    double d = 0;
-                    for (StructuralCausalModel m : models) {
-                        d += diff(model, m);    
-                    }
+                        long start = System.currentTimeMillis();
+                        List<StructuralCausalModel> models;
+                        if (full)
+                            models = inferenceFull(method, maxIter, runs, table, model, random);
+                        else 
+                            models = inferenceCC(method, maxIter, runs, table, model, random, pexec);
+
+                        start = (System.currentTimeMillis() - start);
                     
-                    System.out.println(maxIter + " Time: " + start + " Diff: " + d);
+                        double d = 0;
+                        for (StructuralCausalModel m : models) {
+                            d += diff(model, m);    
+                        }
+                        double[] res = pns(models, 3, 4);
+                        System.out.println(maxIter + " Time: " + start + " Diff: " + d + " " + Arrays.toString(res));
+                    }
                 }
             }
         }
 
     }
 
+
+
+    public static void main(String[] args) throws FileNotFoundException, IOException, CsvException, NotImplementedException, InterruptedException {
+        System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s %2$s %5$s%6$s%n");
+
+
+        String filename = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.uai";
+        String dataname = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.csv";
+         filename="/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n13_mid3_d1000_05_mr098_r10_53.uai";
+         dataname="/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n13_mid3_d1000_05_mr098_r10_53.csv";
+        ///Users/dhuber/Development/credici-dev/papers/JoCI/output/synthetic/s1/random_mc2_n8_mid3_d1000_05_mr098_r10_88_uai_kl_th00_mIter500_wtrue_x300_nh0_0.csv
+        ///Users/dhuber/Development/credici-dev/papers/journalEM/output/synthetic/s3/random_mc2_n5_mid3_d1000_05_mr098_r10_100_uai_emcc_kl_th00_mIter500_wtrue_x200_0.csv
+        
+         filename = "/Users/dhuber/Development/credici-dev/papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.uai";
+         dataname = "/Users/dhuber/Development/credici-dev/papers/journalEM/models/synthetic/s1/random_mc2_n5_mid3_d1000_05_mr098_r10_0.csv";
+        StructuralCausalModel// model = generate();
+        model = new CausalUAIParser(filename).parse();
+
+        Table table = new Table(DataUtil.fromCSV(dataname));
+        model.initRandom(0);
+
+        int runs = 2000;
+
+        StructuralCausalModel[] random = new StructuralCausalModel[0];
+        // IntStream.range(0,runs).mapToObj(a->{
+        //     var m = model.copy();
+        //     m.fillExogenousWithRandomFactors();
+        //     return m;
+        // }).toArray(StructuralCausalModel[]::new);
+
+        
+        int[] exo = model.getExogenousVars();
+        for (int e : exo) {
+            System.out.println(e + ": -> " + toString(model.getFactor(e).getData()));
+        }
+        DotSerialize ds = new DotSerialize();
+        System.out.println(ds.run(model));
+
+        long start = System.currentTimeMillis();
+        List<StructuralCausalModel> models = inferenceCC(5, 500, runs, table, model, random, true);
+
+        start = (System.currentTimeMillis() - start);
+    
+        double d = 0;
+        for (StructuralCausalModel m : models) {
+            d += diff(model, m);    
+        }
+        double[] res = pns(models, 1, 3);
+        System.out.println(" Time: " + start + " Diff: " + d + " " + Arrays.toString(res));
+    }
+
+
+
+    public static double[] pns(List<StructuralCausalModel> models, int cause, int effect) throws NotImplementedException, InterruptedException {
+        double min = Double.POSITIVE_INFINITY;
+        double max = 0;
+        for (var m : models) {
+            CausalVE inf = new CausalVE(m);
+            double p = inf.probNecessityAndSufficiency(cause, effect).getData()[0];
+            if (p > max)
+                max = p;
+            if (p < min)
+                min = p;
+        }
+        // CausalMultiVE cmve = new CausalMultiVE(models);
+        // cmve.setToInterval(true);
+        // IntervalFactor gf = (IntervalFactor) cmve.probNecessityAndSufficiency(cause, effect,0,1);
+        return new double[]{min, max};
+    }
+
+    
     static interface BiDoubleFunc {
         public double exec(double a1, double a2);
     }

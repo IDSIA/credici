@@ -41,7 +41,7 @@ public abstract class CredalBuilder {
 
 
 	protected void assertMarkovianity(){
-		if(!CausalInfo.of(causalmodel).isMarkovian() && !CausalInfo.of(causalmodel).isQuasiMarkovian()){
+		if(!causalmodel.isMarkovian() && !causalmodel.isQuasiMarkovian()){
 			throw new IllegalArgumentException("Wrong markovianity");
 		}
 	}

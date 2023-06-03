@@ -46,13 +46,13 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
                             JoinInference<BayesianFactor, BayesianFactor> inferenceEngine) {
         this.inferenceEngine = inferenceEngine;
         this.priorModel = model;
-        this.trainableVars = CausalInfo.of((StructuralCausalModel) priorModel).getExogenousVars();
+        this.trainableVars = ((StructuralCausalModel) priorModel).getExogenousVars();
     }
 
     public BayesianCausalEM(StructuralCausalModel model, int[] elimSeq){
         this.inferenceEngine = getDefaultInference(model, elimSeq);;
         this.priorModel = model;
-        this.trainableVars = CausalInfo.of(getPrior()).getExogenousVars();
+        this.trainableVars = getPrior().getExogenousVars();
     }
 
     public BayesianCausalEM(StructuralCausalModel model) {
@@ -123,7 +123,7 @@ public class BayesianCausalEM extends DiscreteEM<BayesianCausalEM> {
     public BayesianCausalEM setTrainableVars(int[] trainableVars) {
 
         for(int v: trainableVars)
-            if(!CausalInfo.of((StructuralCausalModel) priorModel).isExogenous(v))
+            if(!((StructuralCausalModel)priorModel).isExogenous(v))
                 throw new IllegalArgumentException("Only exogenous variables can be trainable. Error with "+v);
 
         return super.setTrainableVars(trainableVars);

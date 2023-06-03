@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.stream.IntStream;
@@ -137,7 +138,10 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
 
         WorldMapping map = WorldMapping.getMap(pns_model);
         int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
-        for(int x:CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
+        
+        // cannot be a SCM so just check if not root -> endo
+        int[] endo = Arrays.stream(reality.getVariables()).filter(v -> reality.getParents(v).length > 0).toArray();
+        for(int x:endo) pns_model.removeVariable(x);
 
 
         TIntIntMap query = InferenceTools.modifyModelForJointQuery(pns_model, target, new int[]{trueState, falseState});

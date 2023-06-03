@@ -85,7 +85,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     public FrequentistCausalEM(GraphicalModel<BayesianFactor> model, int[] elimSeq){
         this.inferenceEngine = getInference(model, elimSeq);
         this.priorModel = model;
-        this.trainableVars = CausalInfo.of((StructuralCausalModel) priorModel).getExogenousVars();
+        this.trainableVars = ((StructuralCausalModel) priorModel).getExogenousVars();
     }
 
     public FrequentistCausalEM(GraphicalModel<BayesianFactor> model) {
@@ -219,7 +219,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     public FrequentistCausalEM setTrainableVars(int[] trainableVars) {
 
         for(int v: trainableVars)
-            if(!CausalInfo.of((StructuralCausalModel) priorModel).isExogenous(v)) {
+            if(!((StructuralCausalModel) priorModel).isExogenous(v)) {
                 String msg = "Only exogenous variables can be trainable. Error with "+v;
                 Logger.getGlobal().severe(msg);
                 throw new IllegalArgumentException(msg);

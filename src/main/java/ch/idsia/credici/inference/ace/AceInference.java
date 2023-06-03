@@ -19,7 +19,9 @@ public class AceInference {
     private File networkFile;
     private StructuralCausalModel model; 
     private AceEvalExt ace; 
+
     private String acePath; 
+
     private int[] exo; 
 
     private Map<Integer, BayesianFactor> factors;
@@ -33,7 +35,10 @@ public class AceInference {
         this.acePath = acepath;
     }
 
-
+    public String getCircuitFileName() {
+        return ace.getACFileName();
+    }
+    
     public File init(StructuralCausalModel network, boolean table) throws IOException {
         networkFile = File.createTempFile("CrediciAceModel", ".net");
         networkFile.deleteOnExit();

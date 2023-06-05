@@ -1,0 +1,17 @@
+#!/bin/bash
+#
+# Unix script to compute Pr(e) for UAI 2008 evaluation
+#
+# by Mark Chavira
+#
+# Configuration: adjust the memory allocated to java below if necessary
+
+ACEDIR=`dirname $0`
+if [[ ($MACHTYPE =~ ^i386-apple-darwin.*$) || ($MACHTYPE =~ ^x86_64-apple.*$) ]]; then
+  C2D=c2d_osx
+  export DYLD_LIBRARY_PATH=$ACEDIR
+else
+  C2D=c2d_linux
+  export LD_LIBRARY_PATH=$ACEDIR
+fi
+java -DACEC2D="$ACEDIR/$C2D" -Xmx3700m -classpath "$ACEDIR/ace.jar:$ACEDIR/inflib.jar:$ACEDIR/jdom.jar" mark.reason.apps.BnUai08 -z "$@"

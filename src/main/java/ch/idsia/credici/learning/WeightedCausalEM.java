@@ -9,6 +9,7 @@ import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.IntStream;
@@ -18,6 +19,7 @@ import org.apache.commons.math3.util.FastMath;
 
 import ch.idsia.credici.collections.FIntObjectHashMap;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.io.uai.CausalUAIWriter;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.GraphicalModel;
@@ -28,7 +30,7 @@ import gnu.trove.map.TIntObjectMap;
 
 
 public class WeightedCausalEM extends FrequentistCausalEM {
-
+    static AtomicInteger counter = new AtomicInteger();
 
     public WeightedCausalEM(GraphicalModel<BayesianFactor> model) {
         super(model);
@@ -67,8 +69,17 @@ public class WeightedCausalEM extends FrequentistCausalEM {
             // M-stage
             //logger.logp(Level.INFO, "WeightedCausalEM", "stepPrivate", "Maximization");
             maximization(counts);
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             ex.printStackTrace();
+            int v = counter.incrementAndGet();
+        
+            CausalUAIWriter writer;
+            try {
+                writer = new CausalUAIWriter((StructuralCausalModel) posteriorModel, "ErrorModel"+v+".uai");
+                writer.writeToFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

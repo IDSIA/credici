@@ -322,8 +322,8 @@ public class PNS {
                     double[] mm = pns(models, cause, effect);
                     output.add("pns");
                     output.addAll(DoubleStream.of(mm).<String>mapToObj(v->Double.toString(v)).collect(Collectors.toList()));
-                    output.add(""+DoubleStream.of(mm).min());
-                    output.add(""+DoubleStream.of(mm).max());
+                    output.add(""+DoubleStream.of(mm).min().orElse(Double.NaN));
+                    output.add(""+DoubleStream.of(mm).max().orElse(Double.NaN));
                 }
             }
 

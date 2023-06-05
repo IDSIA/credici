@@ -1,24 +1,15 @@
 package ch.idsia.credici.model.builder;
 
-import ch.idsia.credici.inference.CausalMultiVE;
-import ch.idsia.credici.inference.CredalCausalVE;
-import ch.idsia.credici.learning.BayesianCausalEM;
 import ch.idsia.credici.learning.FrequentistCausalEM;
 import ch.idsia.credici.learning.WeightedCausalEM;
 import ch.idsia.credici.learning.inference.ComponentInference;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.io.uai.CausalUAIParser;
-import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.Probability;
-import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.learning.ExpectationMaximization;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import org.apache.commons.lang3.NotImplementedException;

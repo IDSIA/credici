@@ -132,7 +132,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		}
 	}
 	public void initRandom() {
-		initRandom(0);
+		randomSource = RandomSource.JDK.create();
 	}
 
 	/** 

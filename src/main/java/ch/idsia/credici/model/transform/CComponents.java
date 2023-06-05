@@ -34,16 +34,11 @@ import ch.idsia.crema.utility.CombinationsIterator;
 public class CComponents {
 
     public CComponents() { 
-        initRandom();
     }
 
-    public void initRandom() { 
-    }
-    
     private StructuralCausalModel from; 
     
   
-
     public List<StructuralCausalModel> apply(StructuralCausalModel model) {
         var res = apply(model, null);
         return res.stream().map(Pair<StructuralCausalModel, Table>::getLeft).collect(Collectors.toList());

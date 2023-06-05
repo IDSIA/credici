@@ -1,0 +1,17 @@
+#!/bin/bash
+#
+# Unix script to run AceEvaluate
+#
+# by Mark Chavira
+#
+# Configuration: adjust the memory allocated to java below if necessary
+
+ACEDIR=`dirname $0`
+if [[ ($MACHTYPE =~ ^i386-apple-darwin.*$) || ($MACHTYPE =~ ^x86_64-apple.*$) ]]; then
+  export DYLD_LIBRARY_PATH=$ACEDIR
+  OPTIONS=-Djava.awt.headless=true
+else
+  export LD_LIBRARY_PATH=$ACEDIR
+  OPTIONS=''
+fi
+java $OPTIONS -Xmx1512m -classpath "$ACEDIR/ace.jar:$ACEDIR/inflib.jar:$ACEDIR/jdom.jar" edu.ucla.belief.ace.AceEvaluate "$@"

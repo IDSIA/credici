@@ -2,7 +2,9 @@ package ch.idsia.credici.utility.apps;
 
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -37,6 +39,7 @@ import ch.idsia.credici.learning.FrequentistCausalEM.StopCriteria;
 import ch.idsia.credici.learning.inference.AceMethod;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
+import ch.idsia.credici.model.io.dot.DotSerialize;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.model.transform.CComponents;
 import ch.idsia.credici.utility.DataUtil;
@@ -82,8 +85,13 @@ public class PNS {
         
         Option c2d = new Option(null, "c2d", false, "Whether ace should use c2d rather than table (default)");
         
+        Option output = new Option("o", "output", true, "Name of output file (default stdout)");
+        output.setArgs(1);
+        output.setRequired(false);
+
         Options options = new Options();
         options.addOption(new Option(null, "help", false, "print this message"));
+        options.addOption(output);
         options.addOption(iter);
         options.addOption(runs);
         options.addOption(method);
@@ -199,7 +207,7 @@ public class PNS {
         }).toArray();
     }
 
-    static List<StructuralCausalModel> run(CommandLine cl, List<String> output) throws ParseException, FileNotFoundException, IOException, CsvException {
+    static List<StructuralCausalModel> run(StructuralCausalModel causalModel, Table datatable, CommandLine cl, List<String> output) throws ParseException, FileNotFoundException, IOException, CsvException {
         
         int maxIter = intOrDefault(cl, "iter", 1000);
         int runs = intOrDefault(cl, "runs", 200);
@@ -210,22 +218,7 @@ public class PNS {
         String method = stringOrDefault(cl, "method", "ace");
         int m = "ace".equals(method) ? 5 : 0;
 
-        File model = (File) cl.getParsedOptionValue("model");
-        if (!model.exists()) throw new ParseException("No such file: " + model.getName());
-        if (!model.canRead()) throw new ParseException("File not readable: " + model.getName());
-
-        File data = (File) cl.getParsedOptionValue("data");
-        if (data == null) {
-            String fn = model.toString();
-            int idx = fn.lastIndexOf(".");
-            int path = fn.lastIndexOf(File.separator);
-            if (idx == -1 || idx < path) data = new File(fn + ".csv");
-            else data = new File(fn.substring(0, idx) + ".csv");
-        }
-        if (!data.exists()) throw new ParseException("No such file: " + data.getName());
-
-        StructuralCausalModel causalModel =  new CausalUAIParser(model.toString()).parse();
-        Table datatable = new Table(DataUtil.fromCSV(data.toString()));
+     
 
         StructuralCausalModel[] randomModels;
         if (cl.hasOption("seed")) {
@@ -254,8 +247,6 @@ public class PNS {
         output.add(""+method);
         output.add(""+table);
         output.add(""+components);
-        output.add(model.toString());
-        output.add(data.toString());
 
         long start = System.currentTimeMillis();
         if (components) {
@@ -277,6 +268,7 @@ public class PNS {
             CommandLine cl = parser.parse(options, args);
             if (cl.hasOption("help")) throw new ParseException("Help requested");
             
+            boolean rundot = false;
             boolean runace = false;
             boolean runpns = false;
             
@@ -293,22 +285,60 @@ public class PNS {
                 for (len -= 3; len >= 0; --len) {
                     if ("ace".equals(left[len])) runace = true;
                     if ("pns".equals(left[len])) runpns = true;
+                    if ("graph".equals(left[len])) rundot = true;
                 }
-                
             }
             
-            List<String> output = new ArrayList<>();
-            List<StructuralCausalModel> models = run(cl, output);
-            output.add(""+cause);
-            output.add(""+effect);
+            File model = (File) cl.getParsedOptionValue("model");
+            if (!model.exists()) throw new ParseException("No such file: " + model.getName());
+            if (!model.canRead()) throw new ParseException("File not readable: " + model.getName());
+    
+            File data = (File) cl.getParsedOptionValue("data");
+            if (data == null) {
+                String fn = model.toString();
+                int idx = fn.lastIndexOf(".");
+                int path = fn.lastIndexOf(File.separator);
+                if (idx == -1 || idx < path) data = new File(fn + ".csv");
+                else data = new File(fn.substring(0, idx) + ".csv");
+            }
+            if (!data.exists()) throw new ParseException("No such file: " + data.getName());
+    
+            StructuralCausalModel causalModel =  new CausalUAIParser(model.toString()).parse();
+            Table datatable = new Table(DataUtil.fromCSV(data.toString()));
 
-            if (runpns) {
-                double[] mm = pns(models, cause, effect);
-                output.add("pns");
-                output.addAll(DoubleStream.of(mm).<String>mapToObj(v->Double.toString(v)).collect(Collectors.toList()));
+            List<String> output = new ArrayList<>();
+            output.add(model.toString());
+            output.add(data.toString());
+            if (rundot) {
+                DotSerialize ser = new DotSerialize();
+                System.out.println(ser.run(causalModel));
+            }
+            if (runace || runpns) {
+                List<StructuralCausalModel> models = run(causalModel, datatable, cl, output);
+                output.add(""+cause);
+                output.add(""+effect);
+
+                if (runpns) {
+                    double[] mm = pns(models, cause, effect);
+                    output.add("pns");
+                    output.addAll(DoubleStream.of(mm).<String>mapToObj(v->Double.toString(v)).collect(Collectors.toList()));
+                    output.add(""+DoubleStream.of(mm).min());
+                    output.add(""+DoubleStream.of(mm).max());
+                }
             }
 
-            System.out.println(output.stream().collect(Collectors.joining(",")));
+
+            String out = output.stream().collect(Collectors.joining(","));
+            if (cl.hasOption("output")) {
+                String of = cl.getOptionValue("output");
+                try(PrintWriter pw = new PrintWriter(new FileWriter(of))){
+                    pw.println(out);
+                } catch(IOException ex) {
+                    throw new ParseException(ex.getMessage());
+                }
+            } else {
+                System.out.println(out);
+            }
 
         } catch (ParseException pe) {
             System.err.println(pe.getMessage());

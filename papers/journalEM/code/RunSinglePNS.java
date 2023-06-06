@@ -7,10 +7,6 @@ import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.experiments.Logger;
 import ch.idsia.credici.utility.experiments.Terminal;
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-import ch.idsia.crema.utility.RandomUtil;
-import gnu.trove.map.TIntIntMap;
 import jdk.jshell.spi.ExecutionControl;
 import picocli.CommandLine;
 
@@ -25,7 +21,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 
-public class CalculatePNS extends Terminal {
+public class RunSinglePNS extends Terminal {
 
 	/*
 	--cause 9 --effect 0 --descr triangolo_ ./papers/journalEM/output/triangolo/1000/
@@ -47,7 +43,7 @@ public class CalculatePNS extends Terminal {
 
 	public static void main(String[] args) {
 		argStr = String.join(";", args);
-		CommandLine.run(new CalculatePNS(), args);
+		CommandLine.run(new RunSinglePNS(), args);
 		if(errMsg!="")
 			System.exit(-1);
 	}

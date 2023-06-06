@@ -15,27 +15,10 @@ from pathlib import Path
 print(sys.argv)
 
 
-id,seed=8,0
-id = int(sys.argv[1])
-seed = int(sys.argv[2])
-
-modelset = "synthetic/s12/"
-#modelset = "triangolo/"
-modelsetOutput = modelset
-#modelsetOutput = "synthetic/s12/"
-
-EMruns = 1000
-filterbyid = True
-CAUSE_EFFECT = []
+cause,alg="asia","CCALP"
+cause = int(sys.argv[1])
+alg = int(sys.argv[2])
 heapGB = 64
-TH = [0.0, 0.00000001, 0.0000001, 0.000001, 0.00001, 0.0001, 0.001, 0.01]
-#TH = [0.0, 0.00000001]
-SCRITERIA = ["LLratio", "KL"]
-
-
-
-print(f"id={id}")
-print(f"seed={seed}")
 
 
 ####
@@ -69,7 +52,7 @@ model_folder = Path(exp_folder, "models")
 data_folder = Path(exp_folder, "data")
 
 
-jar_file = Path(prj_path, "target/credici.jar")
+jar_file = Path(prj_path, "target/credici-0.1.5-dev-SNAPSHOT-jar-with-dependencies.jar")
 #java = "/Library/Java/JavaVirtualMachines/openjdk-12.0.1.jdk/Contents/Home/bin/java"
 java = "java"
 
@@ -91,59 +74,37 @@ def runjava(javafile, args_str, heap_gbytes=None):
 
 ## Get models
 
-end_pattern = ".uai"
-if filterbyid: end_pattern = f"_{id}"+end_pattern
-MODELS = [f for f in os.listdir(Path(model_folder, modelset)) if f.endswith(end_pattern)]
-
-print(MODELS)
-print(f"{len(MODELS)} models")
-
-
 # -w
 # -x 100
 # -m 500 -sc KL -th 0.00001 -a EMCC -rw --seed 0 --output ./papers/journalEM/output/synthetic/sample_files/ ./papers/journalEM/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai
 
-def learnpns(method, model, weighted = True,
-             rewrite = False,
-             executions = 100,
-             max_iter = 500,
-             stop_criteria = "KL", th = 0.00001,
-             output = ".", cause=None, effect=None, seed = 0):
+# -x 5 -m 10 --debug -a CCVE --cause asia -rw -o /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/output/literature --seed 0
+# /Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/papers/journalEM/models/literature/
 
-    if stop_criteria == "LLratio": th = 1 - th
+
+def asiapns(method, cause,
+             rewrite = True,
+             executions = 200,
+             max_iter = 500,
+             output = ".", seed = 0, debug=False):
+
 
     args = ""
-    if weighted: args += f"-w "
     if rewrite: args += f"-rw "
+    if debug: args += f"--debug "
+
     args += f"-x {executions} "
     args += f"-m {max_iter} "
-    args += f"-sc {stop_criteria} "
-    args += f"-th {th} "
     args += f"-a {method} "
     args += f"--seed {seed} "
     args += f"--output {output} "
     if cause is not None: args += f"--cause {cause} "
-    if effect is not None: args += f"--effect {effect} "
-    args += str(model)
+    args += f"{Path(model_folder, './literature/')}"
 
-    javafile = Path(code_folder, "LearnAndCalculatePNS.java")
+    javafile = Path(code_folder, "AsiaPNS.java")
     print(javafile)
     runjava(javafile, args_str=args, heap_gbytes=heapGB)
 
 ####
 
-if len(CAUSE_EFFECT)==0: CAUSE_EFFECT = [(None, None)]
-
-for m in MODELS:
-    modelpath = Path(model_folder, modelset, m)
-    outputpath = Path(res_folder, modelsetOutput)
-
-    for c,e in CAUSE_EFFECT:
-        #learnpns("CCVE", modelpath, output=outputpath, cause=c, effect=e)
-        #learnpns("CCALP", modelpath, output=outputpath, cause=c, effect=e)
-        for th in TH:
-                for criteria in SCRITERIA:
-                    learnpns("EMCC", modelpath,
-                             stop_criteria=criteria, th=th,
-                             executions=EMruns,
-                             output=outputpath, cause=c, effect=e, seed=seed)
+asiapns(alg, cause, output=Path(res_folder, "./literature"), debug=True)

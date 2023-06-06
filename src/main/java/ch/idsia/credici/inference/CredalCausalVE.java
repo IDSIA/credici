@@ -24,6 +24,7 @@ import java.util.Collection;
 
 public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
 
+    private boolean convexHull = true;
 
     public CredalCausalVE(StructuralCausalModel model){
 
@@ -107,9 +108,9 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
         if(filteredEvidence.size()>0)
             ve.setEvidence(filteredEvidence);
         ve.setNormalize(false);
-        VertexFactor.CONVEX_HULL_MARG = true;
+        VertexFactor.CONVEX_HULL_MARG = this.convexHull;
         ve.setFactors(infModel.getFactors());
-        return ((VertexFactor) ve.run(target)).normalize().convexHull(true);
+        return ((VertexFactor) ve.run(target)).normalize().convexHull(this.convexHull);
 
     }
 
@@ -136,4 +137,9 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
 
     }
 
+
+    public CredalCausalVE setConvexHull(boolean convexHull) {
+        this.convexHull = convexHull;
+        return this;
+    }
 }

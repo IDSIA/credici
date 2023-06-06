@@ -11,12 +11,13 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import gnu.trove.map.TIntIntMap;
+import jdk.jshell.spi.ExecutionControl;
 
 import java.util.Arrays;
 import java.util.HashMap;
 
 public class Jov_RSME {
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, ExecutionControl.NotImplementedException {
 
 
         // Define the SCM structure
@@ -75,6 +76,8 @@ public class Jov_RSME {
                 .run();
 
         System.out.println("Result exact: "+resExact);
+        VertexFactor pnsExact = (VertexFactor) infExact.probNecessityAndSufficiency(X,Y);
+        System.out.println("pns exact: "+pnsExact);
 
         EMCredalBuilder builder = EMCredalBuilder.of(m, data2)
                 .setWeightedEM(true)
@@ -91,6 +94,10 @@ public class Jov_RSME {
                 .run();     // K(vars[5]|[]) [0.41000000000825193, 0.5899999999917482]
 
         System.out.println(resApporx);
+
+
+        VertexFactor pnsApprox = (VertexFactor) infApprox.probNecessityAndSufficiency(X,Y);
+        System.out.println("pns approx: "+pnsApprox);
 
         System.out.println(resApporx.sampleVertex());
 

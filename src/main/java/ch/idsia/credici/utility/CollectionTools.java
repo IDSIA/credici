@@ -82,7 +82,7 @@ public class CollectionTools {
 
 		String[] colnames = (String[]) (table.stream()
 				.map(r -> (r).keySet())
-				.reduce((s1,s2)-> Sets.union(s1,s2)).get().toArray(String[]::new));
+				.reduce((s1,s2)-> Sets.union(s1,s2)).get().stream().sorted().toArray(String[]::new));
 
 
 		String[][] out = new String[table.size()+1][];

@@ -16,8 +16,8 @@ print(sys.argv)
 
 
 cause,alg="asia","CCALP"
-cause = int(sys.argv[1])
-alg = int(sys.argv[2])
+cause = str(sys.argv[1])
+alg = str(sys.argv[2])
 heapGB = 64
 
 

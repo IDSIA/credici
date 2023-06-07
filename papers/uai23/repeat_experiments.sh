@@ -58,6 +58,7 @@ for settings in $(cat experiment-flags.txt ); do
         -o "results_$UUID.csv" \
         -f "${modelspath}/${model}.uai" \
         --ace ace/compile \
+        --header \
         pns $cause $effect
     echo "done"
 

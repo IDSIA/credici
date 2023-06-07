@@ -66,18 +66,18 @@ for settings in $(cat experiment-flags.txt ); do
     if [[ "$FIRST" -eq "1" ]]; then
         echo header
         { echo -n "old_pns_l,old_pns_u," ; \
-          head -1 "results_$UUID.csv" ; \
+          cat "results_$UUID.csv" | head -1  ; \
           echo "memory,cntx-switch,page-faults,wall-clock,system-time,user-time,cpu" ; \
         } | paste -s -d, - > $output
         FIRST=0
     fi
 
     # concatenate the two files
-    { echo -n "$pnsl,$pnsu," ; tail -1 "results_$UUID.csv" ; tail -1 "timeings_$UUID.csv" ; } | paste -s -d, - >> $output
+    { echo -n "$pnsl,$pnsu," ; cat "results_$UUID.csv" | tail -1 ; tail -1 "timeings_$UUID.csv" ; } | paste -s -d, - >> $output
 done
 
 # cleanup
-rm -f "timeings_$UUID.csv"
-rm -f "results_$UUID.csv" 
+#rm -f "timeings_$UUID.csv"
+#rm -f "results_$UUID.csv" 
     
 unset IFS

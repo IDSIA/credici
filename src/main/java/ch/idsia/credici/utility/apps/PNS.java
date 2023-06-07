@@ -181,6 +181,12 @@ public class PNS {
         } catch(InterruptedException ex) { 
             ex.printStackTrace();
         }
+        
+        // just for the header alignments with Full
+        header.add("FullLikelihoods");
+        output.add("NA");
+        header.add("FullCircuitSize");
+        output.add("NA");
 
         // keep order
         for (int i =0; i< scms.size();++i) {
@@ -219,9 +225,20 @@ public class PNS {
                 output.add(lls);
 
                 int size = ace.getAceInference().getCircuitSize();
-                header.add("FullCircuitSize_");
+                header.add("FullCircuitSize");
                 output.add(""+size);
 
+                // just for the header alignments with CC
+                CComponents cc = new CComponents();
+                var scms = cc.apply(model, table);
+                for (int i = 0; i < scms.size(); ++i) {
+    
+                    header.add("CCLikelihoods_" + i);
+                    output.add("NA");
+        
+                    header.add("CCCircuitSize_" + i);
+                    output.add("NA");
+                }
                 return builder.getSelectedPoints();
                 
             } catch (Exception ex) {

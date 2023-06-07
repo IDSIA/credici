@@ -20,10 +20,11 @@ function read_param () {
 }
 
 # read the parameters from command line
-csv="$1"
-modelspath="$2"
-UUID="$3"
-output="$4"
+experiments="$1"
+csv="$2"
+modelspath="$3"
+UUID="$4"
+output="$5"
 
 # get info about stuff
 read_param "$csv" "cause"
@@ -46,15 +47,16 @@ model=${model%.uai*}
 FIRST=1
 
 IFS="$(echo -en "\n\r")" 
-for settings in $(cat experiment-flags.txt ); do 
+for settings in $(cat "$experiments"); do 
     echo running $settings
 
     rm -f "timeings_$UUID.csv"
     rm -f "results_$UUID.csv" 
     
     # NOTE: data file is obtained replacing the uai extension with csv
+    unset IFS
     $TIME_APP -f '%M,%c,%F,%e,%S,%U,%P' -o "timeings_$UUID.csv" $JAVA_HOME/bin/java -cp credici.jar ch.idsia.credici.utility.apps.PNS \
-        $line \
+        $(echo "$settings") \
         -o "results_$UUID.csv" \
         -f "${modelspath}/${model}.uai" \
         --ace ace/compile \
@@ -77,7 +79,7 @@ for settings in $(cat experiment-flags.txt ); do
 done
 
 # cleanup
-#rm -f "timeings_$UUID.csv"
-#rm -f "results_$UUID.csv" 
+rm -f "timeings_$UUID.csv"
+rm -f "results_$UUID.csv" 
     
 unset IFS

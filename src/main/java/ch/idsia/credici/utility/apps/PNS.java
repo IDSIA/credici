@@ -232,7 +232,6 @@ public class PNS {
                 CComponents cc = new CComponents();
                 var scms = cc.apply(model, table);
                 for (int i = 0; i < scms.size(); ++i) {
-    
                     header.add("CCLikelihoods_" + i);
                     output.add("NA");
         
@@ -316,7 +315,7 @@ public class PNS {
         output.add(""+s);        header.add("seed");
         output.add(""+method);      header.add("method");
         output.add(""+m);           header.add("methodCode");
-        output.add(""+table);       header.add("c2d");
+        output.add(""+table);       header.add("forceTable");
         output.add(""+components);  header.add("components");
 
         long start = System.currentTimeMillis();

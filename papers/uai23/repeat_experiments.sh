@@ -3,9 +3,9 @@
 which gtime
 if [[ "$?" -eq 1 ]]; then 
     echo setting gtime
-    alias gtime=/usr/bin/time 
+    TIME_APP=/usr/bin/time 
 else 
-    echo gtime present
+    TIME_APP=$(which gtime)
 fi
 
 # read some params from a previous exection. 
@@ -22,7 +22,7 @@ function read_param () {
 # read the parameters from command line
 csv="$1"
 modelspath="$2"
-uuid="$3"
+UUID="$3"
 output="$4"
 
 # get info about stuff
@@ -42,20 +42,41 @@ model=${model##*/}
 model=${model%.uai*}
 
 
-echo -n "$cause,$effect,$pnsl,$pnsu,$model,"
 
-# NOTE: data file is obtained replacing the uai extension with csv
-gtime -f '%M,%c,%F,%e,%S,%U,%P' -o "timeings_$UUID.csv" $JAVA_HOME/bin/java -cp credici.jar ch.idsia.credici.utility.apps.PNS \
-    -c          \
-    -r 200      \
-    -i 500     \
-    -t 16       \
-    -o "results_$UUID.csv" \
-    -f "${modelspath}/${model}.uai" \
-    --ace ace/compile \
-    pns $cause $effect
+FIRST=1
 
+IFS="$(echo -en "\n\r")" 
+for settings in $(cat experiment-flags.txt ); do 
+    echo running $settings
 
-# concatenate the two files
-{ tail -1 "results_$UUID.csv" ; tail -1 "timeings_$UUID.csv" ; } | paste -s -d, - >> $output
+    rm -f "timeings_$UUID.csv"
+    rm -f "results_$UUID.csv" 
+    
+    # NOTE: data file is obtained replacing the uai extension with csv
+    $TIME_APP -f '%M,%c,%F,%e,%S,%U,%P' -o "timeings_$UUID.csv" $JAVA_HOME/bin/java -cp credici.jar ch.idsia.credici.utility.apps.PNS \
+        $line \
+        -o "results_$UUID.csv" \
+        -f "${modelspath}/${model}.uai" \
+        --ace ace/compile \
+        pns $cause $effect
+    echo "done"
 
+    # first experiment? add header to output
+    if [[ "$FIRST" -eq "1" ]]; then
+        echo header
+        { echo -n "old_pns_l,old_pns_u," ; \
+          head -1 "results_$UUID.csv" ; \
+          echo "memory,cntx-switch,page-faults,wall-clock,system-time,user-time,cpu" ; \
+        } | paste -s -d, - > $output
+        FIRST=0
+    fi
+
+    # concatenate the two files
+    { echo -n "$pnsl,$pnsu," ; tail -1 "results_$UUID.csv" ; tail -1 "timeings_$UUID.csv" ; } | paste -s -d, - >> $output
+done
+
+# cleanup
+rm -f "timeings_$UUID.csv"
+rm -f "results_$UUID.csv" 
+    
+unset IFS

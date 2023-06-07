@@ -173,7 +173,7 @@ public class AceEvalExt {
 
 	public void commitLmap() throws Exception {
 		generate_lmap(m_lmap_file);
-		engine = new CrediciEngine(m_lmap_file, m_net_file + ".ac", table);
+		engine = new CrediciEngine(m_lmap_file, m_net_file + ".ac", true);
 	}
 
 	// compute query

@@ -20,10 +20,11 @@ function read_param () {
 }
 
 # read the parameters from command line
-csv="$1"
-modelspath="$2"
-UUID="$3"
-output="$4"
+experiments="$1"
+csv="$2"
+modelspath="$3"
+UUID="$4"
+output="$5"
 
 # get info about stuff
 read_param "$csv" "cause"
@@ -46,15 +47,16 @@ model=${model%.uai*}
 FIRST=1
 
 IFS="$(echo -en "\n\r")" 
-for settings in $(cat experiment-flags.txt ); do 
+for settings in $(cat "$experiments"); do 
     echo running $settings
 
     rm -f "timeings_$UUID.csv"
     rm -f "results_$UUID.csv" 
     
     # NOTE: data file is obtained replacing the uai extension with csv
+    unset IFS
     $TIME_APP -f '%M,%c,%F,%e,%S,%U,%P' -o "timeings_$UUID.csv" $JAVA_HOME/bin/java -cp credici.jar ch.idsia.credici.utility.apps.PNS \
-        $line \
+        $(echo "$settings") \
         -o "results_$UUID.csv" \
         -f "${modelspath}/${model}.uai" \
         --ace ace/compile \
@@ -66,14 +68,14 @@ for settings in $(cat experiment-flags.txt ); do
     if [[ "$FIRST" -eq "1" ]]; then
         echo header
         { echo -n "old_pns_l,old_pns_u," ; \
-          head -1 "results_$UUID.csv" ; \
+          cat "results_$UUID.csv" | head -1  ; \
           echo "memory,cntx-switch,page-faults,wall-clock,system-time,user-time,cpu" ; \
         } | paste -s -d, - > $output
         FIRST=0
     fi
 
     # concatenate the two files
-    { echo -n "$pnsl,$pnsu," ; tail -1 "results_$UUID.csv" ; tail -1 "timeings_$UUID.csv" ; } | paste -s -d, - >> $output
+    { echo -n "$pnsl,$pnsu," ; cat "results_$UUID.csv" | tail -1 ; tail -1 "timeings_$UUID.csv" ; } | paste -s -d, - >> $output
 done
 
 # cleanup

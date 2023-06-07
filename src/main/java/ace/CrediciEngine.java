@@ -26,4 +26,8 @@ public class CrediciEngine extends OnlineEngineSop {
     public String getLmfilename() {
         return lmfilename;
     }
+
+    public int getEdgeCount() {
+        return fEdgeToTailNode.length;
+    }
 }

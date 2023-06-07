@@ -472,4 +472,9 @@ public class AceEvalExt {
 	private int varId(String name) {
 		return Integer.parseInt(name.substring(1));
 	}
+
+
+	public int getCircuitSize(){ 
+		return engine.getEdgeCount();
+	}
 }

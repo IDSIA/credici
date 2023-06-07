@@ -50,14 +50,14 @@ public class WeightedCausalEM extends FrequentistCausalEM {
     double maxll;
     @Override
     public void run(Collection stepArgs, int iterations) throws InterruptedException {
+        ll = Double.NEGATIVE_INFINITY;
+
         setData((TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new));
         List<Pair> pairs = Arrays.asList(DataUtil.getCounts(data));       
         super.run(pairs, iterations);
     }
     
     Logger logger;
-
-
 
     @Override
     protected void stepPrivate(Collection stepArgs) throws InterruptedException {
@@ -80,10 +80,9 @@ public class WeightedCausalEM extends FrequentistCausalEM {
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            throw new InterruptedException(ex.getMessage());
         }
     }
-
-    private double ll;
 
     NumberFormat nf = NumberFormat.getNumberInstance();
     protected TIntObjectMap<BayesianFactor> expectation(Collection<Pair> dataWeighted) throws InterruptedException, IOException {

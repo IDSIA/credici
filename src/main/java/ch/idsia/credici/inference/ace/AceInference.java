@@ -15,6 +15,11 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import gnu.trove.map.TIntIntMap;
 import ch.idsia.credici.collections.FIntIntHashMap;
 
+/**
+ * Class abstracting a little the management of the AceExt class. 
+ * This will hide all network and node details and offer a clean interface between {@link StructuralCausalModel} objects and 
+ * the ACE compiler and Circuit evaluator.
+ */
 public class AceInference {
     private File networkFile;
     private StructuralCausalModel model; 
@@ -70,6 +75,10 @@ public class AceInference {
         this.dirty = true;
     }
 
+    /**
+     * Update the parameters of the model with new data. 
+     * @param f - {@link BayesianFactor} the new parameters
+     */
     public void update(BayesianFactor f) {
         if (f.getDomain().getSize() != 1) 
             throw new IllegalArgumentException("only single var domains");
@@ -79,11 +88,18 @@ public class AceInference {
         this.dirty = true;
     }
 
-  
+    /** 
+     * Mark the model as in need of computing an updating
+     */
     public void dirty() {
         this.dirty = true;
     }
 
+    /**
+     * get the marginal parameters for the specified variable.
+     * @param u the variable
+     * @return the parameters stored in a Bayesian factor.
+     */
     public BayesianFactor marginals(int u) {
         return factors.get(u);
     }
@@ -140,4 +156,9 @@ public class AceInference {
         return pe;
     }
 
+
+
+    public int getCircuitSize() {
+        return ace.getCircuitSize();
+    }
 }

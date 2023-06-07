@@ -15,21 +15,15 @@ import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
 
-import javax.xml.bind.annotation.adapters.CollapsedStringAdapter;
-
 import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
 import org.apache.commons.cli.HelpFormatter;
 import org.apache.commons.cli.Option;
-import org.apache.commons.cli.OptionGroup;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
 import org.apache.commons.cli.PatternOptionBuilder;
 import org.apache.commons.collections.IteratorUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.math3.optim.MaxIter;
-import org.eclipse.persistence.sessions.coordination.Command;
+import org.checkerframework.common.value.qual.IntRange;
 
 import com.opencsv.exceptions.CsvException;
 
@@ -43,12 +37,13 @@ import ch.idsia.credici.model.io.dot.DotSerialize;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.model.transform.CComponents;
 import ch.idsia.credici.utility.DataUtil;
-import gnu.trove.map.TIntIntMap;
+import ch.idsia.credici.utility.Probability;
 import jdk.jshell.spi.ExecutionControl.NotImplementedException;
 
 public class PNS {
 
     private static Options setup() {
+
         Option iter = new Option("i", "iter", true, "Set maximum number of iterations");
         iter.setArgs(1);
         iter.setOptionalArg(false);
@@ -89,8 +84,11 @@ public class PNS {
         output.setArgs(1);
         output.setRequired(false);
 
+        Option header = new Option("h", "header", false, "Include header row in output");
+
         Options options = new Options();
         options.addOption(new Option(null, "help", false, "print this message"));
+        options.addOption(header);
         options.addOption(output);
         options.addOption(iter);
         options.addOption(runs);
@@ -121,18 +119,27 @@ public class PNS {
 
 
 
-    public static List<StructuralCausalModel> inferenceCC(int method, String acepath, boolean useTable, int maxIter, int runs, Table table, StructuralCausalModel model, StructuralCausalModel[] random, boolean parallel, int threads) {
+    public static List<StructuralCausalModel> inferenceCC(int method, String acepath, boolean useTable, int maxIter, int runs, Table table, StructuralCausalModel model, StructuralCausalModel[] random, boolean parallel, int threads, List<String> output, List<String> header) {
         ExecutorService executor = parallel ? 
             Executors.newFixedThreadPool(threads):
             Executors.newSingleThreadExecutor();
 
         CComponents cc = new CComponents();
+        var scms = cc.apply(model, table);
+      
+        final Object lock = new Object();
         
-        for (final var x : cc.apply(model, table)) {
+        String[] lls = new String[scms.size()];
+        String[] sizes = new String[scms.size()];
+
+        for (int i = 0; i < scms.size(); ++i) {
+            final var x = scms.get(i);
+            final int index = i;
+
             Runnable trace = new Runnable() {
                 StructuralCausalModel cmodel = x.getLeft();
                 Table csamples = x.getRight();
-            
+                int icomponent = index;
                 public void run() {
                     try {
                         AceMethod ace = (method == 5) ? new AceMethod(acepath, useTable) : null;
@@ -147,6 +154,17 @@ public class PNS {
                                 .setRandomModels(cmodel, random)
                                 .build();
 
+                        int size = method == 5 ? ace.getAceInference().getCircuitSize() : -1;
+
+                        // components may be parallelly executed
+                        // synchronize on a output lock
+                        synchronized(lock) {
+                            double[] ll = builder.getLikelihoods();
+                            lls[icomponent] = Arrays.stream(ll).mapToObj(Double::toString).collect(Collectors.joining("|"));
+                            sizes[icomponent] = ""+size;
+                        }
+
+                        // lock (addResults is synchronized) also when reconciling the results 
                         cc.addResults(cmodel.getName(), builder.getSelectedPoints());
                         
                     } catch (Exception ex) {
@@ -164,10 +182,19 @@ public class PNS {
             ex.printStackTrace();
         }
 
+        // keep order
+        for (int i =0; i< scms.size();++i) {
+            header.add("CCLikelihoods_" + i);
+            output.add(lls[i]);
+
+            header.add("CCCircuitSize_" + i);
+            output.add(sizes[i]);
+        }
+
         return IteratorUtils.toList(cc.alignedIterator(), runs);
     }
 
-    public static List<StructuralCausalModel> inferenceFull(int method, String acepath, boolean useTable, int maxIter, int runs, Table table, StructuralCausalModel model, StructuralCausalModel[] random) {
+    public static List<StructuralCausalModel> inferenceFull(int method, String acepath, boolean useTable, int maxIter, int runs, Table table, StructuralCausalModel model, StructuralCausalModel[] random, List<String> output, List<String> header) {
             var cmodel = model;
             var csamples = table;
 
@@ -183,6 +210,17 @@ public class PNS {
                         .setInference(ace)
                         .setRandomModels(cmodel, random)
                         .build();
+
+                
+                        
+                double[] ll = builder.getLikelihoods();
+                String lls = Arrays.stream(ll).mapToObj(Double::toString).collect(Collectors.joining("|"));
+                header.add("FullLikelihoods");
+                output.add(lls);
+
+                int size = ace.getAceInference().getCircuitSize();
+                header.add("FullCircuitSize_");
+                output.add(""+size);
 
                 return builder.getSelectedPoints();
                 
@@ -207,7 +245,7 @@ public class PNS {
         }).toArray();
     }
 
-    static List<StructuralCausalModel> run(StructuralCausalModel causalModel, Table datatable, CommandLine cl, List<String> output) throws ParseException, FileNotFoundException, IOException, CsvException {
+    static List<StructuralCausalModel> run(StructuralCausalModel causalModel, Table datatable, CommandLine cl, List<String> output, List<String> header) throws ParseException, FileNotFoundException, IOException, CsvException {
         
         int maxIter = intOrDefault(cl, "iter", 1000);
         int runs = intOrDefault(cl, "runs", 200);
@@ -216,8 +254,22 @@ public class PNS {
         int seed = intOrDefault(cl, "seed", 0);
         
         String method = stringOrDefault(cl, "method", "ace");
-        int m = "ace".equals(method) ? 5 : 0;
-
+        
+        int m;
+        switch(method) {
+            case "ace":
+            case "ACE":
+            case "5":
+                m = 5;
+                break;
+            case "ve":
+            case "2": 
+                m = 2;
+                break;
+            default:
+                m=Integer.parseInt(method);
+                break;
+        }
      
 
         StructuralCausalModel[] randomModels;
@@ -240,23 +292,24 @@ public class PNS {
         List<StructuralCausalModel> models;
         boolean components = cl.hasOption("components");
         
-        output.add(""+maxIter);
-        output.add(""+runs);
-        output.add(""+threads);
-        output.add(""+seed);
-        output.add(""+method);
-        output.add(""+table);
-        output.add(""+components);
+        output.add(""+maxIter);     header.add("maxIter");
+        output.add(""+runs);        header.add("numRuns");
+        output.add(""+threads);     header.add("threads");
+        String s = cl.hasOption("seed") ? ""+seed : "NA";
+        output.add(""+s);        header.add("seed");
+        output.add(""+method);      header.add("method");
+        output.add(""+m);           header.add("methodCode");
+        output.add(""+table);       header.add("c2d");
+        output.add(""+components);  header.add("components");
 
         long start = System.currentTimeMillis();
         if (components) {
-            models = inferenceCC(m, acepath, table, maxIter, runs, datatable, causalModel, randomModels, parallel, threads);
+            models = inferenceCC(m, acepath, table, maxIter, runs, datatable, causalModel, randomModels, parallel, threads, output, header);
         } else {
-            models = inferenceFull(m, acepath, table, maxIter, runs, datatable, causalModel, randomModels);
+            models = inferenceFull(m, acepath, table, maxIter, runs, datatable, causalModel, randomModels, output, header);
         }
         start = System.currentTimeMillis() - start;
-        output.add(""+start);
-        output.add("ms");
+        output.add(""+start);  header.add("runtime");
         return models;
     }
 
@@ -305,39 +358,53 @@ public class PNS {
     
             StructuralCausalModel causalModel =  new CausalUAIParser(model.toString()).parse();
             Table datatable = new Table(DataUtil.fromCSV(data.toString()));
-
+            
+            double maxll = Probability.maxLogLikelihood(causalModel, datatable.convert());
+            
+            List<String> header = new ArrayList<>();
             List<String> output = new ArrayList<>();
-            output.add(model.toString());
-            output.add(data.toString());
+            output.add(model.toString()); header.add("modelpath");
+            output.add(data.toString());  header.add("datapath");
+            output.add("" + maxll);       header.add("maxLL");
+
             if (rundot) {
                 DotSerialize ser = new DotSerialize();
                 System.out.println(ser.run(causalModel));
             }
             if (runace || runpns) {
-                List<StructuralCausalModel> models = run(causalModel, datatable, cl, output);
-                output.add(""+cause);
-                output.add(""+effect);
+                List<StructuralCausalModel> models = run(causalModel, datatable, cl, output, header);
+                output.add(""+cause);    header.add("cause");
+                output.add(""+effect);   header.add("effect");
 
                 if (runpns) {
                     double[] mm = pns(models, cause, effect);
-                    output.add("pns");
-                    output.addAll(DoubleStream.of(mm).<String>mapToObj(v->Double.toString(v)).collect(Collectors.toList()));
-                    output.add(""+DoubleStream.of(mm).min().orElse(Double.NaN));
-                    output.add(""+DoubleStream.of(mm).max().orElse(Double.NaN));
+                    header.add("action"); output.add("pns");
+                    header.add("pnss"); output.add(DoubleStream.of(mm).mapToObj(Double::toString).collect(Collectors.joining("|")));
+    
+                    output.add(""+DoubleStream.of(mm).min().orElse(Double.NaN));  header.add("pns_l");
+                    output.add(""+DoubleStream.of(mm).max().orElse(Double.NaN));  header.add("pns_u");
                 }
             }
 
 
             String out = output.stream().collect(Collectors.joining(","));
+            String h = header.stream().collect(Collectors.joining(","));
+            
             if (cl.hasOption("output")) {
                 String of = cl.getOptionValue("output");
                 try(PrintWriter pw = new PrintWriter(new FileWriter(of))){
+                    if (cl.hasOption("header")) 
+                        pw.println(h);
+
                     pw.println(out);
                 } catch(IOException ex) {
                     throw new ParseException(ex.getMessage());
                 }
             } else {
+                if (cl.hasOption("header")) 
+                    System.out.println(h);
                 System.out.println(out);
+                    
             }
 
         } catch (ParseException pe) {

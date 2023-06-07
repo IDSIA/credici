@@ -40,6 +40,7 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private double regularization = 0.00001;
 
+    protected double ll; 
 
     private HashMap<String, BayesianFactor> posteriorCache = new HashMap<>();
 
@@ -57,11 +58,15 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
 
     private double smoothing = 0.0;
 
+    protected int currentIteration = 0;
+
+
     public enum StopCriteria {
         KL,
         L1,
         LLratio, 
-        MAX_ITER
+        MAX_ITER,
+        DIFF
     }
 
     private JoinInference<BayesianFactor,BayesianFactor> getInference(GraphicalModel<BayesianFactor> model, int[] elimSeq) {
@@ -183,18 +188,20 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     }
 
     private boolean hasConverged(int... exoCC) {
-        if(stopCriteria == StopCriteria.KL) {
-            return TrajectoryAnalyser.hasConvergedKL((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
-        }else if(stopCriteria == StopCriteria.L1) {
+        switch(stopCriteria) {
+            case KL:
+                return TrajectoryAnalyser.hasConvergedKL((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
+            case L1:
                 return TrajectoryAnalyser.hasConvergedL1((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
-        }else if(stopCriteria == StopCriteria.LLratio){
-            return TrajectoryAnalyser.hasConvergedLLratio((StructuralCausalModel) posteriorModel, data, threshold, exoCC);
-        } else if(stopCriteria == StopCriteria.MAX_ITER) {
-            return false;
-        }else{
-            throw new IllegalArgumentException("Wrong stopping Criteria");
+            case LLratio:
+                return TrajectoryAnalyser.hasConvergedLLratio((StructuralCausalModel) posteriorModel, data, threshold, exoCC);
+            case MAX_ITER:
+                return false;
+            case DIFF:
+                return TrajectoryAnalyser.hasConvergedDiff((StructuralCausalModel) posteriorModel, replacedFactors, threshold, exoCC);
+            default:
+                throw new IllegalArgumentException("Wrong stopping Criteria");
         }
-
     }
 
     public FrequentistCausalEM setRegularization(double regularization) {
@@ -448,11 +455,10 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
         this.data = data;
     }
 
-    int currentIteration = 0;
-
+    
     @Override
     public void run(Collection stepArgs, int iterations) throws InterruptedException {
-
+        ll = 0;
         if(data == null)
             data = (TIntIntMap[]) stepArgs.toArray(TIntIntMap[]::new);
 
@@ -518,6 +524,14 @@ public class FrequentistCausalEM extends DiscreteEM<FrequentistCausalEM> {
     public FrequentistCausalEM setThreshold(double threshold) {
         this.threshold = threshold;
         return this;
+    }
+
+    /**
+     * Get the posterior model's likelihood
+     * @return
+     */
+    public double getLikelihood() {
+        return ll;
     }
 }
 

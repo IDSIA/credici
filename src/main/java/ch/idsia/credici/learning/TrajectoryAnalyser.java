@@ -15,6 +15,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.ArrayUtils;
+
 public class TrajectoryAnalyser {
 
 
@@ -70,6 +72,24 @@ public class TrajectoryAnalyser {
     }
     /*
  */
+    public static boolean hasConvergedDiff(StructuralCausalModel posteriorModel,
+            TIntObjectMap<BayesianFactor> replacedFactors, double threshold, int[] exoCC) {
+        for (var key : replacedFactors.keys()) {
+            var bf1 = replacedFactors.get(key);
+            var bf2 = posteriorModel.getFactor(key);
 
+            double diff = 0;
+            double[] a1 = bf1.getInteralData();
+            double[] a2 = bf2.getInteralData();
+            for (int i = 0; i < a1.length; ++i) {
+                diff += Math.abs(a1[i] - a2[i]);
+            }
+            
+            if (diff > threshold)
+                return false;
+        }
+        return true;
+    }
+    
 
 }

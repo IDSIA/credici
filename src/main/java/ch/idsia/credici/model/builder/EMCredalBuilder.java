@@ -120,7 +120,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 	public EMCredalBuilder buildTrajectories() throws InterruptedException {
 		trajectories = new ArrayList<>();
-	
+		this.likelihoods = new ArrayList<>();
+		
 		if (inferenceVariation == 5 && this.method != null){
 			this.method.initialize(causalmodel);
 		}
@@ -343,14 +344,7 @@ public class EMCredalBuilder extends CredalBuilder{
 		return selectedPoints.stream().allMatch(this::isInside);
 	}
 
-	private double aceQueryTime;
-	private double aceSetupTime;
-	public double getAceQueryTime() {
-		return aceQueryTime;
-	}
-	public double getAceSetupTime() {
-		return aceSetupTime;
-	}
+
 
 
 	private LinkedList<StructuralCausalModel> randomModels;
@@ -380,11 +374,10 @@ public class EMCredalBuilder extends CredalBuilder{
 		}
 	}
 
+
+	private List<Double> likelihoods;
+
 	private List<StructuralCausalModel> runEM() throws InterruptedException {
-		// if (inferenceVariation == 5 && this.method != null){
-		// 	this.method.initialize(causalmodel);
-		// 	System.out.println("compiled" + causalmodel);
-		// }
 		StructuralCausalModel startingModel = randomModel(causalmodel);
 		
 		FrequentistCausalEM em = null;
@@ -392,8 +385,6 @@ public class EMCredalBuilder extends CredalBuilder{
 
 		if(this.data==null) {
 			throw new IllegalArgumentException("No data provided");
-			//em = new BayesianCausalEM(startingModel).setKlthreshold(threshold).setRegularization(0.0);
-			//stepArgs = (Collection) endogJointProbs.values();
 		} else if(weightedEM) {
 			em = new WeightedCausalEM(startingModel).setRegularization(0.0)
 					.setStopCriteria(stopCriteria)
@@ -418,7 +409,9 @@ public class EMCredalBuilder extends CredalBuilder{
 				.setInferenceMethod(method);
 
 		em.run(stepArgs, maxEMIter);
-
+		
+		// save model's likelihood
+		likelihoods.add(em.getLikelihood());
 
 		List<StructuralCausalModel> t = intermediate ? 
 			em.getIntermediateModels().stream().map(n->(StructuralCausalModel)n).collect(Collectors.toList()):
@@ -491,6 +484,11 @@ public class EMCredalBuilder extends CredalBuilder{
 		this.method = inference;
 		return this;
 	}
+
+
+    public double[] getLikelihoods() {
+        return likelihoods.stream().mapToDouble(i->i).toArray();
+    }
 
 
 }

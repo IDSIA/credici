@@ -33,6 +33,8 @@ import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.model.transform.CComponents;
 import ch.idsia.credici.utility.DataUtil;
+import ch.idsia.credici.utility.Probability;
+import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import gnu.trove.map.TIntIntMap;
 import ch.idsia.credici.collections.FIntIntHashMap;
@@ -96,19 +98,37 @@ public class Example1 {
         model.addParent(v1, U1);
         model.addParents(v2, U2, v1);
         
-        var xx = EquationBuilder.of(model).conservative(U1, U2);
-        model.setFactor(v1, xx.get(v1));
-        model.setFactor(v2, xx.get(v2));
+        BayesianFactor f1 = new BayesianFactor(model.getDomain(v1, U1), new double[] {
+            0,1,
+            1,0
+        }, false);
+
+        BayesianFactor f2 = new BayesianFactor(model.getDomain(v2, v1, U2), new double[] {
+            0,1, // v1=0
+            1,0,  // v1=1
+            1,0, // v1=0
+            0,1,  // v1=1,
+            1,0, // v1=0
+            1,0,  // v1=1
+            0,1, // v1=0
+            0,1,  // v1=1
+        }, false);
+        
+        model.setFactor(v1, f1);
+        model.setFactor(v2, f2);
         
         model.fillExogenousWithRandomFactors();
         return model;
     }
 
-    public static void main21(String[] args) {
+    public static void main3123(String[] args) throws IOException {
         StructuralCausalModel model = generate();
         AceMethod m = new AceMethod();
         m.initialize(model);
+
         String ac = m.getAceInference().getCircuitFileName();
+        System.out.println(ac);
+        System.in.read();
        // new File(ax)
     }
     public static void xx(String[] args) throws IOException, InterruptedException, NotImplementedException, CsvException {
@@ -119,7 +139,7 @@ public class Example1 {
         System.out.println(map1.equals(map2));
     }
 
-    public static void main1(String[] args) throws Exception {    
+    public static void main0asd(String[] args) throws Exception {    
         //String filename = "/Users/dhuber/Development/credici-dev/papers/21why/examples/consPearl.uai";
         String filename = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.uai";
         String dataname = "/Users/dhuber/Development/credici-dev/papers/clear23/models/synthetic/s1/random_mc2_n6_mid3_d1000_05_mr098_r10_17.csv";
@@ -219,7 +239,7 @@ public class Example1 {
     }
 
 
-    public static void main4(String[] args) throws FileNotFoundException, IOException, CsvException, NotImplementedException, InterruptedException {
+    public static void main(String[] args) throws FileNotFoundException, IOException, CsvException, NotImplementedException, InterruptedException {
         System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s %2$s %5$s%6$s%n");
 
 
@@ -235,8 +255,9 @@ public class Example1 {
         model = new CausalUAIParser(filename).parse();
 
         Table table = new Table(DataUtil.fromCSV(dataname));
+        
+        
         model.initRandom(0);
-
         int runs = 100;
 
         StructuralCausalModel[] random = IntStream.range(0,runs).mapToObj(a->{
@@ -253,14 +274,13 @@ public class Example1 {
         DotSerialize ds = new DotSerialize();
         System.out.println(ds.run(model));
 
-        for (int method : new int[] {  5, 0}) {
-            for (boolean full : new boolean[] { false, true }) {
+        for (boolean full : new boolean[] { false, true }) {
             String name = full ? "FULL" : "CC";
-         
             boolean[] parallel = full ? new boolean[]{false} : new boolean[] {false, true};
-                for (var pexec : parallel) {
+        for (var pexec : parallel) {
+            for (int method : new int[] {  5, 2 }) { 
                     System.out.println("------------------- "+name+" " + method + " " + pexec + " ----------");
-                    for (int maxIter : new int[] {10, 10, 10, 20, 50, 100, 150, 200, 300, 400}) {
+                    for (int maxIter : new int[] {50, 100, 150, 200, 300, 400}) {
                         
                         long start = System.currentTimeMillis();
                         List<StructuralCausalModel> models;
@@ -286,7 +306,7 @@ public class Example1 {
 
 
 
-    public static void main(String[] args) throws FileNotFoundException, IOException, CsvException, NotImplementedException, InterruptedException {
+    public static void main2123(String[] args) throws FileNotFoundException, IOException, CsvException, NotImplementedException, InterruptedException {
         System.setProperty("java.util.logging.SimpleFormatter.format", "%4$s %2$s %5$s%6$s%n");
 
 

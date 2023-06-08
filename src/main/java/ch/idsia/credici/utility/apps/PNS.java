@@ -205,20 +205,26 @@ public class PNS {
         output.add("NA");
 
         // keep order
-        for (int i =0; i< scms.size();++i) {
-            header.add("CCLikelihoods_" + i);
-            output.add(lls[i]);
+        header.add("CCCount");
+        output.add("" + scms.size());
 
-            header.add("CCCircuitSize_" + i);
-            output.add(sizes[i]);
+        
+        String clikes = Arrays.stream(lls).collect(Collectors.joining(";"));
+        String csizes = Arrays.stream(sizes).collect(Collectors.joining(";"));
+        String ctimes = Arrays.stream(compile).collect(Collectors.joining(";"));
+        String ttimes = Arrays.stream(tjts).collect(Collectors.joining(";"));
+        
+        header.add("CCLikelihoods");
+        output.add(clikes);
+        
+        header.add("CCCircuitSizes");
+        output.add(csizes);
+        
+        header.add("CCCompileTimes");
+        output.add(ctimes);
 
-            header.add("CCCompileTime_" + i);
-            output.add(compile[i]);
-            
-            header.add("CCEMCCRunTimes_" + i);
-            output.add(tjts[i]);
-
-        }
+        header.add("CCEMCCRunTimes");
+        output.add(ttimes);
 
         return IteratorUtils.toList(cc.alignedIterator(), runs);
     }
@@ -240,14 +246,12 @@ public class PNS {
                         .setRandomModels(cmodel, random)
                         .build();
 
-                
-                        
                 double[] ll = builder.getLikelihoods();
                 String lls = Arrays.stream(ll).mapToObj(Double::toString).collect(Collectors.joining("|"));
                 header.add("FullLikelihoods");
                 output.add(lls);
 
-                int size = ace.getAceInference().getCircuitSize();
+                int size = method == 5 ? ace.getAceInference().getCircuitSize() : -1;
                 header.add("FullCircuitSize");
                 output.add(""+size);
 
@@ -262,20 +266,22 @@ public class PNS {
                 // just for the header alignments with CC
                 CComponents cc = new CComponents();
                 var scms = cc.apply(model, table);
-                for (int i = 0; i < scms.size(); ++i) {
-                    header.add("CCLikelihoods_" + i);
-                    output.add("NA");
+
+                header.add("CCCount");
+                output.add("" + scms.size());
         
-                    header.add("CCCircuitSize_" + i);
-                    output.add("NA");
-
-                    header.add("CCCompileTime_" + i);
-                    output.add("NA");
-
-                    header.add("CCEMCCRunTimes_" + i);
-                    output.add("NA");
-
-                }
+                header.add("CCLikelihoods");
+                output.add("NA");
+                
+                header.add("CCCircuitSizes");
+                output.add("NA");
+                
+                header.add("CCCompileTimes");
+                output.add("NA");
+        
+                header.add("CCEMCCRunTimes");
+                output.add("NA");
+                
                 return builder.getSelectedPoints();
                 
             } catch (Exception ex) {

@@ -122,16 +122,30 @@ public class EMCredalBuilder extends CredalBuilder{
 		trajectories = new ArrayList<>();
 		this.likelihoods = new ArrayList<>();
 		
+		this.trajectoryTimes = new ArrayList<>(numTrajectories);
+		compileTime = -1;
+
+		long time = System.currentTimeMillis();
 		if (inferenceVariation == 5 && this.method != null){
 			this.method.initialize(causalmodel);
+			compileTime = System.currentTimeMillis() - time;
 		}
-
+		
 		for(int i = 0; i < numTrajectories; i++) {
 			trajectories.add(runEM());
+			trajectoryTimes.add(System.currentTimeMillis() - time);
 		}
 		return this;
 	}
 
+	long compileTime;
+	public long getCompileTime() {
+		return compileTime;
+	}
+
+	public List<Long> getTrajectoryTimes() {
+		return trajectoryTimes;
+	}
 
 	private void selectPoints() {
 		// If there is not any inner point, apply LAST,
@@ -376,6 +390,8 @@ public class EMCredalBuilder extends CredalBuilder{
 
 
 	private List<Double> likelihoods;
+	private List<Long> trajectoryTimes;
+
 
 	private List<StructuralCausalModel> runEM() throws InterruptedException {
 		StructuralCausalModel startingModel = randomModel(causalmodel);

@@ -132,6 +132,9 @@ public class PNS {
         String[] lls = new String[scms.size()];
         String[] sizes = new String[scms.size()];
 
+        String[] tjts = new String[scms.size()];
+        String[] compile = new String[scms.size()];
+
         for (int i = 0; i < scms.size(); ++i) {
             final var x = scms.get(i);
             final int index = i;
@@ -162,6 +165,10 @@ public class PNS {
                             double[] ll = builder.getLikelihoods();
                             lls[icomponent] = Arrays.stream(ll).mapToObj(Double::toString).collect(Collectors.joining("|"));
                             sizes[icomponent] = ""+size;
+                            compile[icomponent] = ""+builder.getCompileTime();
+                            List<Long> tjt = builder.getTrajectoryTimes();
+                            tjts[icomponent] = tjt.stream().<String>map(Object::toString).collect(Collectors.joining("|"));
+                    
                         }
 
                         // lock (addResults is synchronized) also when reconciling the results 
@@ -187,6 +194,10 @@ public class PNS {
         output.add("NA");
         header.add("FullCircuitSize");
         output.add("NA");
+        header.add("FullCompileTime");
+        output.add("NA");
+        header.add("FullEMCCRunTimes");
+        output.add("NA");
 
         // keep order
         for (int i =0; i< scms.size();++i) {
@@ -195,6 +206,13 @@ public class PNS {
 
             header.add("CCCircuitSize_" + i);
             output.add(sizes[i]);
+
+            header.add("CCCompileTime_" + i);
+            output.add(compile[i]);
+            
+            header.add("CCEMCCRunTimes_" + i);
+            output.add(tjts[i]);
+
         }
 
         return IteratorUtils.toList(cc.alignedIterator(), runs);
@@ -228,6 +246,14 @@ public class PNS {
                 header.add("FullCircuitSize");
                 output.add(""+size);
 
+                header.add("FullCompileTime");
+                output.add("" + builder.getCompileTime());
+
+                List<Long> tjt = builder.getTrajectoryTimes();
+                String tjts = tjt.stream().<String>map(v -> v.toString()).collect(Collectors.joining("|"));
+                header.add("FullEMCCRunTimes");
+                output.add(tjts);
+
                 // just for the header alignments with CC
                 CComponents cc = new CComponents();
                 var scms = cc.apply(model, table);
@@ -237,6 +263,13 @@ public class PNS {
         
                     header.add("CCCircuitSize_" + i);
                     output.add("NA");
+
+                    header.add("CCCompileTime_" + i);
+                    output.add("NA");
+
+                    header.add("CCEMCCRunTimes_" + i);
+                    output.add("NA");
+
                 }
                 return builder.getSelectedPoints();
                 

@@ -86,10 +86,15 @@ public class PNS {
 
         Option header = new Option("h", "header", false, "Include header row in output");
 
+        Option seed = new Option("s", "seed", true, "Random seed (default none)");
+        seed.setArgs(1);
+        seed.setType(PatternOptionBuilder.NUMBER_VALUE);
+
         Options options = new Options();
         options.addOption(new Option(null, "help", false, "print this message"));
         options.addOption(header);
         options.addOption(output);
+        options.addOption(seed);
         options.addOption(iter);
         options.addOption(runs);
         options.addOption(method);

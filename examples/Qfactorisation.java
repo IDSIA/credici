@@ -9,8 +9,13 @@ import gnu.trove.map.TIntIntMap;
 import java.io.IOException;
 import java.nio.file.Path;
 
+
+import gnu.trove.map.TIntIntMap;
+
+import java.nio.file.Path;
+
 public class Qfactorisation {
-    public static void main(String[] args) throws IOException, CsvException {
+    public static void main(String[] args) {
 
         int T = 0;  //  Treatment
         int S = 1;  // Survival

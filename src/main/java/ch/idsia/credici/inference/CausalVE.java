@@ -59,6 +59,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         }
         if(elimOrder==null)
             elimOrder = new MinFillOrdering().apply(infModel);
+        elimOrder = ArraysUtil.union(elimOrder, infModel.getVariables());
         return infModel;
     }
 

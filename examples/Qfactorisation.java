@@ -15,7 +15,7 @@ import gnu.trove.map.TIntIntMap;
 import java.nio.file.Path;
 
 public class Qfactorisation {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, CsvException {
 
         int T = 0;  //  Treatment
         int S = 1;  // Survival

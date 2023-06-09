@@ -1,0 +1,37 @@
+files.txt is the list of input models for
+- ACE and BVE parallel CC computation (ace-cc and bve-cc)
+
+files contains the 10 fold split of the input files.txt for:
+- ACE Full computation
+- ACE CC but single thread
+- BVE Full computation
+
+foles2 contains a 20 fold split for:
+- BVE CC but single thread
+
+experiments run with:
+./run_experiments.sh files.txt exp-ace-cc.txt ace-cc.csv 15m
+./run_experiments.sh files.txt exp-bve-cc.txt bve-cc.csv 15m
+
+for f in files/xa*; do ./run_experiments.sh $f exp-ace.txt ace-${f##*/}-simple.csv 15m & done
+for f in files/xa*; do ./run_experiments.sh $f exp-bve.txt bve-${f##*/}-simple.csv 15m & done
+for f in files/xa*; do ./run_experiments.sh $f exp-ace-cc-single.txt ace-cc-${f##*/}-single.csv 15m & done
+
+for f in files2/x*; do ./run_experiments.sh $f exp-bve-cc-single.txt bve-cc-${f##*/}-single.csv 15m & done
+
+
+if timeout the row does not include the model, we can add it by
+
+cd files
+for f in xa*; do tail -n+2 ../ace-$f-simple.csv | paste $f - -d, > ../output_fixed/ace-$f-simple.csv; done
+for f in xa*; do tail -n+2 ../bve-$f-simple.csv | paste $f - -d, > ../output_fixed/bve-$f-simple.csv; done
+for f in xa*; do tail -n+2 ../ace-cc-$f-single.csv | paste $f - -d, > ../output_fixed/ace-cc-$f-single.csv; done
+
+cd ../files2
+for f in xa*; do tail -n+2 ../bve-cc-$f-single.csv |  paste $f - -d, > ../output_fixed/bve-cc-$f-single.csv; done
+
+cd ..
+tail -n+2 ace-cc.csv | paste files.txt - -d, > output_fixed/ace-cc.csv
+tail -n+2 bve-cc.csv | paste files.txt - -d, > output_fixed/bve-cc.csv
+
+this will paste the results with the model name

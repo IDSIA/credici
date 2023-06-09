@@ -38,6 +38,7 @@ import ch.idsia.credici.model.io.uai.CausalUAIParser;
 import ch.idsia.credici.model.transform.CComponents;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.Probability;
+import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import jdk.jshell.spi.ExecutionControl.NotImplementedException;
 
 public class PNS {
@@ -384,7 +385,8 @@ public class PNS {
             boolean rundot = false;
             boolean runace = false;
             boolean runpns = false;
-            
+            boolean learn = false;
+
             int cause = 0;
             int effect = 0;
 
@@ -399,6 +401,7 @@ public class PNS {
                     if ("ace".equals(left[len])) runace = true;
                     if ("pns".equals(left[len])) runpns = true;
                     if ("graph".equals(left[len])) rundot = true;
+                    if ("learn".equals(left[len])) rundot = true;
                 }
             }
             
@@ -431,11 +434,29 @@ public class PNS {
                 DotSerialize ser = new DotSerialize();
                 System.out.println(ser.run(causalModel));
             }
-            if (runace || runpns) {
-                List<StructuralCausalModel> models = run(causalModel, datatable, cl, output, header);
+
+            if (runace || runpns || learn) {
+                List<StructuralCausalModel> models = null;
+                models = run(causalModel, datatable, cl, output, header);
                 output.add(""+cause);    header.add("cause");
                 output.add(""+effect);   header.add("effect");
 
+                if (learn) {
+                    // for the model of each EMCC run get the factors of the exogenous variables
+                    // and convert their data to a "|" seraparated string. Factors are joined together
+                    // by ":" and runs by ";".
+                    String Us = models.stream().map( 
+                        m -> IntStream.of(m.getExogenousVars())
+                            .mapToObj(m::getFactor)
+                            .map(BayesianFactor::getData)
+                            .map(a -> {
+                                return DoubleStream.of(a).boxed().map(Object::toString).collect(Collectors.joining("|"));
+                            }).collect(Collectors.joining(":"))
+                    ).collect(Collectors.joining(";"));
+                    header.add("pU");
+                    output.add(Us);
+                }
+                
                 if (runpns) {
                     double[] mm = pns(models, cause, effect);
                     header.add("action"); output.add("pns");

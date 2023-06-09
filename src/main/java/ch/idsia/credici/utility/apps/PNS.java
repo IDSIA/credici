@@ -401,7 +401,7 @@ public class PNS {
                     if ("ace".equals(left[len])) runace = true;
                     if ("pns".equals(left[len])) runpns = true;
                     if ("graph".equals(left[len])) rundot = true;
-                    if ("learn".equals(left[len])) rundot = true;
+                    if ("learn".equals(left[len])) learn = true;
                 }
             }
             
@@ -456,7 +456,7 @@ public class PNS {
                     header.add("pU");
                     output.add(Us);
                 }
-                
+
                 if (runpns) {
                     double[] mm = pns(models, cause, effect);
                     header.add("action"); output.add("pns");

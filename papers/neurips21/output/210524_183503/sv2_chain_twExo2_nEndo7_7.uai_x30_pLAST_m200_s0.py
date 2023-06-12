@@ -1,1 +1,0 @@
-results=dict(file='chain_twExo2_nEndo7_7.uai', folder='sv2', seed=0, timeBuild=91746, markovian=False, exoTW=2, groundtruth='saturation', error=True, nExo=4, nEndo=7, errorMsg='java.util.concurrent.TimeoutException')

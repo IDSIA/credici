@@ -1,1 +1,0 @@
-results=dict(seed=0, markovian=False, pnsExact_u=-1.0, error=True, nEndo=10, errorMsg='java.util.concurrent.ExecutionException: org.apache.commons.math3.optim.linear.NoFeasibleSolutionException: no feasible solution', timeExact=683, compatible=False, file='chain_twExo1_nEndo10_34.uai', folder='x1_2', timeBuild=136105, exoTW=1, groundtruth='cve', nExo=5, pnsExact_l=-1.0)

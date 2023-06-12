@@ -1,1 +1,0 @@
-results=dict(seed=0, markovian=False, aceExact_u=-0.012082151524364537, pnsExact_u=0.010902401894792853, error=True, nEndo=10, errorMsg='java.util.concurrent.TimeoutException', timeExact=1215919, file='chain_twExo1_nEndo10_0.uai', folder='s1a_10', aceExact_l=-0.018238758606341166, exoTW=1, nExo=6, pnsExact_l=0.009516121441042979)

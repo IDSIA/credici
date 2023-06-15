@@ -8,11 +8,11 @@
 #sbatch  --export=cause="bronc",method="CCALP" -n 1 asiapns.sbs
 #sbatch  --export=cause="lung",method="CCALP" -n 1 asiapns.sbs
 
-#sbatch  --export=cause="asia",method="CCVE" -n 1 asiapns.sbs
-#sbatch  --export=cause="tub",method="CCVE" -n 1 asiapns.sbs
+sbatch  --export=cause="asia",method="CCVE" -n 1 asiapns.sbs
+sbatch  --export=cause="tub",method="CCVE" -n 1 asiapns.sbs
 sbatch  --export=cause="smoke",method="CCVE" -n 1 asiapns.sbs
-#sbatch  --export=cause="bronc",method="CCVE" -n 1 asiapns.sbs
-#sbatch  --export=cause="lung",method="CCVE" -n 1 asiapns.sbs
+sbatch  --export=cause="bronc",method="CCVE" -n 1 asiapns.sbs
+sbatch  --export=cause="lung",method="CCVE" -n 1 asiapns.sbs
 
 sbatch  --export=cause="asia",method="EMCC" -n 1 asiapns.sbs
 sbatch  --export=cause="tub",method="EMCC" -n 1 asiapns.sbs

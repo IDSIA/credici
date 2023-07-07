@@ -84,7 +84,7 @@ def runjava(javafile, args_str, heap_gbytes=None):
 
 def asiapns(method, cause,
              rewrite = True,
-             executions = 300,
+             executions = 400,
              max_iter = 500,
              output = ".", seed = 0, debug=False):
 

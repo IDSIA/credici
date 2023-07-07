@@ -102,6 +102,7 @@ public class AsiaPNS extends Terminal {
         res.add("cause", cause);
         res.add("effect", effect);
         res.add("method", alg.toString());
+        res.add("max_llk", maxllk);
 
         res.logSummary();
 

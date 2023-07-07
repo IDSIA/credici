@@ -10,6 +10,8 @@ import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
+import ch.idsia.crema.utility.ArraysUtil;
+import com.google.common.primitives.Ints;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import jdk.jshell.spi.ExecutionControl;
@@ -85,6 +87,8 @@ public class EmpiricalCausalVE extends CausalInference<BayesianNetwork, GenericF
         }
         // Get the  elimination order
         int[] elimOrder = new MinFillOrdering().apply(infModel);
+        elimOrder = ArraysUtil.unique(Ints.concat(elimOrder, infModel.getVariables()));
+
 
         FactorVariableElimination ve = new FactorVariableElimination(elimOrder);
         if(filteredEvidence.size()>0)

@@ -95,18 +95,24 @@ public abstract class CausalInference<M, R extends GenericFactor>{
 
 
 
-    public R probNecessity(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+    public R probNecessity(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException {
 
         Query q = this.counterfactualQuery()
-                .setIntervention(cause, falseState)
-                .setEvidence(ObservationBuilder.observe(new int[]{effect, cause}, new int[]{trueState, trueState}))
+                .setIntervention(cause, causeFalse)
+                .setEvidence(ObservationBuilder.observe(new int[]{effect, cause}, new int[]{effectTrue, causeTrue}))
                 .setTarget(effect);
 
         R res = (R) q.run();
         int var = q.getCounterfactualMapping().getEquivalentVars(1,effect);
-        res = (R) FactorUtil.filter(res, var, falseState);
+        res = (R) FactorUtil.filter(res, var, effectFalse);
 
         return res;
+
+    }
+
+
+    public R probNecessity(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+        return probNecessity(cause, effect, trueState, falseState, trueState, falseState);
 
     }
 
@@ -129,17 +135,19 @@ public abstract class CausalInference<M, R extends GenericFactor>{
         return probDisablement(cause, effect, 0, 1);
     }
 
-
     public R probEnablement(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+        return probEnablement(cause, effect, trueState, falseState, trueState, falseState);
+    }
+    public R probEnablement(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException {
 
         Query q = this.counterfactualQuery()
-                .setIntervention(cause, trueState)
-                .setEvidence(ObservationBuilder.observe(new int[]{effect}, new int[]{falseState}))
+                .setIntervention(cause, causeTrue)
+                .setEvidence(ObservationBuilder.observe(new int[]{effect}, new int[]{effectFalse}))
                 .setTarget(effect);
 
         R res = (R) q.run();
         int var = q.getCounterfactualMapping().getEquivalentVars(1,effect);
-        res = (R) FactorUtil.filter(res, var, trueState);
+        res = (R) FactorUtil.filter(res, var, effectTrue);
 
         return res;
 

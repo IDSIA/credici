@@ -1,5 +1,6 @@
 package ch.idsia.credici.inference;
 
+import ch.idsia.credici.IO;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.GenericFactor;
@@ -11,6 +12,9 @@ import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
 import jdk.jshell.spi.ExecutionControl;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,6 +29,9 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 
 	List<StructuralCausalModel> inputModels = null;
 
+	int lastModelIndex = -1;
+	int firstModelIndex = -1;
+
 
 	private CausalMultiVE(){
 
@@ -37,6 +44,23 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 		inf = model.stream().map(m-> new CausalVE(m)).collect(Collectors.toList());
 
 	}
+
+	public static CausalMultiVE fromFolder(Path folder) throws IOException {
+		List modelList =
+				Files.walk(folder)
+						.filter(Files::isRegularFile)
+						.filter( f -> f.toString().endsWith(".uai"))
+						.map(f -> {
+							try {
+								return IO.readUAI(f.toString());
+							} catch (IOException e) {
+								return null;
+							}
+						})
+						.collect(Collectors.toList());
+		return new CausalMultiVE(modelList);
+	}
+
 
 	public static CausalMultiVE as(List<CausalVE> infList){
 		CausalMultiVE obj = new CausalMultiVE();
@@ -52,11 +76,11 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 			throw new IllegalArgumentException("Only queries over a single variable are allowed.");
 
 		// Run each query independently
-		List<BayesianFactor> factors = inf.stream().map(i->i.run(q)).collect(Collectors.toList());
+		List<BayesianFactor> factors = getInferenceList().stream().map(i->i.run(q)).collect(Collectors.toList());
 
 
 		// Merge the results
-		VertexFactor vf = FactorUtil.mergeFactors(factors, inf.get(0).target[0], !toInterval);
+		VertexFactor vf = FactorUtil.mergeFactors(factors, getInferenceList().get(0).target[0], !toInterval);
 
 		if(toInterval)
 			return new VertexToInterval().apply(vf, q.getTarget()[0]);
@@ -66,7 +90,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 
 	@Override
 	public List<StructuralCausalModel> getInferenceModel(Query q, boolean simplify) {
-		return inf.stream().map(i->i.getInferenceModel(q, simplify)).collect(Collectors.toList());
+		return getInferenceList().stream().map(i->i.getInferenceModel(q, simplify)).collect(Collectors.toList());
 	}
 
 	public CausalMultiVE setToInterval(boolean toInterval) {
@@ -75,6 +99,13 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 	}
 
 	public List<CausalVE> getInferenceList() {
+
+
+		if(lastModelIndex>0 || firstModelIndex>0) {
+			int i = Math.max(0, firstModelIndex);
+			int j = Math.min(inf.size(), lastModelIndex);
+			return this.inf.subList(i,j);
+		}
 		return inf;
 	}
 
@@ -175,14 +206,14 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 	}
 
 
-	public GenericFactor probNecessity(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+	public GenericFactor probNecessity(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException {
 
 		double max = Double.NEGATIVE_INFINITY;
 		double min = Double.POSITIVE_INFINITY;
 
 
 		for (CausalVE i : this.getInferenceList()) {
-			double p = i.probNecessity(cause, effect, trueState, falseState).getValue(0);
+			double p = i.probNecessity(cause, effect, causeTrue, causeFalse, effectTrue, effectFalse).getValue(0);
 			if (p > max) max = p;
 			if (p < min) min = p;
 		}
@@ -217,7 +248,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 	public CausalMultiVE filter(int[] mask){
 		List newInfList = Arrays
 				.stream(ArraysUtil.where(mask, i -> i > 0))
-				.mapToObj(i -> this.inf.get(i))
+				.mapToObj(i -> getInferenceList().get(i))
 				.collect(Collectors.toList());
 		return as(newInfList);
 
@@ -248,4 +279,17 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 	public List<StructuralCausalModel> getInputModels() {
 		return inputModels;
 	}
+
+	public CausalMultiVE setFirstModelIndex(int firstModelIndex) {
+		this.firstModelIndex = firstModelIndex;
+		return this;
+	}
+
+	public CausalMultiVE setLastModelIndex(int lastModelIndex) {
+		this.lastModelIndex = lastModelIndex;
+		return this;
+	}
+
+
+
 }

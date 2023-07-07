@@ -102,7 +102,7 @@ public class ResultsManager {
     public void save(String fullpath) throws IOException {
         if(logger != null)
             logger.info("Saving info at:" +fullpath);
-        DataUtil.toCSV(fullpath, results.values().stream().collect(Collectors.toList()));
+        DataUtil.toCSV(fullpath, results.values().stream().filter(m -> m.size()>0).collect(Collectors.toList()));
 
     }
 

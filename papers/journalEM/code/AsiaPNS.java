@@ -228,7 +228,7 @@ public class AsiaPNS extends Terminal {
         BayesianNetwork bnet = (BayesianNetwork) IO.readUAI(path);
 
         RandomUtil.setRandomSeed(0);
-        data = bnet.samples(1000, bnet.getVariables());
+        data = bnet.samples(5000, bnet.getVariables());
 
         RandomUtil.setRandomSeed(seed);
         model = CausalBuilder.of(bnet.getNetwork(), 2).build();

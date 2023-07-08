@@ -59,7 +59,7 @@ t = data.iloc[3]
 def filter_pns_bounds(t):
     if t.method=="EMCC":
         max_llk = t["max_llk"]
-        pns = [t[k.replace("llk","pns")] for k in t.keys() if k.startswith("llk") and max_llk/t[k]>0.99995]
+        pns = [t[k.replace("llk","pns")] for k in t.keys() if k.startswith("llk") and max_llk/t[k]>0.99999]
         t.pns_l, t.pns_u = min(pns),max(pns)
     return t
 

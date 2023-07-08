@@ -53,9 +53,26 @@ for c in causes:
 
 print(tablestr)
 
+data = data.reset_index(drop=True)
+t = data.iloc[3]
+
+def filter_pns_bounds(t):
+    if t.method=="EMCC":
+        max_llk = t["max_llk"]
+        pns = [t[k.replace("llk","pns")] for k in t.keys() if k.startswith("llk") and max_llk/t[k]>0.99995]
+        t.pns_l, t.pns_u = min(pns),max(pns)
+    return t
+
+data =  data.apply(filter_pns_bounds, axis=1)
+
 df = data[["cause", "method", "pns_l", "pns_u"]].sort_values(by="cause")
 
 df.loc[df.method=="CCALP"][["cause","pns_l", "pns_u"]].sort_values(by=["pns_l","pns_u"], ascending=False)
+
+df.loc[df.method=="CCVE"][["cause","pns_l", "pns_u"]].sort_values(by=["pns_l","pns_u"], ascending=False)
+df.loc[df.method=="EMCC"][["cause","pns_l", "pns_u"]].sort_values(by=["pns_l","pns_u"], ascending=False)
+
+
 
 
 data.columns

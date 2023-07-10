@@ -33,4 +33,27 @@ public class InferenceTools {
         return obs;
 
     }
+
+    public static TIntIntMap modifyModelForJointQueryBin(GraphicalModel model, int[] target, int [] values){
+
+        if(target.length!=2 || values.length!=2)
+            throw new IllegalArgumentException("Operation only implemented for 2 parents.");
+
+        // Add common child
+        int s = model.addVariable(2);
+        int offset = model.getDomain(target).getOffset(values);
+        int[] assign = new int[model.getDomain(target).getCombinations()];
+        assign[offset] = 1;
+
+
+        BayesianFactor fs = BayesianFactor.deterministic(
+                model.getDomain(s), model.getDomain(target),
+                assign);
+        model.setFactor(s, fs);
+
+        TIntIntMap obs = new TIntIntHashMap();
+        obs.put(s, 1);
+        return obs;
+
+    }
 }

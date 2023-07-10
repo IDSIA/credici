@@ -150,7 +150,7 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
         int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
         for(int x:CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
 
-
+/*
         TIntIntMap query = InferenceTools.modifyModelForJointQuery(pns_model, target, new int[]{trueState, falseState});
         int newTarget =query.keys()[0];
         int newValue = query.values()[0];
@@ -159,11 +159,26 @@ public class CredalCausalApproxLP extends CausalInference<SparseModel, IntervalF
                 new BayesianToHalfSpace().apply((BayesianFactor) pns_model.getFactor(newTarget), newTarget));
 
         CausalInference infInternal =  new CredalCausalApproxLP(pns_model);
+
+        System.out.println(pns_model.getDomain(newTarget));
         IntervalFactor prob = (IntervalFactor) infInternal.causalQuery().setTarget(newTarget).run();
+        System.out.println(prob);
         return (IntervalFactor) FactorUtil.filter(prob, newTarget, newValue);
 
-        //VertexFactor prob = (VertexFactor) infInternal.causalQuery().setTarget(target[0]).run();
-        //return (IntervalFactor) FactorUtil.filter(prob, target[0], 0);
+
+
+ */
+        TIntIntMap query = InferenceTools.modifyModelForJointQueryBin(pns_model, target, new int[]{trueState, falseState});
+        int newTarget =query.keys()[0];
+        int newValue = query.values()[0];
+
+        pns_model.setFactor(newTarget,
+                new BayesianToHalfSpace().apply((BayesianFactor) pns_model.getFactor(newTarget), newTarget));
+
+        CausalInference infInternal =  new CredalCausalApproxLP(pns_model);
+
+        IntervalFactor prob = (IntervalFactor) infInternal.causalQuery().setTarget(newTarget).run();
+        return (IntervalFactor) FactorUtil.filter(prob, newTarget, newValue);
 
     }
 

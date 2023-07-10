@@ -121,4 +121,7 @@ Asia         & $[xx,xx]$ & $[xx,xx]$ & $[xx,xx]$ &
 print(merged)
 data["time"] = data.time_inf + data.time_learn
 
-data.sort_values(by = "time")[["method", "cause", "time"]]
+data[data.method.isin(["CCVE", "CCALP"])]
+
+
+data[data.method.isin(["CCVE", "CCALP"])].sort_values(by = "time")[["method", "cause", "time"]]

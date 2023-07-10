@@ -68,7 +68,6 @@ data =  data.apply(filter_pns_bounds, axis=1)
 df = data[["cause", "method", "pns_l", "pns_u"]].sort_values(by="cause")
 
 df.loc[df.method=="CCALP"][["cause","pns_l", "pns_u"]].sort_values(by=["pns_l","pns_u"], ascending=False)
-
 df.loc[df.method=="CCVE"][["cause","pns_l", "pns_u"]].sort_values(by=["pns_l","pns_u"], ascending=False)
 df.loc[df.method=="EMCC"][["cause","pns_l", "pns_u"]].sort_values(by=["pns_l","pns_u"], ascending=False)
 

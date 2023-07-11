@@ -67,7 +67,7 @@ tablestr = ""
 for c in causes:
     tablestr += f"{varnames[c]}\t\t"
     for m in methods:
-        l,u = get_interval(c,m,dec=2)
+        l,u = get_interval(c,m,dec=4)
         tablestr +="\t\t& "
         if None not in (l,u):
             tablestr += f"$[{l},{u}]$"

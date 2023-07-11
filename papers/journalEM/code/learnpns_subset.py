@@ -23,9 +23,9 @@ N = int(sys.argv[4])
 
 
 
-modelset = "synthetic/s3/"
+modelset = "synthetic/s123/"
 #modelset = "triangolo/"
-modelsetOutput = modelset
+modelsetOutput = "synthetic/s123b/"
 #modelsetOutput = "synthetic/s12/"
 
 EMruns = 200
@@ -145,11 +145,11 @@ for m in MODELS:
     outputpath = Path(res_folder, modelsetOutput)
 
     for c,e in CAUSE_EFFECT:
-        learnpns("CCVE", modelpath, output=outputpath, cause=c, effect=e)
+#        learnpns("CCVE", modelpath, output=outputpath, cause=c, effect=e)
         learnpns("CCALP", modelpath, output=outputpath, cause=c, effect=e)
-        for th in TH:
-                for criteria in SCRITERIA:
-                    learnpns("EMCC", modelpath,
-                             stop_criteria=criteria, th=th,
-                             executions=EMruns,
-                             output=outputpath, cause=c, effect=e, seed=seed)
+#        for th in TH:
+#                for criteria in SCRITERIA:
+#                    learnpns("EMCC", modelpath,
+#                             stop_criteria=criteria, th=th,
+#                             executions=EMruns,
+#                             output=outputpath, cause=c, effect=e, seed=seed)

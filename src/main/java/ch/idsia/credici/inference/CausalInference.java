@@ -116,17 +116,19 @@ public abstract class CausalInference<M, R extends GenericFactor>{
 
     }
 
-
     public R probDisablement(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+        return probDisablement(cause,effect, trueState,falseState,trueState,falseState);
+    }
+    public R probDisablement(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException {
 
         Query q = this.counterfactualQuery()
-                .setIntervention(cause, falseState)
-                .setEvidence(ObservationBuilder.observe(new int[]{effect}, new int[]{trueState}))
+                .setIntervention(cause, causeFalse)
+                .setEvidence(ObservationBuilder.observe(new int[]{effect}, new int[]{effectTrue}))
                 .setTarget(effect);
 
         R res = (R) q.run();
         int var = q.getCounterfactualMapping().getEquivalentVars(1,effect);
-        res = (R) FactorUtil.filter(res, var, falseState);
+        res = (R) FactorUtil.filter(res, var, effectFalse);
 
         return res;
 

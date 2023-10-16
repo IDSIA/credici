@@ -9,6 +9,7 @@ import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.experiments.Logger;
+import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import com.opencsv.exceptions.CsvException;
@@ -60,12 +61,19 @@ public class MuellerExampleBounding {
         TIntIntMap[] data = DataUtil.fromCSV(folder+"/models/literature/dataPearl.csv");
 
 
+
         // Empirical endogenous distribution from the data
         HashMap empiricalDist = DataUtil.getEmpiricalMap(model, data);
         empiricalDist = FactorUtil.fixEmpiricalMap(empiricalDist,6);
 
         // Determine the cause and the effect variables
         int cause = X, effect = Y;
+
+        BayesianFactor pXY = (BayesianFactor) BayesianFactor.combineAll(empiricalDist.values()).marginalize(Z);
+        double TPubound = pXY.filter(X,0).filter(Y,0).getData()[0] + pXY.filter(X,0).filter(Y,0).getData()[0];
+
+        logger.info("TianAndPearl result: [0,"+TPubound+"]");
+
 
         // Credal vausal VE
         CredalCausalVE ccve = new CredalCausalVE(model, empiricalDist.values());

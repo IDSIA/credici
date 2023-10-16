@@ -80,9 +80,46 @@ public class FactorUtil {
 	}
 
 
-	public static void print(BayesianFactor p) { print(p, new HashMap());}
+	public static void print(BayesianFactor p) { print(p, new HashMap(), new HashMap<>());}
 
-	public static void print(BayesianFactor p, HashMap varNames){//, int[] vars){
+	public static void print(BayesianFactor p, HashMap varNames){ print(p, varNames, new HashMap<>());}
+
+
+	public static void print(BayesianFactor p, HashMap varNames, HashMap domNames){//, int[] vars){
+
+
+		Strides dom = p.getDomain();
+		int[] vars = dom.getVariables();
+
+		//IndexIterator it = dom.getReorderedIterator(vars);
+
+		System.out.println("f("+ Arrays.toString(vars)+")");
+		System.out.println("-------------------------------");
+		for (int i = 0; i < dom.getCombinations(); i++) {
+			int[] states = dom.statesOf(i);
+			String strAssig = "";
+			for (int j = vars.length-1; j >= 0; j--) {
+
+				strAssig +=varNames.getOrDefault(vars[j], vars[j])+"=";
+				if (!domNames.containsKey(vars[j]))
+					strAssig += states[j];
+				else
+					strAssig += ((String[])domNames.get(vars[j]))[states[j]];
+
+
+				if(j>0)
+					strAssig+=", ";
+			}
+
+			System.out.println("f("+strAssig+") = " + +p.getValue(states));
+		}
+		System.out.println("-------------------------------");
+
+
+
+	}
+
+	public static void printNonZeros(BayesianFactor p, HashMap varNames){//, int[] vars){
 
 
 		Strides dom = p.getDomain();
@@ -106,8 +143,9 @@ public class FactorUtil {
 				if(j>0)
 					strAssig+=", ";
 			}
-
-			System.out.println("f("+strAssig+") = " + +p.getValue(states));
+			double val = p.getValue(states);
+			if (val>0)
+				System.out.println("f("+strAssig+") = " + +val);
 		}
 		System.out.println("-------------------------------");
 

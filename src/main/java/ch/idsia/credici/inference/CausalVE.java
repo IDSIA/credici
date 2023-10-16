@@ -52,6 +52,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
             q.setCounterfactualMapping(WorldMapping.getMap(infModel));
             target = q.getCounterfactualMapping().getEquivalentVars(1, target);
         }
+
         if (simplify) {
             RemoveBarren removeBarren = new RemoveBarren();
             infModel = removeBarren
@@ -69,6 +70,8 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
 
         TIntIntHashMap filteredEvidence = new TIntIntHashMap();
         // update the evidence
+
+
         for(int v: q.getEvidence().keys()){
             if(ArrayUtils.contains(model.getVariables(), v)){
                 filteredEvidence.put(v, q.getEvidence().get(v));

@@ -107,13 +107,13 @@ public class DrugGendersTianPearlIntervals {
         HashMap empirical = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, dataObs),5);
         System.out.println(empirical);
 
-        //CredalCausalVE cve = new CredalCausalVE(model, empirical.values());
+        CredalCausalVE cve = new CredalCausalVE(model, empirical.values());
 
-/*
+
         double pydox = ((VertexFactor)cve.causalQuery().setTarget(Y).setIntervention(X, x).run()).filter(Y, y).getVerticesAt(0)[0][0];
         double py_dox_ = ((VertexFactor)cve.causalQuery().setTarget(Y).setIntervention(X, x_).run()).filter(Y, y_).getVerticesAt(0)[0][0];
         double pydox_ = ((VertexFactor)cve.causalQuery().setTarget(Y).setIntervention(X, x_).run()).filter(Y, y).getVerticesAt(0)[0][0];
-
+/*
 
         CredalCausalApproxLP credal_inf = new CredalCausalApproxLP(model, empirical.values());
 
@@ -121,10 +121,9 @@ public class DrugGendersTianPearlIntervals {
         double py_dox_ = ((IntervalFactor)credal_inf.causalQuery().setTarget(Y).setIntervention(X, x_).run()).filter(Y, y_).getVerticesAt(0)[0][0];
         double pydox_ = ((IntervalFactor)credal_inf.causalQuery().setTarget(Y).setIntervention(X, x_).run()).filter(Y, y).getVerticesAt(0)[0][0];
 
-
+*/
         double lb, ub;
 
-/*
 
         VertexFactor resCCVE = (VertexFactor) cve.probNecessityAndSufficiency(X, Y, x,x_);
         lb = DoubleStream.of(resCCVE.getData()[0][0][0], resCCVE.getData()[0][1][0]).min().getAsDouble();

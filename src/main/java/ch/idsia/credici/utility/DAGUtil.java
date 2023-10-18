@@ -515,5 +515,16 @@ public class DAGUtil {
 
     }
 
+    public static String getLabelledEdges(SparseDirectedAcyclicGraph dag, HashMap<Integer,String> varnames){
+        List<String> edges = new ArrayList();
+        for(int x : dag.getVariables()){
+            for(int y : dag.getParents(x)){
+                edges.add("("+varnames.get(y)+","+varnames.get(x)+")");
+            }
+        }
+
+        return String.join(", ",edges);
+    }
+
 
 }

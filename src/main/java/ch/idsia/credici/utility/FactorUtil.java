@@ -111,7 +111,49 @@ public class FactorUtil {
 					strAssig+=", ";
 			}
 
-			System.out.println("f("+strAssig+") = " + +p.getValue(states));
+			System.out.println("P("+strAssig+") = " + +p.getValue(states));
+		}
+		System.out.println("-------------------------------");
+
+
+
+	}
+
+
+	public static void printEquation(BayesianFactor p, int leftVar, HashMap varNames, HashMap domNames){//, int[] vars){
+
+
+		Strides dom = p.getDomain();
+		int[] vars = dom.getVariables();
+
+
+		int lpos = ArraysUtil.indexOf(leftVar, vars);
+
+
+		System.out.println("f("+ Arrays.toString(vars)+")");
+		System.out.println("-------------------------------");
+		for (int i = 0; i < dom.getCombinations(); i++) {
+
+			int[] states = dom.statesOf(i);
+			double value = p.getValue(states);
+
+			if(value==1) {
+				String strAssig = "";
+				for (int j = vars.length - 1; j >= 0; j--) {
+					if(j != lpos) {
+						strAssig += varNames.getOrDefault(vars[j], vars[j]) + "=";
+						if (!domNames.containsKey(vars[j])) strAssig += states[j];
+						else strAssig += ((String[]) domNames.get(vars[j]))[states[j]];
+						if (j > 0) strAssig += ", ";
+					}
+				}
+
+				String leftValue = "";
+				if (!domNames.containsKey(leftVar))  leftValue += states[lpos];
+				else leftValue += ((String[]) domNames.get(leftVar))[states[lpos]];
+
+				System.out.println("f_" + varNames.getOrDefault(leftVar, leftVar) + "(" + strAssig + ") = " + leftValue);
+			}
 		}
 		System.out.println("-------------------------------");
 

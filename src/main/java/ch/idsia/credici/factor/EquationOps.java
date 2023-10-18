@@ -53,7 +53,28 @@ public class EquationOps {
 
 	}
 
+	public static void setValue(BayesianFactor f, TIntIntHashMap paValues, int var, int value){
 
+		TIntIntHashMap conf = new TIntIntHashMap();
+
+		for(int y : paValues.keys())
+			conf.put(y, paValues.get(y));
+
+		for(int v=0; v<f.getDomain().getCardinality(var); v++){
+			conf.put(var,v);
+			int offset = FactorUtil.getOffset(f, conf);
+			if(v!=value) {
+				f.setValueAt(0, offset);
+				//System.out.println("0 -> "+offset);
+			}
+			else {
+				f.setValueAt(1, offset);
+				//System.out.println("1 -> "+offset);
+
+			}
+		}
+
+	}
 
 
 	public static void setValue(BayesianFactor f, TIntIntHashMap exoPaValues, TIntIntHashMap endoPaValues, int[] vars, int[] value){

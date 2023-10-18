@@ -1,0 +1,1 @@
+java -cp ./bin/credici.jar ./code/PlotModel.java

@@ -1,188 +1,197 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
 
-    <groupId>ch.idsia</groupId>
-    <artifactId>credici</artifactId>
-    <version>0.1.5-dev-SNAPSHOT</version>
-
-
-    <repositories>
-        <repository>
-            <id>cremaRepo</id>
-            <url>https://raw.github.com/idsia/crema/mvn-repo/</url>
-        </repository>
-        <repository>
-            <id>localJar</id>
-            <url>file://${project.basedir}/src/main/resources/repo</url>
-        </repository>
-    </repositories>
+	<groupId>ch.idsia</groupId>
+	<artifactId>credici</artifactId>
+	<version>0.1.5-dev-SNAPSHOT</version>
 
 
-    <scm>
-        <connection>scm:git:git@github.com:idsia/crema.git</connection>
-        <developerConnection>scm:git:git@github.com:idsia/crema.git</developerConnection>
-        <url>git@github.com:idsia/crema.git</url>
-    </scm>
+	<repositories>
+		<repository>
+			<id>cremaRepo</id>
+			<url>https://raw.github.com/idsia/crema/mvn-repo/</url>
+		</repository>
+		<repository>
+			<id>localJar</id>
+			<url>file://${project.basedir}/src/main/resources/repo</url>
+		</repository>
+	</repositories>
 
 
-    <distributionManagement>
-        <repository>
-            <id>internal.repo</id>
-            <name>Temporary Staging Repository</name>
-            <url>file://${project.build.directory}/mvn-repo</url>
-        </repository>
-    </distributionManagement>
+	<scm>
+		<connection>scm:git:git@github.com:idsia/crema.git</connection>
+		<developerConnection>scm:git:git@github.com:idsia/crema.git</developerConnection>
+		<url>git@github.com:idsia/crema.git</url>
+	</scm>
 
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- github server corresponds to entry in ~/.m2/settings.xml -->
-        <github.global.server>github</github.global.server>
-        <additionalparam>-Xdoclint:none</additionalparam>
-        <doclint>none</doclint>
-    </properties>
-
-    <dependencies>
-        <dependency>
-            <groupId>br.usp.poli</groupId>
-            <artifactId>embayes</artifactId>
-            <version>1.1</version>
-        </dependency>
-
-        <dependency>
-          <groupId>BNJ</groupId>
-            <artifactId>BNJ</artifactId>
-           <version>0.3</version>
-        </dependency>
-        
-        <dependency>
-          <groupId>cern</groupId>
-            <artifactId>colt</artifactId>
-           <version>1.2.0</version>
-        </dependency>
-
-        <dependency>
-            <groupId>ch.idsia</groupId>
-            <artifactId>crema</artifactId>
-            <version>0.1.5</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.junit.jupiter</groupId>
-            <artifactId>junit-jupiter-params</artifactId>
-            <version>5.4.2</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jgrapht</groupId>
-            <artifactId>jgrapht-core</artifactId>
-            <version>1.5.1</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jgrapht</groupId>
-            <artifactId>jgrapht-ext</artifactId>
-            <version>1.5.1</version>
-        </dependency>
-        <dependency>
-            <groupId>info.picocli</groupId>
-            <artifactId>picocli</artifactId>
-            <version>3.9.6</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations</artifactId>
-            <version>RELEASE</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains</groupId>
-            <artifactId>annotations</artifactId>
-            <version>RELEASE</version>
-            <scope>compile</scope>
-        </dependency>
-    </dependencies>
+	<distributionManagement>
+		<repository>
+			<id>internal.repo</id>
+			<name>Temporary Staging Repository</name>
+			<url>file://${project.build.directory}/mvn-repo</url>
+		</repository>
+	</distributionManagement>
 
 
-    <build>
-    <plugins>
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.1</version>
-            <configuration>
-                <source>11</source>
-                <target>11</target>
-            </configuration>
-        </plugin>
-        <plugin>
-            <artifactId>maven-assembly-plugin</artifactId>
-            <executions>
-                <execution>
-                    <phase>package</phase>
-                    <goals>
-                        <goal>single</goal>
-                    </goals>
-                </execution>
-            </executions>
-            <configuration>
-                <descriptorRefs>
-                    <descriptorRef>jar-with-dependencies</descriptorRef>
-                </descriptorRefs>
-            </configuration>
-        </plugin>
+	<properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<!-- github server corresponds to entry in ~/.m2/settings.xml -->
+		<github.global.server>github</github.global.server>
+		<additionalparam>-Xdoclint:none</additionalparam>
+		<doclint>none</doclint>
+	</properties>
 
-        <!-- Deploy without running tests -->
-        <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-surefire-plugin</artifactId>
-            <configuration>
-                <forkMode>pertest</forkMode>
-                <argLine>-Xms1g -Xmx2g</argLine>
-            </configuration>
-        </plugin>
+	<dependencies>
 
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.19.1</version>
-        </plugin>
-        <!-- maven-deploy plugin -->
-        <plugin>
-            <artifactId>maven-deploy-plugin</artifactId>
-            <version>2.8.1</version>
-            <configuration>
-                <altDeploymentRepository>internal.repo::default::file://${project.build.directory}/mvn-repo</altDeploymentRepository>
-            </configuration>
-        </plugin>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-rng-sampling</artifactId>
+			<version>1.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-rng-core</artifactId>
+			<version>1.5</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-rng-simple</artifactId>
+			<version>1.5</version>
+		</dependency>
+
+		<dependency>
+			<groupId>br.usp.poli</groupId>
+			<artifactId>embayes</artifactId>
+			<version>1.1</version>
+		</dependency>
+
+		<dependency>
+			<groupId>BNJ</groupId>
+			<artifactId>BNJ</artifactId>
+			<version>0.3</version>
+		</dependency>
+
+		<dependency>
+			<groupId>cern</groupId>
+			<artifactId>colt</artifactId>
+			<version>1.2.0</version>
+		</dependency>
+
+		<dependency>
+			<groupId>ch.idsia</groupId>
+			<artifactId>crema</artifactId>
+			<version>0.1.5</version>
+			<scope>compile</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.junit.jupiter</groupId>
+			<artifactId>junit-jupiter-params</artifactId>
+			<version>5.4.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.jgrapht</groupId>
+			<artifactId>jgrapht-core</artifactId>
+			<version>1.5.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.jgrapht</groupId>
+			<artifactId>jgrapht-ext</artifactId>
+			<version>1.5.1</version>
+		</dependency>
+		<dependency>
+			<groupId>info.picocli</groupId>
+			<artifactId>picocli</artifactId>
+			<version>3.9.6</version>
+		</dependency>
+
+	</dependencies>
 
 
-        <plugin>
-            <groupId>com.github.github</groupId>
-            <artifactId>site-maven-plugin</artifactId>
-            <version>0.11</version>
-            <configuration>
-                <message>Maven artifacts for ${artifactId}-${version}</message>
-                <noJekyll>true</noJekyll>
-                <outputDirectory>${project.build.directory}/mvn-repo</outputDirectory>
-                <branch>refs/heads/mvn-repo</branch>
-                <includes><include>**/*</include></includes>
-                <repositoryName>crema</repositoryName>
-                <repositoryOwner>idsia</repositoryOwner>
-                <merge>true</merge>
-            </configuration>
-            <executions>
-                <execution>
-                    <goals>
-                        <goal>site</goal>
-                    </goals>
-                    <phase>deploy</phase>
-                </execution>
-            </executions>
-        </plugin>
-    </plugins>
-    </build>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-compiler-plugin</artifactId>
+				<version>3.1</version>
+				<configuration>
+					<source>17</source>
+					<target>17</target>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-assembly-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>single</goal>
+						</goals>
+					</execution>
+				</executions>
+				<configuration>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
+				</configuration>
+			</plugin>
+
+			<!-- Deploy without running tests -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<forkMode>pertest</forkMode>
+					<argLine>-Xms1g -Xmx2g</argLine>
+				</configuration>
+			</plugin>
+
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<version>2.19.1</version>
+			</plugin>
+			<!-- maven-deploy plugin -->
+			<plugin>
+				<artifactId>maven-deploy-plugin</artifactId>
+				<version>2.8.1</version>
+				<configuration>
+					<altDeploymentRepository>
+						internal.repo::default::file://${project.build.directory}/mvn-repo</altDeploymentRepository>
+				</configuration>
+			</plugin>
+
+
+			<plugin>
+				<groupId>com.github.github</groupId>
+				<artifactId>site-maven-plugin</artifactId>
+				<version>0.11</version>
+				<configuration>
+					<message>Maven artifacts for ${artifactId}-${version}</message>
+					<noJekyll>true</noJekyll>
+					<outputDirectory>${project.build.directory}/mvn-repo</outputDirectory>
+					<branch>refs/heads/mvn-repo</branch>
+					<includes>
+						<include>**/*</include>
+					</includes>
+					<repositoryName>crema</repositoryName>
+					<repositoryOwner>idsia</repositoryOwner>
+					<merge>true</merge>
+				</configuration>
+				<executions>
+					<execution>
+						<goals>
+							<goal>site</goal>
+						</goals>
+						<phase>deploy</phase>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 
 </project>

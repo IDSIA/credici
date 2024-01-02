@@ -8,7 +8,6 @@ import ch.idsia.credici.utility.DomainUtil;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
 import gnu.trove.map.TIntIntMap;
-import jdk.jshell.spi.ExecutionControl;
 
 import java.util.Arrays;
 import java.util.List;
@@ -21,7 +20,7 @@ public class SimpleIntegrator {
     TIntIntMap[] extendedData = null;
     StructuralCausalModel extendedModel = null;
 
-    public SimpleIntegrator(StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws InterruptedException, ExecutionControl.NotImplementedException {
+    public SimpleIntegrator(StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws InterruptedException {
 
 
         if(interventions.length>0) {
@@ -91,7 +90,7 @@ public class SimpleIntegrator {
         return extendedData;
     }
 
-    public static double loglikelihood(StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws ExecutionControl.NotImplementedException, InterruptedException {
+    public static double loglikelihood(StructuralCausalModel model, TIntIntMap[] dataObs, TIntIntMap[] interventions, TIntIntMap[][] datasets) throws InterruptedException {
         SimpleIntegrator si = new SimpleIntegrator(model, dataObs, interventions, datasets);
         return si.getExtendedModel().logLikelihood(si.getExtendedData());
     }

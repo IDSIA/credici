@@ -2,6 +2,8 @@ package ch.idsia.credici.inference;
 
 import java.util.Arrays;
 
+import org.apache.commons.lang3.NotImplementedException;
+
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.crema.factor.GenericFactor;
@@ -186,12 +188,12 @@ public abstract class CausalInference<M, R extends GenericFactor>{
 
     }
 
-    public R probNecessityAndSufficiency(int cause, int effect) throws InterruptedException, ExecutionControl.NotImplementedException {
+    public R probNecessityAndSufficiency(int cause, int effect) throws InterruptedException {
         return this.probNecessityAndSufficiency(cause, effect, 0, 1);
     }
 
-    public R probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
-        throw new ExecutionControl.NotImplementedException("Not implemented");
+    public R probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException {
+        throw new NotImplementedException("Not implemented");
     }
 
 

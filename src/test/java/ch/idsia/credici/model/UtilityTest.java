@@ -1,28 +1,16 @@
 package ch.idsia.credici.model;
 
-import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.inference.CredalCausalApproxLP;
-import ch.idsia.credici.inference.CredalCausalVE;
-import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;
-import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
 import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.VertexToInterval;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
-import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
-import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.RandomUtil;
-import com.google.common.primitives.Doubles;
-import gnu.trove.map.TIntIntMap;
-import jdk.jshell.spi.ExecutionControl;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -30,7 +18,7 @@ public class UtilityTest {
 
 
 	@Test
-	public void DAGUtil() throws InterruptedException, ExecutionControl.NotImplementedException {
+	public void DAGUtil() throws InterruptedException {
 
 		RandomUtil.setRandomSeed(1);
 		StructuralCausalModel m = RandomChainNonMarkovian.buildModel(5, 2, 6);

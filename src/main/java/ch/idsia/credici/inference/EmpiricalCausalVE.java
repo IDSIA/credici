@@ -99,7 +99,7 @@ public class EmpiricalCausalVE extends CausalInference<BayesianNetwork, GenericF
 
     }
 
-    public IntervalFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
+    public IntervalFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException {
         throw new NotImplementedException("");
     }
 

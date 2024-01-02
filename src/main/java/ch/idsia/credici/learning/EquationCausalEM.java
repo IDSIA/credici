@@ -6,24 +6,31 @@ import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.experiments.Logger;
+import ch.idsia.credici.utility.table.Table;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.JoinInference;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.learning.DiscreteEM;
 import ch.idsia.crema.learning.ExpectationMaximization;
+import ch.idsia.crema.model.Domain;
 import ch.idsia.crema.model.GraphicalModel;
+import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
+import ch.idsia.crema.utility.CombinationsIterator;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Ints;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.math3.stat.descriptive.summary.Product;
 
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
+
+import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.time.StopWatch;
 
 import java.util.*;
@@ -33,8 +40,6 @@ import java.util.stream.IntStream;
 public class EquationCausalEM extends DiscreteEM<EquationCausalEM> {
 
 	private HashMap<String, BayesianFactor> posteriorCache = new HashMap<>();
-
-	private boolean usePosteriorCache = true;
 
 	private TIntObjectHashMap<BayesianFactor> replacedFactors = null;
 
@@ -50,21 +55,15 @@ public class EquationCausalEM extends DiscreteEM<EquationCausalEM> {
 		KL, L1, LLratio
 	}
 
-	public EquationCausalEM(StructuralCausalModel model,
-			JoinInference<BayesianFactor, BayesianFactor> inferenceEngine) {
-		this.inferenceEngine = inferenceEngine;
-		this.priorModel = model;
-		this.trainableVars = CausalInfo.of((StructuralCausalModel) priorModel).getExogenousVars();
-	}
-
 	public EquationCausalEM(GraphicalModel<BayesianFactor> model, int[] elimSeq) {
 		this.inferenceEngine = getDefaultInference(model, elimSeq);
 		this.priorModel = model;
-		this.trainableVars = CausalInfo.of((StructuralCausalModel) priorModel).getExogenousVars();
 	}
 
-	public EquationCausalEM(GraphicalModel<BayesianFactor> model) {
-		this(model, (new MinFillOrdering()).apply(model));
+	public EquationCausalEM(StructuralCausalModel model) {
+		//this(model, (new MinFillOrdering()).apply(model));
+		this.priorModel = model;
+		this.trainableVars = model.getExogenousVars();
 	}
 
 	private void init() {
@@ -131,60 +130,88 @@ public class EquationCausalEM extends DiscreteEM<EquationCausalEM> {
 
 	}
 
-	protected void stepPrivate(@SuppressWarnings("rawtypes") Collection stepArgs) throws InterruptedException {
+	
+	protected void stepPrivate(Collection stepArgs) throws InterruptedException {
+		
 		// E-stage
-		@SuppressWarnings("unchecked")
-		TIntObjectMap<BayesianFactor> counts = expectation((Pair<TIntIntMap, Long>[]) stepArgs.toArray(Pair[]::new));
+		Table counts = expectation((Table) stepArgs);
 
 		// M-stage
 		maximization(counts);
 	}
 
-	protected Pair<TIntIntMap,Long>[] expectation(Pair<TIntIntMap, Long>[] dataWeighted)
-			throws InterruptedException {
-
+	protected Table expectation(Table dataWeighted) throws InterruptedException {
 	
+		clearCache();
 		
-//		TIntObjectMap<BayesianFactor> counts = new TIntObjectHashMap<>();
-//		for (int variable : posteriorModel.getVariables()) {
-//			counts.put(variable, new BayesianFactor(posteriorModel.getFactor(variable).getDomain(), false));
-//		}
-
-		clearPosteriorCache();
-		// devo generare la congiunta delle P(U|row)
-		// poi devo estendere la tabella con la P(U)
-		for (Pair<TIntIntMap, Long> p : dataWeighted) {
+		// expecting ccomponents
+		
+		int[] columns = ArraysUtil.append(dataWeighted.getColumns(), trainableVars);
+		
+		Table goal = new Table(columns);
+		
+		// devo generare la marginal posterior delle P(U|row)
+		for (Pair<TIntIntMap, Double> p : dataWeighted.mapIterable()) {
 			TIntIntMap observation = p.getLeft();
-			long w = p.getRight();
+			double w = p.getRight();
 
-			// expecting ccomponents
-
+			List<Collection<Pair<Integer, Double>>> states = new ArrayList<Collection<Pair<Integer, Double>>>();
 			
-			StructuralCausalModel scm = (StructuralCausalModel) posteriorModel;
-			int[] e = scm.getExogenousVars();
-			
-	
-			
-			// Case with missing data
-			BayesianFactor phidden_obs = posteriorInference(e, observation);
-			phidden_obs = phidden_obs.scalarMultiply(w);
+			for (int u : trainableVars) {
+				BayesianFactor phidden_obs = posteriorInference(u, observation);
+				double[] dta = phidden_obs.getData();
 				
+				// phidden_obs = phidden_obs.scalarMultiply(w);
+				int size = posteriorModel.getSize(u);
+				if (dta.length != size) {
+					System.err.println("HALT");
+				}
+				
+				Collection<Pair<Integer, Double>> var_states = 
+						IntStream.range(0, size).<Pair<Integer, Double>>mapToObj(i->Pair.of(i, dta[i])).collect(Collectors.toList());
+				states.add(var_states);
+			}
+			
+			// the posteriors must now be combined into many rows
+			CombinationsIterator<Pair<Integer, Double>> iter = new CombinationsIterator<Pair<Integer, Double>>(states);
+			while (iter.hasNext()) {
+				List<Pair<Integer, Double>> row = iter.next();
+				TIntIntMap new_obs = new TIntIntHashMap(observation);
+				
+				double weight = w;
+				for (int i = 0; i < trainableVars.length; ++i) {
+					int variable = trainableVars[i];
+					Pair<Integer, Double> d = row.get(i);
+					int state = d.getKey();
+					
+					new_obs.put(variable, state);
+					
+					double probab = d.getValue();
+					weight *= probab;
+				}
+				
+				goal.add(new_obs, weight);
+			}
 			
 		}
 
-		return null;
+		return goal;
 	}
 
-	private int[] getCC()
-	void maximization(TIntObjectMap<BayesianFactor> counts) {
+
+	
+	void maximization(Table counts) {
 
 		replacedFactors = new TIntObjectHashMap<BayesianFactor>();
 		updated = false;
-
+		
+		// exogenous first
 		for (int var : trainableVars) {
-			BayesianFactor countVar = counts.get(var);
-
-			BayesianFactor f = countVar.divide(countVar.marginalize(var));
+			BayesianFactor bf = posteriorModel.getFactor(var);
+			Strides d = bf.getDomain();
+			double[] weights = counts.getWeights(d.getVariables(), d.getSizes());
+			bf = new BayesianFactor(d, weights);
+			BayesianFactor f = bf.divide(bf.marginalize(var));
 
 			// Store the previous factor and set the new one
 			replacedFactors.put(var, posteriorModel.getFactor(var));
@@ -194,20 +221,20 @@ public class EquationCausalEM extends DiscreteEM<EquationCausalEM> {
 		// for all other variables we have the counts as they are in the table. 
 		// however as the distributions are conditional the counts must be spread.
 		
-		
 		// Determine which trainable variables should not be trained anymore
 		if (stopAtConvergence)
-			for (int[] exoCC : getTrainableExoCC())
-				if (hasConverged(exoCC))
-					trainableVars = ArraysUtil.difference(trainableVars, exoCC);
+//			for (int[] exoCC : getTrainableExoCC())
+//				if (hasConverged(exoCC))
+//					trainableVars = ArraysUtil.difference(trainableVars, exoCC);
+			trainableVars = ArraysUtil.difference(trainableVars, trainableVars);
 
 	}
-
-	private List<int[]> getTrainableExoCC() {
-		return ((StructuralCausalModel) posteriorModel).exoConnectComponents().stream()
-				.filter(c -> Arrays.stream(c).allMatch(u -> ArraysUtil.contains(u, trainableVars)))
-				.collect(Collectors.toList());
-	}
+//
+//	private List<int[]> getTrainableExoCC() {
+//		return ((StructuralCausalModel) posteriorModel).exoConnectComponents().stream()
+//				.filter(c -> Arrays.stream(c).allMatch(u -> ArraysUtil.contains(u, trainableVars)))
+//				.collect(Collectors.toList());
+//	}
 
 	private boolean hasConverged(int... exoCC) {
 		if (stopCriteria == StopCriteria.KL) {
@@ -239,33 +266,47 @@ public class EquationCausalEM extends DiscreteEM<EquationCausalEM> {
 		return this;
 	}
 
+	private String getKey(int query, TIntIntMap obs) {
+		StringBuilder key = new StringBuilder();
+		key.append(query);
+		key.append("--");
+		obs.forEachEntry((k,v) -> {
+			key.append(k+"="+v+",");
+			return true;
+		});
+		return key.toString();
+	}
 	
-	BayesianFactor posteriorInference(int[] query, TIntIntMap obs) throws InterruptedException {
+	
+	BayesianFactor posteriorInference(int query, TIntIntMap obs) throws InterruptedException {
 		// considerations:
 		// - since we are using the weighted counts there is no two same observation sets. No no chance to cache on that
 		// - we expect to be working on since ccomponent, so not filtering of vars needed
 		
+		// String cacheKey = getKey(query, obs);
+		
 		StructuralCausalModel infModel = (StructuralCausalModel) new CutObserved().execute(posteriorModel, obs);
 		infModel = new RemoveBarren().execute(infModel, query, obs);
 
+		
 		TIntIntMap newObs = new TIntIntHashMap();
-		for (int x : obs.keys())
-			if (ArraysUtil.contains(x, infModel.getVariables()))
+		for (int x : obs.keys()) {
+			if (ArraysUtil.contains(x, infModel.getVariables())) {
 				newObs.put(x, obs.get(x));
+			}
+		}
+		
 		return inferenceEngine.apply(infModel, query, newObs); // P(U|X=obs)
 	}
 
 
 
 
-	void clearPosteriorCache() {
+	private void clearCache() {
 		posteriorCache.clear();
+		modelCache.clear();
 	}
 
-	public EquationCausalEM usePosteriorCache(boolean active) {
-		this.usePosteriorCache = active;
-		return this;
-	}
 
 	protected TIntIntMap[] data = null;
 

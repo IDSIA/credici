@@ -39,6 +39,7 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
+import org.apache.commons.rng.UniformRandomProvider;
 import org.jgrapht.Graph;
 import org.jgrapht.alg.clique.ChordalGraphMaxCliqueFinder;
 import org.jgrapht.alg.shortestpath.AllDirectedPaths;
@@ -64,6 +65,9 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	/** set of variables that are exogenous. The rest are considered to be endogenous */
 	private Set<Integer> exogenousVars = new HashSet<Integer>();
+	
+	/** var that are a link to another Component. Always obseved **/
+	private Set<Integer> dependencyVars = new HashSet<Integer>();
 
 
 
@@ -175,6 +179,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return vid;
 	}
 
+	
 	public int addVariable(int vid, int size, boolean exogenous){
 		if(vid>max) max = vid;
 		max++;
@@ -185,6 +190,25 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return vid;
 	}
 
+	public enum VarType {
+		ENDOGENOUS, EXOGENOUS, DEPENDENCY
+	}
+	public int addVariable(int vid, int size, VarType type){
+		if(vid>max) max = vid;
+		max++;
+		this.cardinalities.put(vid, size);
+		network.addVariable(vid, size);
+		switch(type) {
+		case EXOGENOUS:
+			this.exogenousVars.add(vid);
+			break;
+		case DEPENDENCY:
+			this.dependencyVars.add(vid);
+			break;
+		}
+		return vid;
+	}
+	
 	/**
 	 * Removes a variable from the model
 	 * @param variable
@@ -224,15 +248,15 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	/**
-	 * Retruns an array with IDs of the endogenous variables
+	 * Returns an array with IDs of the endogenous variables
 	 * @return
 	 */
 	public int[] getEndogenousVars() {
 		Set<Integer> endogenousVars = new HashSet<Integer>();
 
 		for(int v : this.getVariables())
-			if(!this.exogenousVars.contains(v))
-				endogenousVars.add(v)	;
+			if(!this.exogenousVars.contains(v) && !dependencyVars.contains((v)))
+				endogenousVars.add(v);
 		return Ints.toArray(endogenousVars);
 	}
 
@@ -342,7 +366,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		}
 	}
 
-
+	
 	public void randomizeExoFactor(int u, int prob_decimals){
 		this.setFactor(u,
 				BayesianFactor.random(this.getDomain(u),
@@ -1460,13 +1484,16 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		for(int v : intervenedVars()){
 			int card = this.getDomain(v).getCombinations();
 			int u = this.addVariable(card, true);
+			
 			BayesianFactor pu = this.getFactor(v).renameDomain(u);
 			this.addParent(v,u);
+			
 			BayesianFactor fv = BayesianFactor.deterministic(this.getDomain(v), this.getDomain(u), IntStream.range(0,card).toArray());
 			this.setFactor(v,fv);
 			this.setFactor(u,pu);
 		}
 	}
+	
 	public StructuralCausalModel getWithFixedIntervened(){
 		StructuralCausalModel out = this.copy();
 		out.fixIntervened();
@@ -1497,6 +1524,18 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		for(int x : interVars) inter.put(x, 0);
 		Query q = new CausalVE(this).causalQuery().setIntervention(inter);
 		return q.isIdentifiable();
+	}
+
+	
+	private UniformRandomProvider random;
+	
+	public Object getRandomSource() {
+		// TODO Auto-generated method stub
+		return random;
+	}
+
+	public void setRandomSource(UniformRandomProvider randomSource) {
+		random = randomSource;
 	}
 
 }

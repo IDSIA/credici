@@ -10,7 +10,6 @@ import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
-import jdk.jshell.spi.ExecutionControl;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,6 +17,8 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.NotImplementedException;
 
 import static ch.idsia.credici.utility.EncodingUtil.getRandomSeqIntMask;
 
@@ -141,7 +142,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 						return Double.NaN;
-					} catch (ExecutionControl.NotImplementedException e) {
+					} catch (NotImplementedException e) {
 						e.printStackTrace();
 						return Double.NaN;
 					}
@@ -158,7 +159,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 						return Double.NaN;
-					} catch (ExecutionControl.NotImplementedException e) {
+					} catch (NotImplementedException e) {
 						e.printStackTrace();
 						return Double.NaN;
 					}
@@ -167,7 +168,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 	}
 
 	@Override
-	public GenericFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
+	public GenericFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException {
 
 		double max = Double.NEGATIVE_INFINITY;
 		double min = Double.POSITIVE_INFINITY;
@@ -186,7 +187,7 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 		return new VertexFactor(Strides.empty(), Strides.empty(), vals);
 	}
 
-	public GenericFactor probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException, ExecutionControl.NotImplementedException {
+	public GenericFactor probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException {
 
 		double max = Double.NEGATIVE_INFINITY;
 		double min = Double.POSITIVE_INFINITY;
@@ -254,11 +255,11 @@ public class CausalMultiVE extends CausalInference<List<StructuralCausalModel>, 
 
 	}
 
-	public int pointsForConvergingPNS(double ratioMin, int cause, int effect) throws InterruptedException, ExecutionControl.NotImplementedException {
+	public int pointsForConvergingPNS(double ratioMin, int cause, int effect) throws InterruptedException {
 		return pointsForConvergingPNS(ratioMin, cause, effect, 0, 1);
 	}
 
-	public int pointsForConvergingPNS(double ratioMin, int cause, int effect,  int trueState, int falseState) throws ExecutionControl.NotImplementedException, InterruptedException {
+	public int pointsForConvergingPNS(double ratioMin, int cause, int effect,  int trueState, int falseState) throws InterruptedException {
 
 		IntervalFactor pns = new VertexToInterval().apply((VertexFactor) this.probNecessityAndSufficiency(cause, effect, trueState, falseState));
 		List masks = getRandomSeqIntMask(this.getInferenceList().size());

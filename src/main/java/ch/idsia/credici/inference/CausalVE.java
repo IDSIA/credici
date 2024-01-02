@@ -97,13 +97,13 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
     }
 
 
-    public BayesianFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
+    public BayesianFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException {
         return probNecessityAndSufficiency(cause, effect, trueState, falseState, trueState, falseState);
     }
-    public BayesianFactor probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException, ExecutionControl.NotImplementedException {
+    public BayesianFactor probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException {
         return probNecessityAndSufficiency(cause, effect, causeTrue, causeFalse, effectTrue, effectFalse, null);
     }
-    private BayesianFactor probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse, TIntIntMap evidence) throws InterruptedException, ExecutionControl.NotImplementedException {
+    private BayesianFactor probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse, TIntIntMap evidence) throws InterruptedException {
         StructuralCausalModel reality = this.getModel();
         StructuralCausalModel doTrue = (StructuralCausalModel)this.causalQuery().setIntervention(cause, causeTrue).getInferenceModel(false);
         StructuralCausalModel doFalse = (StructuralCausalModel)this.causalQuery().setIntervention(cause, causeFalse).getInferenceModel(false);

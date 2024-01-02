@@ -10,7 +10,7 @@ import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseModel;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.primitives.Doubles;
-import jdk.jshell.spi.ExecutionControl;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -20,7 +20,7 @@ public class BuilderTest {
 
 
 	@Test
-	public void ExactCredalBuilderV() throws InterruptedException, ExecutionControl.NotImplementedException {
+	public void ExactCredalBuilderV() throws InterruptedException {
 
 		RandomUtil.setRandomSeed(1);
 		StructuralCausalModel m = RandomChainNonMarkovian.buildModel(5, 2, 6);
@@ -67,7 +67,7 @@ public class BuilderTest {
 
 
 	@Test
-	public void EMbuilder() throws ExecutionControl.NotImplementedException, InterruptedException {
+	public void EMbuilder() throws InterruptedException {
 
 		RandomUtil.setRandomSeed(1);
 		StructuralCausalModel m = RandomChainNonMarkovian.buildModel(5, 2, 6);
@@ -88,7 +88,7 @@ public class BuilderTest {
 		CausalMultiVE inf = new CausalMultiVE(points);
 
 		expected = new double[]{ 1.9556621461757713E-5, 0.0017321884419042996 };
-		VertexFactor pns = ((VertexFactor)inf.probNecessityAndSufficiency(x,y));
+		VertexFactor pns = ((VertexFactor) inf.probNecessityAndSufficiency(x,y));
 		actual = new double[]{pns.getData()[0][0][0], pns.getData()[0][1][0]};
 		Doubles.sortDescending(actual);
 		Doubles.sortDescending(expected);

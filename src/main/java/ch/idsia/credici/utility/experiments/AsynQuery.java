@@ -2,7 +2,6 @@ package ch.idsia.credici.utility.experiments;
 
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.crema.factor.GenericFactor;
-import jdk.jshell.spi.ExecutionControl;
 
 public class AsynQuery {
 
@@ -18,7 +17,7 @@ public class AsynQuery {
         AsynQuery.effect = effect;
     }
 
-    public  static GenericFactor run() throws InterruptedException, ExecutionControl.NotImplementedException {
+    public  static GenericFactor run() throws InterruptedException {
         if(type.equals("ace")){
             return  inf.averageCausalEffects(cause, effect);
         }else if(type.equals("pns")){

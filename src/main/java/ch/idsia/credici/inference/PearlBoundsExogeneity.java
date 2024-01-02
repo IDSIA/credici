@@ -43,7 +43,7 @@ public class PearlBoundsExogeneity extends CausalInference<BayesianNetwork, Inte
         throw new NotImplementedException("");
     }
 
-    public IntervalFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
+    public IntervalFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException {
         //if(!CausalOps.exogenityCheck(causalModel, cause, effect))
         //    throw new IllegalArgumentException("Exogeneity condition is not satisfied");
 

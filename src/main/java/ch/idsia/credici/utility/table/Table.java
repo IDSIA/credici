@@ -109,21 +109,21 @@ public class Table implements Iterable<Map.Entry<int[], Double>> {
 	 * @return
 	 */
 	public double[] getWeights(int[] vars, int[] sizes) {
-		int[] state = new int[vars.length];
-
+		
+		// cumulative size
 		int cumsize = 1;
 
 		TIntIntMap strides = new TIntIntHashMap();
 		for (int i = 0; i < vars.length; ++i) {
-			cumsize = cumsize * sizes[i];
 			strides.put(vars[i], cumsize);
+			cumsize = cumsize * sizes[i];
 		}
 		
 		int[] col_strides = new int[columns.length];
 
 		for (int i = 0; i < columns.length; ++i) {
 			if (strides.containsKey(columns[i])) {
-				col_strides[i] = strides.get(i);
+				col_strides[i] = strides.get(columns[i]);
 			}
 		}
 		

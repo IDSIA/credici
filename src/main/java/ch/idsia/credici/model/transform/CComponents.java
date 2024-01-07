@@ -47,7 +47,6 @@ public class CComponents {
     public List<Pair<StructuralCausalModel, Table>> apply(StructuralCausalModel model, Table data) {
         results = Collections.synchronizedMap(new HashMap<>());
 
-
         from = model;
         Set<Integer> exo = IntStream.of(model.getExogenousVars()).boxed().collect(Collectors.toSet());
 
@@ -85,7 +84,7 @@ public class CComponents {
     }
 
 
-    Map<String, List<StructuralCausalModel>> results;
+    private Map<String, List<StructuralCausalModel>> results;
 
     public synchronized void addResults(String name, List<StructuralCausalModel> models) {
         if (!results.get(name).isEmpty()) { 
@@ -94,8 +93,9 @@ public class CComponents {
         results.put(name, models);
     }
 
-    public void addResult(StructuralCausalModel model) {
-        var list = results.get(model.getName());
+    
+    public synchronized void addResult(StructuralCausalModel model) {
+        var list = results.computeIfAbsent(model.getName(), (t) -> new ArrayList<>());
         list.add(model);
         results.put(model.getName(), list);
     }

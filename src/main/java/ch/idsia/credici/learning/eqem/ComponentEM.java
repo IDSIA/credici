@@ -1,9 +1,12 @@
 package ch.idsia.credici.learning.eqem;
 
+import java.sql.Date;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Random;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -12,10 +15,13 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.math3.util.MathArrays;
 
+import ch.idsia.credici.learning.ve.VE;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.utility.Randomizer;
 import ch.idsia.credici.utility.table.Table;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.JoinInference;
+import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
@@ -29,28 +35,88 @@ import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
 class ComponentEM {
-	private StructuralCausalModel model;
-	private TIntObjectMap<TIntSet> endoLocked;
-	private int[] trainableVars;
-	private JoinInference<BayesianFactor, BayesianFactor> inferenceEngine;
+	int numRuns;
+	int maxIterations;
 	
-	public ComponentEM(StructuralCausalModel model) {
-		this.model = model;
-		init();
+	private StructuralCausalModel model;
+	private StructuralCausalModel sourceModel;
+	
+	private TIntObjectMap<TIntSet> endoLocked;
+	private TIntSet doNotTouch;
+	
+	private int[] trainableVars;
+	private int[] variables;
+	
+	private JoinInference<BayesianFactor, BayesianFactor> inferenceEngine;
+	private Randomizer random;
+	
+	public ComponentEM(StructuralCausalModel model, long seed) {
+		this.random = new Randomizer(seed);
+		init(model);
+	}
+	
+	public ComponentEM(StructuralCausalModel model) {	
+		random = new Randomizer();
+		init(model);
+	}
+	
+
+	
+	private void init(StructuralCausalModel themodel) {
+		sourceModel = themodel;
+		
+		trainableVars = model.getExogenousVars();
+		
+		// model may contain some additional variables (that are not to be optimized)
+		variables = ArraysUtil.append(model.getExogenousVars(), model.getEndogenousVars());
+	}
+
+	private void runInit() {
+		model = sourceModel.copy();
+		for (int variable : variables) {
+			random.randomizeInplace(model.getFactor(variable), variable);
+		}
+		doNotTouch = new TIntHashSet();
 		initLocked();
 	}
 	
-	private void init() {
-		trainableVars = model.getExogenousVars();
+	/**
+	 * Main optimization start.
+	 * This will execute runs in sequence
+	 * @param data
+	 * @throws InterruptedException
+	 */
+	public void run(Table data, Consumer<StructuralCausalModel> resultsCallback) throws InterruptedException {
+		for (int r = 0; r < numRuns; ++r) {
+			runInit();
+			
+			for (int iteration = 0; iteration < maxIterations; ++iteration) {
+				boolean more = step(data);
+				if (!more) break;
+			}
+			resultsCallback.accept(model);
+		}
 	}
 	
-	public void step(Table data) throws InterruptedException {
+	
+	public boolean step(Table data) throws InterruptedException {
 		Table counts = expectation(data);
-		maximization(counts);
+		boolean converged = maximization(counts);
+		if (converged) {
+			var extreme = getExtreme();
+			if (extreme.getKey() == -1) {
+				// nothing found, nothing else to do
+				// we converged and do not have any further variable to lock
+				return false;
+			} 
+			lock(extreme.getKey(), extreme.getValue());
+		}
+		return true;
 	}
 	
 	public Table expectation(Table data) throws InterruptedException {
-		int[] columns = ArraysUtil.append(model.getEndogenousVars(), model.getExogenousVars());
+		int[] columns = variables; //ArraysUtil.append(model.getEndogenousVars(), model.getExogenousVars());
+		double loglike = 0;
 		
 		Table result = new Table(columns);
 		for (Pair<TIntIntMap, Double> p : data.mapIterable()) {
@@ -58,10 +124,21 @@ class ComponentEM {
 			double w = p.getRight();
 
 			List<Collection<Pair<Integer, Double>>> states = new ArrayList<Collection<Pair<Integer, Double>>>();
+			boolean first = true;
 			
+			// compute the probability for each exogenous variable
 			for (int u : model.getExogenousVars()) {
-				BayesianFactor phidden_obs = posteriorInference(u, observation);
-				double[] dta = phidden_obs.getData();
+				BayesianFactor phidden_obs = inference(u, observation);
+				
+				// Likelihood of this observation is the normalizing factor
+				BayesianFactor ll = phidden_obs.marginalize(u);
+				if (first) {
+					// only account once
+					first = false;
+					loglike += FastMath.log(ll.getData()[0] * w);
+				}
+				
+				final double[] dta = phidden_obs.divide(ll).getData();
 				
 				// phidden_obs = phidden_obs.scalarMultiply(w);
 				int size = model.getSize(u);
@@ -70,7 +147,10 @@ class ComponentEM {
 				}
 				
 				Collection<Pair<Integer, Double>> var_states = 
-						IntStream.range(0, size).<Pair<Integer, Double>>mapToObj(i->Pair.of(i, dta[i])).collect(Collectors.toList());
+						IntStream.range(0, size)
+						.<Pair<Integer, Double>>mapToObj(i->Pair.of(i, dta[i]))
+						.collect(Collectors.toList());
+				
 				states.add(var_states);
 			}
 			
@@ -100,30 +180,74 @@ class ComponentEM {
 	
 	
 	
-	public void maximization(Table counts) {
+	public boolean maximization(Table counts) {		
 		
+		for (int variable : variables) {
+			
+			// is the variable fully locked?
+			if (doNotTouch.contains(variable)) continue;
+			
+			BayesianFactor factor = model.getFactor(variable);
+			Strides domain = factor.getDomain();
+			
+			int stride = domain.getStride(variable);
+			int states = domain.getCardinality(variable);
+			
+			double[] original = factor.getData();
+			double[] data = counts.getWeights(domain.getVariables(), domain.getSizes());
+			
+			// restore locked columns
+			int changed = 0;
+			if (endoLocked.containsKey(variable)) {
+				TIntSet locked = endoLocked.get(variable);
+				var iter = locked.iterator();
+				
+				while (iter.hasNext()) {
+					int offset = iter.next();
+					for (int state = 0 ; state < states; ++state) {
+						int id = offset + state * stride;
+						data[id] = original[id];
+					}
+					++changed;
+				}
+			}
+			
+			factor.setData(data);
+			factor = factor.divide(factor.marginalize(variable));
+
+			model.setFactor(variable, factor);
+		}
+		return false;
 	}
 	
+	
+	//boolean converged()
+	
 
-	BayesianFactor posteriorInference(int query, TIntIntMap obs) throws InterruptedException {
+	BayesianFactor inference(int query, TIntIntMap obs) throws InterruptedException {
 		// considerations:
 		// - since we are using the weighted counts there is no two same observation sets. No no chance to cache on that
 		// - we expect to be working on ccomponent, so no filtering of vars needed
 		
 		// String cacheKey = getKey(query, obs);
 		
+		// this should be unnecessary with CComponents. Only replace the factor in the
+		// children of the dependent variables should suffice
 		StructuralCausalModel infModel = (StructuralCausalModel) new CutObserved().execute(model, obs);
 		infModel = new RemoveBarren().execute(infModel, query, obs);
 
+		TIntSet vars = new TIntHashSet(infModel.getVariables());
+		vars.retainAll(obs.keySet());
 		
 		TIntIntMap newObs = new TIntIntHashMap();
-		for (int x : obs.keys()) {
-			if (ArraysUtil.contains(x, infModel.getVariables())) {
-				newObs.put(x, obs.get(x));
-			}
+		for (int x : vars.toArray()) {
+			newObs.put(x, obs.get(x));
 		}
 		
-		return inferenceEngine.apply(infModel, query, newObs); // P(U|X=obs)
+		VE<BayesianFactor> fve = new VE<BayesianFactor>();
+		fve.setNormalize(false);
+
+        return (BayesianFactor) fve.apply(infModel, query, newObs);
 	}
 	
 	

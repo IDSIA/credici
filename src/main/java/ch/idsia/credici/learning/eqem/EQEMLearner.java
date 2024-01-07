@@ -15,9 +15,10 @@ public class EQEMLearner {
 	private Randomizer random;
 	private Table data; 
 	
-	public EQEMLearner(StructuralCausalModel prior) {
+	public EQEMLearner(StructuralCausalModel prior, Table data) {
 		this.random = new Randomizer(0);
 		this.model = prior.copy();
+		this.data = data;
 		
 		for (int variable : this.model.getVariables()) {
 			BayesianFactor bf = this.model.getFactor(variable);
@@ -25,9 +26,12 @@ public class EQEMLearner {
 		}
 	}
 	
-	public void run() {
+	public void run() throws InterruptedException {
 		CComponents cc = new CComponents();
 		List<Pair<StructuralCausalModel, Table>> components = cc.apply(model, data);
-		
+		for (var pair : components) {
+			ComponentEM cem = new ComponentEM(pair.getKey());
+			cem.run(pair.getValue(), cc::addResult);
+		}
 	}
 }

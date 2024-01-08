@@ -146,9 +146,9 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
             Collection<F> var_factors = queue.next();
 
             if (!var_factors.isEmpty()) {
-                for (F f : var_factors) {
-                   System.out.println(f);
-                }
+//                for (F f : var_factors) {
+//                   System.out.println(f);
+//                }
                 F last = FactorUtil.combine(operator, var_factors);
                 //System.out.println("combined: " + last);
                 

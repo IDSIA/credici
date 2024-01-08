@@ -44,6 +44,17 @@ public class CComponents {
         return res.stream().map(Pair<StructuralCausalModel, Table>::getLeft).collect(Collectors.toList());
     }
 
+    /** 
+     * Transform the given {@link StructuralCausalModel} and Data {@link Table} into a list of 
+     * CComponents with their part of the data.
+     * 
+     * The method also initializes a synchronized map for the results.
+     * Which will be lists of Fully specified {@link StructuralCausalModel}
+     * 
+     * @param model the source model 
+     * @param data the observation table
+     * @return a list of model-table pairs.
+     */
     public List<Pair<StructuralCausalModel, Table>> apply(StructuralCausalModel model, Table data) {
         results = Collections.synchronizedMap(new HashMap<>());
 
@@ -88,7 +99,7 @@ public class CComponents {
 
     public synchronized void addResults(String name, List<StructuralCausalModel> models) {
         if (!results.get(name).isEmpty()) { 
-            System.out.println("WOW");
+        	throw new IllegalArgumentException(name + ": duplicate model list");
         }
         results.put(name, models);
     }
@@ -216,6 +227,13 @@ public class CComponents {
     }
 
 
+    /** 
+     * Re-compose the results into complete models connecting the CComponents again. 
+     * FSCM of the different CCompoents can be reunited at will and do not have
+     * to be paired. This strategy will iterate over combinations using 
+     * a sobol sampling.
+     * @return an interator over full and Fully specified {@link StructuralCausalModel}s.
+     */
     public Iterator<StructuralCausalModel> sobolIterator() {
         
         return new Iterator<StructuralCausalModel>() {
@@ -242,6 +260,13 @@ public class CComponents {
     }
 
 
+    /** 
+     * Re-compose the results into complete models connecting the CComponents again. 
+     * FSCM of the different CCompoents can be reunited at will and do not have
+     * to be paired. This strategy will iterate over all possible combinations of 
+     * the different components' FSCM.
+     * @return an interator over full and Fully specified {@link StructuralCausalModel}s.
+     */
     public Iterator<StructuralCausalModel> exaustiveIterator() {
         final Collection<Collection<StructuralCausalModel>> data = results.values().stream().map(a -> {return (Collection<StructuralCausalModel>) a; }).collect(Collectors.toList());
         return new Iterator<StructuralCausalModel>() {
@@ -261,7 +286,14 @@ public class CComponents {
         };
     }
 
-    
+    /** 
+     * Re-compose the results into complete models connecting the CComponents again. 
+     * FSCM of the different CCompoents can be reunited at will and do not have
+     * to be paired. This strategy will iterate over combinations using 
+     * the original strategy of visiting components paired. 
+     * 
+     * @return an interator over full and Fully specified {@link StructuralCausalModel}s.
+     */
     public Iterator<StructuralCausalModel> alignedIterator() {
         int max = results.values().stream().mapToInt(List::size).max().getAsInt();
         return new Iterator<StructuralCausalModel>() {

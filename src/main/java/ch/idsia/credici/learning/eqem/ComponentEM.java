@@ -1,19 +1,14 @@
 package ch.idsia.credici.learning.eqem;
 
-import java.sql.Date;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
-import java.util.Random;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.util.FastMath;
-import org.apache.commons.math3.util.MathArrays;
 
 import ch.idsia.credici.learning.ve.VE;
 import ch.idsia.credici.model.StructuralCausalModel;
@@ -21,7 +16,7 @@ import ch.idsia.credici.utility.Randomizer;
 import ch.idsia.credici.utility.table.Table;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.JoinInference;
-import ch.idsia.crema.inference.ve.FactorVariableElimination;
+import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.preprocess.CutObserved;
 import ch.idsia.crema.preprocess.RemoveBarren;
@@ -35,8 +30,8 @@ import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
 class ComponentEM {
-	int numRuns;
-	int maxIterations;
+	int numRuns = 1000;
+	int maxIterations = 1000;
 	
 	private StructuralCausalModel model;
 	private StructuralCausalModel sourceModel;
@@ -47,7 +42,8 @@ class ComponentEM {
 	private int[] trainableVars;
 	private int[] variables;
 	
-	private JoinInference<BayesianFactor, BayesianFactor> inferenceEngine;
+	private int[] sequence;
+	
 	private Randomizer random;
 	
 	public ComponentEM(StructuralCausalModel model, long seed) {
@@ -65,10 +61,13 @@ class ComponentEM {
 	private void init(StructuralCausalModel themodel) {
 		sourceModel = themodel;
 		
-		trainableVars = model.getExogenousVars();
+		MinFillOrdering order = new MinFillOrdering();
+		sequence = order.apply(themodel);
+		
+		trainableVars = themodel.getExogenousVars();
 		
 		// model may contain some additional variables (that are not to be optimized)
-		variables = ArraysUtil.append(model.getExogenousVars(), model.getEndogenousVars());
+		variables = ArraysUtil.append(themodel.getExogenousVars(), themodel.getEndogenousVars());
 	}
 
 	private void runInit() {
@@ -114,11 +113,14 @@ class ComponentEM {
 		return true;
 	}
 	
+	
 	public Table expectation(Table data) throws InterruptedException {
 		int[] columns = variables; //ArraysUtil.append(model.getEndogenousVars(), model.getExogenousVars());
 		double loglike = 0;
 		
+		// a new table for the results
 		Table result = new Table(columns);
+		
 		for (Pair<TIntIntMap, Double> p : data.mapIterable()) {
 			TIntIntMap observation = p.getLeft();
 			double w = p.getRight();
@@ -132,18 +134,21 @@ class ComponentEM {
 				
 				// Likelihood of this observation is the normalizing factor
 				BayesianFactor ll = phidden_obs.marginalize(u);
+				
+				// by the definition of a CComponent we alway have P(E) as the 
+				// normalizing factor. So only the first is needed
 				if (first) {
-					// only account once
 					first = false;
 					loglike += FastMath.log(ll.getData()[0] * w);
 				}
 				
 				final double[] dta = phidden_obs.divide(ll).getData();
 				
+				// will multiply lated as we will have to scale all combinations
 				// phidden_obs = phidden_obs.scalarMultiply(w);
 				int size = model.getSize(u);
 				if (dta.length != size) {
-					System.err.println("HALT");
+					throw new IllegalStateException("Data is of wrong size ("+dta.length+" != " + size + ") for variable: " + u);
 				}
 				
 				Collection<Pair<Integer, Double>> var_states = 
@@ -155,12 +160,13 @@ class ComponentEM {
 			}
 			
 			// the posteriors must now be combined into many rows
+			// for all combinations of exogenous variables' states in the component
 			CombinationsIterator<Pair<Integer, Double>> iter = new CombinationsIterator<Pair<Integer, Double>>(states);
 			while (iter.hasNext()) {
 				List<Pair<Integer, Double>> row = iter.next();
 				TIntIntMap new_obs = new TIntIntHashMap(observation);
 				
-				double weight = w;
+				double weight = w; // start with original row weight
 				for (int i = 0; i < trainableVars.length; ++i) {
 					int variable = trainableVars[i];
 					Pair<Integer, Double> d = row.get(i);
@@ -169,9 +175,12 @@ class ComponentEM {
 					new_obs.put(variable, state);
 					
 					double probab = d.getValue();
+					
+					// each var gives a contribution
 					weight *= probab;
 				}
 				
+				// save a new row
 				result.add(new_obs, weight);
 			}
 		}
@@ -179,7 +188,14 @@ class ComponentEM {
 	}
 	
 	
-	
+	/** 
+	 * Maximization stage.
+	 * 
+	 * Recompute all free distributions from the imputed data Table.
+	 * 
+	 * @param counts
+	 * @return
+	 */
 	public boolean maximization(Table counts) {		
 		
 		for (int variable : variables) {
@@ -196,7 +212,8 @@ class ComponentEM {
 			double[] original = factor.getData();
 			double[] data = counts.getWeights(domain.getVariables(), domain.getSizes());
 			
-			// restore locked columns
+			// locked columns need their data to be restore to the original 
+			// values.
 			int changed = 0;
 			if (endoLocked.containsKey(variable)) {
 				TIntSet locked = endoLocked.get(variable);
@@ -213,6 +230,8 @@ class ComponentEM {
 			}
 			
 			factor.setData(data);
+			
+			// normalize the factor to get a proper CPT
 			factor = factor.divide(factor.marginalize(variable));
 
 			model.setFactor(variable, factor);
@@ -246,6 +265,7 @@ class ComponentEM {
 		
 		VE<BayesianFactor> fve = new VE<BayesianFactor>();
 		fve.setNormalize(false);
+		fve.setSequence(sequence);
 
         return (BayesianFactor) fve.apply(infModel, query, newObs);
 	}
@@ -259,7 +279,7 @@ class ComponentEM {
 		
 		for (int endo : model.getEndogenousVars()) {
 			int[] parents = model.getParents(endo);
-			Strides conditioning = model.getDomain(parents);
+//			Strides conditioning = model.getDomain(parents);
 			endoLocked.put(endo, new TIntHashSet());
 		}
 	}

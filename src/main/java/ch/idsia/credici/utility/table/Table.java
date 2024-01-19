@@ -3,36 +3,32 @@ package ch.idsia.credici.utility.table;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
-import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.commons.math3.util.FastMath;
 
-import gnu.trove.impl.hash.TIntIntHash;
-import gnu.trove.list.TDoubleList;
-import gnu.trove.list.array.TDoubleArrayList;
+import ch.idsia.credici.collections.FIntIntHashMap;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
-import gnu.trove.set.TIntSet;
-import gnu.trove.set.hash.TIntHashSet;
-import ch.idsia.credici.collections.FIntIntHashMap;
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
+
 
 /**
  * A data table counting duplicates.
  */
 public class Table implements Iterable<Map.Entry<int[], Double>> {
 
+	private double likelihood;
+	
 	private int[] columns;
 
 	/**
@@ -41,8 +37,14 @@ public class Table implements Iterable<Map.Entry<int[], Double>> {
 	 */
 	private TreeMap<int[], Double> dataTable;
 
+	public void setLikelihood(double likelihood) {
+		this.likelihood = likelihood;
+	}
 
-
+	public double getLikelihood() {
+		return likelihood;
+	}
+	
 	public Table(int[] columns, int[][] data) {
 
 		dataTable = new TreeMap<>(Arrays::compare);
@@ -109,7 +111,7 @@ public class Table implements Iterable<Map.Entry<int[], Double>> {
 	 * @return
 	 */
 	public double[] getWeights(int[] vars, int[] sizes) {
-		
+	
 		// cumulative size
 		int cumsize = 1;
 
@@ -275,15 +277,23 @@ public class Table implements Iterable<Map.Entry<int[], Double>> {
 	}
 
 	public String toString() {
+		double max = dataTable.entrySet().stream().mapToDouble(r->r.getValue()).max().orElse(0);
+		int digits = Math.max("weight".length(),(int) FastMath.log10(max)+1);
+		
+		// should be much more accurate (expecially in number of digits)
+		String pattern = IntStream.range(0, digits).mapToObj(s->"0").collect(Collectors.joining()) + ".###";
+		
+		NumberFormat weightFormat = new DecimalFormat(pattern);
+		
 		StringBuilder sb = new StringBuilder();
-		String out = String.join("\t",
+		String out = String.join(" | ",
 				Arrays.stream(columns).<String>mapToObj(Integer::toString).toArray(a -> new String[a]));
 		sb.append("count\t").append(out).append('\n');
 
 		for (Map.Entry<int[], Double> entry : dataTable.entrySet()) {
 			out = String.join("\t",
 					Arrays.stream(entry.getKey()).<String>mapToObj(Integer::toString).toArray(a -> new String[a]));
-			sb.append(entry.getValue()).append('\t').append(out).append('\n');
+			sb.append(weightFormat.format(entry.getValue())).append('\t').append(out).append('\n');
 		}
 		return sb.toString();
 	}

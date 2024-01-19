@@ -132,17 +132,17 @@ public class CausalUAIParser extends NetUAIParser<StructuralCausalModel> {
     }
 
 
-
-    public static void main(String[] args) throws IOException {
-        StructuralCausalModel model = (StructuralCausalModel) IO.read("./models/simple-scm.uai");
-
-        for(int v:model.getVariables()){
-            System.out.println(model.getFactor(v));
-        }
-
-        System.out.println(model.getProb(2));
-
-    }
+//
+//    public static void main(String[] args) throws IOException {
+//        StructuralCausalModel model = (StructuralCausalModel) IO.read("./models/simple-scm.uai");
+//
+//        for(int v:model.getVariables()){
+//            System.out.println(model.getFactor(v));
+//        }
+//
+//        System.out.println(model.getProb(2));
+//
+//    }
 
 
 }

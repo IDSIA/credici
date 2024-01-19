@@ -11,7 +11,6 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -19,10 +18,14 @@ import java.util.stream.IntStream;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.commons.math3.random.SobolSequenceGenerator;
+import org.apache.commons.math3.util.FastMath;
 
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.utility.table.DoubleTable;
 import ch.idsia.credici.utility.table.Table;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.CombinationsIterator;
 
 /**
@@ -41,7 +44,7 @@ public class CComponents {
   
     public List<StructuralCausalModel> apply(StructuralCausalModel model) {
         var res = apply(model, null);
-        return res.stream().map(Pair<StructuralCausalModel, Table>::getLeft).collect(Collectors.toList());
+        return res.stream().map(Pair<StructuralCausalModel, DoubleTable>::getLeft).collect(Collectors.toList());
     }
 
     /** 
@@ -55,7 +58,7 @@ public class CComponents {
      * @param data the observation table
      * @return a list of model-table pairs.
      */
-    public List<Pair<StructuralCausalModel, Table>> apply(StructuralCausalModel model, Table data) {
+    public List<Pair<StructuralCausalModel, DoubleTable>> apply(StructuralCausalModel model, DoubleTable data) {
         results = Collections.synchronizedMap(new HashMap<>());
 
         from = model;
@@ -66,7 +69,7 @@ public class CComponents {
 
         Set<Integer> visited = new HashSet<>();
 
-        List<Pair<StructuralCausalModel, Table>> models = new ArrayList<>();
+        List<Pair<StructuralCausalModel, DoubleTable>> models = new ArrayList<>();
         
         for (Integer exoVar : exo) {
             
@@ -76,13 +79,13 @@ public class CComponents {
             var vars = collectVariables(exoVar, model, exo);
     
             // now create and copy
-            StructuralCausalModel newmodel = createModel(vars, model);
+            StructuralCausalModel newmodel = createModel(vars, model, data);
             
             int[] exoVars = newmodel.getExogenousVars();
             visited.addAll(Arrays.stream(exoVars).boxed().collect(Collectors.toSet()));
             
             // filter the data table
-            int[] endoVars = newmodel.getEndogenousVars();
+            int[] endoVars = newmodel.getEndogenousVars(true);
             
             if (data != null) {
                 models.add(Pair.of(newmodel, data.subtable(endoVars)));
@@ -132,7 +135,7 @@ public class CComponents {
      * 
      * @return a new SCM with for the component
      */
-    private StructuralCausalModel createModel(Triple<Set<Integer>, Set<Integer>, Set<Integer>> vars,  StructuralCausalModel model) {
+    private StructuralCausalModel createModel(Triple<Set<Integer>, Set<Integer>, Set<Integer>> vars,  StructuralCausalModel model, DoubleTable dataset) {
 
         var newExo = vars.getLeft(); 
         var newEndo = vars.getMiddle();
@@ -147,7 +150,9 @@ public class CComponents {
 
         for (int newExoVar : newExo) {
             newmodel.addVariable(newExoVar, model.getSize(newExoVar), true);
-            newmodel.setFactor(newExoVar, model.getFactor(newExoVar).copy());
+            
+            var factor = model.getFactor(newExoVar);
+            if (factor != null) newmodel.setFactor(newExoVar, factor.copy());
         }
 
         // visit all children, but put in open only their exogenous parents
@@ -170,15 +175,35 @@ public class CComponents {
         // add parenting and factors
         for (int newEndoVar : newEndo) {
             newmodel.addParents(newEndoVar, model.getParents(newEndoVar).clone());
-            newmodel.setFactor(newEndoVar, model.getFactor(newEndoVar).copy());
+            var factor = model.getFactor(newEndoVar);
+            if (factor != null) newmodel.setFactor(newEndoVar, factor.copy());
         }
 
         // additional x
         for (int x : spurious) {
-            int size = model.getSize(x);
-            double[] dta = new double[size];
-            BayesianFactor f = new BayesianFactor(model.getDomain(x), new double[size], true);
-            newmodel.setFactor(x, f);
+            
+        	Set<Integer> domain = Arrays.stream(model.getParents(x)).boxed().collect(Collectors.toSet());
+        	domain.retainAll(spurious);
+        	domain.add(x);
+        	
+            int[] dom_vars = domain.stream().mapToInt(i->i).sorted().toArray();
+            newmodel.addParents(x, ArraysUtil.removeAllFromSortedArray(dom_vars, x));
+            
+            if (dataset != null) {
+	            // interesting parents 
+	            Strides s = model.getDomain(dom_vars);
+	            double[] marginal = dataset.getWeights(s.getVariables(), s.getSizes());
+	            
+	            var factor = model.getFactor(x);
+	            boolean log = factor != null ? factor.isLog() : false;
+	            if (log) {
+	            	marginal = Arrays.stream(marginal).map(FastMath::log).toArray();
+	            }
+	            
+	            BayesianFactor f = new BayesianFactor(s, marginal, log);
+	            f = f.normalize();
+	            newmodel.setFactor(x, f);
+            }
         }
         return newmodel;
     }

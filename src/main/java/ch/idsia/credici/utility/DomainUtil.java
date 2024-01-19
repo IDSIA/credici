@@ -34,4 +34,6 @@ public class DomainUtil {
         int[] vars = ArraysUtil.difference(domf.getVariables(), toRemove);
         return subDomain(domf,vars);
     }
+    
+    
 }

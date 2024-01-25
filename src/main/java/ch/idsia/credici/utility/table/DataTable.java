@@ -138,7 +138,7 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	 * @param row   the item to be added
 	 * @param count the number of rows to be added
 	 */
-	protected void add(int[] row, T count) {
+	public void add(int[] row, T count) {
 		dataTable.compute(row, (k, v) -> (v == null) ? count : add.apply(v, count));
 	}
 

@@ -20,6 +20,27 @@ public class Randomizer {
 		source = RandomSource.JDK.create(seed);
 	}
 
+	
+	
+	/**
+	 * Create a random CPT for the given variable and domain.
+	 * 
+	 * @param domain the full domain of the factor
+	 * @param variable the target variable (rest of domain assumed to be conditioning)
+	 * @param sorted whether domain should be sorted
+	 * @return a new {@link BayesianFactor} CPT with random distributions
+	 */
+	public BayesianFactor randomFactor(Strides domain, int variable, boolean sorted) {
+
+		if (sorted) {
+			domain = domain.sort();
+		}
+		
+		BayesianFactor factor = new BayesianFactor(domain);
+		randomizeInplace(factor, variable);
+		return factor;
+	}
+	
 	/**
 	 * randomize the given Bayesian factor. This will normalize assuming the factor to
 	 * define P(variable|...).

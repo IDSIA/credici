@@ -1,4 +1,4 @@
-package ch.idsia.credici.model.io.dot;
+package ch.idsia.credici.utility.logger;
 
 import java.io.File;
 import java.io.IOException;
@@ -22,27 +22,32 @@ import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.IndexIterator;
 
 public class DetailedDotSerializer {
-
-	protected static Function<Integer, String> bnNodeName(BayesianNetwork model) {
-		return (node) -> {
-			return "X<sub>" + node + "</sub>";
-		};
+	
+	
+	
+	
+	protected static Function<Integer, String> nodeName(GraphicalModel<BayesianFactor> model) {
+		if (model instanceof BayesianNetwork) {
+			return (node) -> {
+				return "X<sub>" + node + "</sub>";
+			};
+		} else {
+			final StructuralCausalModel sm = (StructuralCausalModel) model;
+			return (node) -> {
+				String label;
+				if (sm.isEndogenous(node)) {
+					label = "X";
+				} else if (sm.isExogenous(node)) {
+					label = "U";
+				} else {
+					label = "W";
+				}
+	
+				return label + "<sub>" + node + "</sub>";
+			};
+		}
 	}
-
-	protected static Function<Integer, String> scmNodeName(StructuralCausalModel model) {
-		return (node) -> {
-			String label;
-			if (model.isEndogenous(node)) {
-				label = "X";
-			} else if (model.isExogenous(node)) {
-				label = "U";
-			} else {
-				label = "W";
-			}
-
-			return label + "<sub>" + node + "</sub>";
-		};
-	}
+		
 
 	protected String apply(DoubleTable table, Function<Integer, String> nodeName) {
 		NumberFormat formatter = new DecimalFormat("0.###");
@@ -74,17 +79,22 @@ public class DetailedDotSerializer {
 		return builder.toString();
 	}
 
-	public String apply(GraphicalModel<BayesianFactor> model, String name, DoubleTable data,
-			Function<Integer, String> nodeName, Map<Integer, Set<Integer>> highlight) {
-
+	public String apply(Info record) {
+		String name = record.getModelName();
+		GraphicalModel<BayesianFactor> model = record.getModel();
+		final Function<Integer, String> nodeName = record.getNodeName() == null ? DetailedDotSerializer.nodeName(model) : record.getNodeName();
+		
+		var highlight = record.getHighlight();
+		
+		
 		StringBuilder builder = new StringBuilder();
 		if (name == null)
 			name = "model";
 		
 		builder.append("digraph \"").append(name).append("\" {\n node [shape=none];\n").append("\n");
 
-		if (data != null)
-			builder.append("TABLE [label=<").append(apply(data, nodeName)).append(">]\n");
+		if (record.getData() != null)
+			builder.append("TABLE [label=<").append(apply(record.getData(), nodeName)).append(">]\n");
 
 		StringBuilder arcs = new StringBuilder();
 
@@ -165,46 +175,24 @@ public class DetailedDotSerializer {
 		}
 
 		builder.append(arcs);
+		
+		if (record.getTitle() != null) builder.append("labelloc=\"t\"\nlabel=\"").append(record.getTitle()).append("\"\n");
+		
 		builder.append("}");
 		return builder.toString();
 
 	}
 
-	public String apply(StructuralCausalModel model, DoubleTable data, Map<Integer, Set<Integer>> highlight) {
-		return apply(model, model.getName(), data, DetailedDotSerializer.scmNodeName(model), highlight);
-	}
 
-	public String apply(BayesianNetwork model, DoubleTable data, Map<Integer, Set<Integer>> highlight) {
-		return apply(model, "BN", data, DetailedDotSerializer.bnNodeName(model), highlight);
-	}
-
-	public static void saveModel(StructuralCausalModel model, DoubleTable data, String filename) {
-		saveModel(model, data, filename, null);
-	}
-
-	public static void saveModel(StructuralCausalModel model, DoubleTable data, String filename,
-			Map<Integer, Set<Integer>> highlight) {
-		saveModel(model, model.getName(), data, scmNodeName(model), filename, highlight);
-	}
-
-	public static void saveModel(BayesianNetwork model, DoubleTable data, String filename) {
-		saveModel(model, data, filename, null);
-	}
-
-	public static void saveModel(BayesianNetwork model, DoubleTable data, String filename,
-			Map<Integer, Set<Integer>> highlight) {
-		saveModel(model, "BN", data, bnNodeName(model), filename, highlight);
-	}
-
-	private static <T extends GraphicalModel<BayesianFactor>> void saveModel(T model, String modelName,
-			DoubleTable data, Function<Integer, String> nodeName, String filename,
-			Map<Integer, Set<Integer>> highlight) {
+	
+	
+	public static void saveModel(String filename, Info r) {
 		try {
 			DetailedDotSerializer serializer = new DetailedDotSerializer();
 
 			File f = File.createTempFile(filename, ".dot");
 
-			String file = serializer.apply(model, modelName, data, nodeName, highlight);
+			String file = serializer.apply(r);
 			Files.writeString(Path.of(f.getAbsolutePath()), file);
 			ProcessBuilder b = new ProcessBuilder("/opt/homebrew/bin/dot", "-Tpng", "-o", filename,
 					f.getAbsolutePath());

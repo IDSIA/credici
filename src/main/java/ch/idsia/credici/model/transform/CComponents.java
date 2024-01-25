@@ -12,6 +12,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -35,8 +37,12 @@ import ch.idsia.crema.utility.CombinationsIterator;
  * this parents.  
  */
 public class CComponents {
-
+	private static final String CC_KEY = "CC-Key";
+	
+	AtomicInteger modelCounter; 
+	
     public CComponents() { 
+    	modelCounter = new AtomicInteger();
     }
 
     private StructuralCausalModel from; 
@@ -98,28 +104,39 @@ public class CComponents {
     }
 
 
-    private Map<String, List<StructuralCausalModel>> results;
+    private Map<Integer, List<StructuralCausalModel>> results;
 
-    public synchronized void addResults(String name, List<StructuralCausalModel> models) {
-        if (!results.get(name).isEmpty()) { 
-        	throw new IllegalArgumentException(name + ": duplicate model list");
-        }
-        results.put(name, models);
-    }
 
     
     public synchronized void addResult(StructuralCausalModel model) {
-        var list = results.computeIfAbsent(model.getName(), (t) -> new ArrayList<>());
-        list.add(model);
-        results.put(model.getName(), list);
+    	Integer k = (Integer) model.getData(CC_KEY);
+    	if (k == null) { throw new IllegalStateException(); }
+        results.compute(k, (key, value) -> {
+        	if (value == null) {
+        		value = new ArrayList<StructuralCausalModel>();
+        	}
+        	value.add(model);
+        	return value;
+        });
     }
 
 
+    /**
+     * Restore the original model from a collection of CComponents.
+     * This will copy all CComponent endogenous and exogenous factors into the target model.
+     * The structure of the target model will be the original one.
+     * 
+     * @param models
+     * @return
+     */
     public StructuralCausalModel revert(Collection<StructuralCausalModel> models) {
         StructuralCausalModel target = from.copy();
         for (StructuralCausalModel scm : models) {
             for (int exo : scm.getExogenousVars()) {
                 target.setFactor(exo, scm.getFactor(exo));
+            }
+            for (int endo : scm.getEndogenousVars()) {
+            	target.setFactor(endo, scm.getFactor(endo));
             }
         }
         return target;
@@ -136,15 +153,16 @@ public class CComponents {
      * @return a new SCM with for the component
      */
     private StructuralCausalModel createModel(Triple<Set<Integer>, Set<Integer>, Set<Integer>> vars,  StructuralCausalModel model, DoubleTable dataset) {
-
+    	
         var newExo = vars.getLeft(); 
         var newEndo = vars.getMiddle();
         var spurious = vars.getRight();
 
-        String name = newExo.toString();
+        Integer name = modelCounter.incrementAndGet();
         results.put(name, new ArrayList<>());
 
         StructuralCausalModel newmodel = new StructuralCausalModel("" + name);
+        newmodel.setData(CC_KEY, name);
         // same random source
         // newmodel.setRandomSource(model.getRandomSource());
 

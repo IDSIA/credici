@@ -1,25 +1,22 @@
 package ch.idsia.credici.model.transform;
 
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.IntStream;
+
+import org.jgrapht.traverse.TopologicalOrderIterator;
 
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.utility.Probability;
+import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.table.DoubleTable;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import gnu.trove.iterator.TIntIterator;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.linked.TIntLinkedList;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
-import gnu.trove.procedure.TIntProcedure;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
@@ -153,6 +150,8 @@ public class EmpiricalNetwork {
 	
 	
 	public int[] topological(StructuralCausalModel model) {
+//		return DAGUtil.getTopologicalOrder(model.getEndogenousDAG());
+
 		int[] endo = model.getEndogenousVars(true);
 		TIntLinkedList open_list = new TIntLinkedList();
 		
@@ -174,7 +173,6 @@ public class EmpiricalNetwork {
 			iter.remove();
 			
 			if (closed.contains(item)) continue;
-			
 			
 			int[] parents_array = model.getEndegenousParents(true, item);
 			if (closed.containsAll(parents_array)) {

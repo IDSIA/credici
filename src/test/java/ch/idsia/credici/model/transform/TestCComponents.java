@@ -4,7 +4,8 @@ package ch.idsia.credici.model.transform;
 import org.junit.Test;
 
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
+import ch.idsia.credici.utility.logger.DetailedDotSerializer;
+import ch.idsia.credici.utility.logger.Info;
 
 import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -39,7 +40,7 @@ public class TestCComponents {
 		List<StructuralCausalModel> x = cc.apply(model);
 		
 		for (var m :x) {
-			DetailedDotSerializer.saveModel(m, null, "/Users/dhuber/m.png");
+			DetailedDotSerializer.saveModel("/Users/dhuber/m.png", new Info().model(m).title("Component"));
 			m.getEmpiricalNet();
 		}
 	}

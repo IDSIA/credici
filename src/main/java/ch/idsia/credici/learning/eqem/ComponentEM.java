@@ -1,34 +1,27 @@
 package ch.idsia.credici.learning.eqem;
 
-import java.text.DecimalFormat;
-import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.DoublePredicate;
 import java.util.logging.Logger;
-import java.util.stream.IntStream;
 
 import org.apache.commons.collections4.map.SingletonMap;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.util.FastMath;
 
+import ch.idsia.credici.learning.eqem.ComponentSolution.Stage;
 import ch.idsia.credici.learning.ve.VE;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
-import ch.idsia.credici.model.transform.EmpiricalNetwork;
-import ch.idsia.credici.utility.Probability;
 import ch.idsia.credici.utility.Randomizer;
+import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.credici.utility.table.DoubleTable;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.Strides;
-import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-import ch.idsia.crema.preprocess.CutObserved;
-import ch.idsia.crema.preprocess.RemoveBarren;
 import ch.idsia.crema.utility.ArraysUtil;
-import ch.idsia.crema.utility.IndexIterator;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.map.TIntIntMap;
@@ -39,14 +32,11 @@ import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
 class ComponentEM {
-	private Logger logger;
-	
-	private boolean equations = true;
-	
-	int numRuns = 1;
-	int maxIterations = 1000;
 
-	
+	private Logger logger;
+
+	private Config settings;
+
 	private StructuralCausalModel sourceModel;
 	private DoubleTable dataset;
 
@@ -58,37 +48,38 @@ class ComponentEM {
 	private int[] sequence;
 
 	private Randomizer random;
- 
 
-	public ComponentEM(StructuralCausalModel model, DoubleTable dataset, long seed) {
+	public BiConsumer<String, Info> modelLogger = (a, b) -> {
+	};
+	private String id;
+
+	public String getId() {
+		return id;
+	}
+
+	public ComponentEM(StructuralCausalModel model, DoubleTable dataset, Config settings, long seed) {
 		this.random = new Randomizer(seed);
-		init(model, dataset);
+		init(model, dataset, settings);
 	}
 
-	public ComponentEM(StructuralCausalModel model, DoubleTable dataset) {
+	public ComponentEM(StructuralCausalModel model, DoubleTable dataset, Config settings) {
 		random = new Randomizer();
-		init(model, dataset);
+		init(model, dataset, settings);
 	}
 
-	private int getPartialOffset(Strides domain, int[] vars, int[] states) {
-		int offset = 0;
-		for (int vid = 0; vid < vars.length; ++vid) {
-			int v = vars[vid];
-
-			int vindex = domain.indexOf(v);
-			if (vindex >= 0) {
-				offset += domain.getStrideAt(vindex) * states[vid];
-			}
-		}
-		return offset;
+	public void setModelLogger(BiConsumer<String, Info> mlogger) {
+		this.modelLogger = mlogger;
 	}
-	
+
 	/**
 	 * Initialize the EM
 	 * 
 	 * @param themodel
 	 */
-	private void init(StructuralCausalModel themodel, DoubleTable dataset) {
+	private void init(StructuralCausalModel themodel, DoubleTable dataset, Config settings) {
+		this.settings = settings;
+		this.id = themodel.getName();
+
 		this.logger = Logger.getLogger("ComponentEM");
 
 		logger.config("Setting up inference for: " + themodel.getName() + " ("
@@ -99,18 +90,11 @@ class ComponentEM {
 		sequence = order.apply(themodel);
 
 		// model may contain some additional variables (that are not to be optimized)
-		variables = ArraysUtil.append(themodel.getExogenousVars(), themodel.getEndogenousVars());
-		
-		this.dataset = dataset;
+		variables = ArraysUtil.append(themodel.getExogenousVars(), themodel.getEndogenousVars(false));
 
-		BayesianNetwork network = themodel.getEmpiricalNet(dataset.toMap(false));
-		double ll = Probability.maxLogLikelihood(themodel, dataset.toMap(false));
-		
-	
-		
-		
+		this.dataset = dataset;
 	}
-	
+
 	/**
 	 * Initialize a run of the EM, called for each restart.
 	 * 
@@ -121,9 +105,12 @@ class ComponentEM {
 		logger.config("Starting new run (#" + runid + ") on " + sourceModel.getName());
 
 		StructuralCausalModel model = sourceModel.copy();
+
 		for (int variable : variables) {
 			random.randomizeInplace(model.getFactor(variable), variable);
 		}
+
+		modelLogger.accept("init", new Info().model(model).data(dataset).title("Init " + runid));
 
 		doNotTouch = new TIntHashSet();
 		initLocked(model);
@@ -142,76 +129,135 @@ class ComponentEM {
 	 * @param iterations
 	 */
 	protected void runClose(StructuralCausalModel model, int runid, int iterations) {
-		System.out.println(Arrays.toString(likelihoods.toArray()));
+		try {
+//			System.out.println(likelihoods.get(likelihoods.size()-1));
+		} catch (Exception x) {
+		}
 	}
 
-	
 	/**
 	 * Main optimization start. This will execute runs in sequence
 	 * 
 	 * @param data
 	 * @throws InterruptedException
 	 */
-	public void run(Consumer<StructuralCausalModel> resultsCallback) throws InterruptedException {
-		for (int r = 0; r < numRuns; ++r) {
-			StructuralCausalModel model = runInit(r);
+	public void run(int runid, Consumer<ComponentSolution> resultsCallback) throws InterruptedException {
+		StructuralCausalModel model = runInit(runid);
+		int iteration = 0;
+		boolean success = false;
+		for (int retry = 0; retry < 5 && !success; retry++) {
 			try {
-				int iteration;
-				for (iteration = 0; iteration < maxIterations; ++iteration) {
-					int stepid = (r << 16) + iteration;
-					boolean more = step(model, dataset, equations, stepid);
+				for (iteration = 0; iteration < settings.numIterations(); ++iteration) {
+					int stepid = (runid << 24) + (iteration << 16);
+					boolean more = step(model, dataset, true, settings.deterministic(), stepid);
 					if (!more)
 						break;
 				}
-				runClose(model, r, iteration);
-				resultsCallback.accept(model);
-			} catch (UnreacheableSolutionException ex) {
-				runClose(model, r, -1);
 
+				// first fscm is accepted
+				double ll = likelihoods.get(likelihoods.size() - 1);
+
+				resultsCallback.accept(new ComponentSolution(model.copy(), ll, runid, -1, Stage.FIRST_EM));
+				success = true;
+
+			} catch (UnreacheableSolutionException ex) {
+				resultsCallback.accept(new ComponentSolution(model.copy(), 0, runid, retry, Stage.FIRST_FAILED));
+				runClose(model, runid, -1);
 			}
 		}
+		
+		if (!success) {
+			// no luck
+			return;
+		}
+
+		// more fsc
+		int pscm_runs = 0;
+		try {
+			oldll = Double.NEGATIVE_INFINITY;
+			for (pscm_runs = 0; pscm_runs < settings.numPSCMRuns(); pscm_runs++) {
+
+				// rndomize exogenous
+				for (int exo : model.getExogenousVars()) {
+					random.randomizeInplace(model.getFactor(exo), exo);
+				}
+
+				for (int pscm_iteration = 0; pscm_iteration < settings.numPSCMIterations(); ++pscm_iteration) {
+					int stepid = (pscm_runs << 8) + (pscm_iteration) + (runid << 24) << (iteration << 16);
+					boolean more = step(model, dataset, false, settings.deterministic(), stepid);
+					if (!more)
+						break;
+				}
+
+				double ll = likelihoods.get(likelihoods.size() - 1);
+				resultsCallback.accept(new ComponentSolution(model.copy(), ll, runid, pscm_runs, Stage.PSCM_EM));
+			}
+			runClose(model, runid, iteration);
+
+		} catch (UnreacheableSolutionException ure) {
+			resultsCallback.accept(new ComponentSolution(model.copy(), 0, runid, pscm_runs, Stage.FAILED_PSCM));
+			runClose(model, runid, iteration);
+		}
+
 	}
 
-	
-	public boolean step(StructuralCausalModel model, DoubleTable data, boolean free_endo, int stepid) throws UnreacheableSolutionException, InterruptedException {
+	public boolean step(StructuralCausalModel model, DoubleTable data, boolean free_endo, boolean true_scm, int stepid)
+			throws UnreacheableSolutionException, InterruptedException {
 		PUTable counts = expectation(model, data, stepid);
 		if (counts == null) {
 			throw new UnreacheableSolutionException();
 		}
-		
-		
-		NumberFormat f = new DecimalFormat("0000000000");
 
-		DetailedDotSerializer.saveModel(model, data, f.format(stepid) + "_0.png");
-		boolean converged = maximization(model, counts, free_endo, stepid);
-		DetailedDotSerializer.saveModel(model, null, f.format(stepid) + "_1.png");
+		// NumberFormat f = new DecimalFormat("0000000000");
+		// DetailedDotSerializer.saveModel(model, data, f.format(stepid) + "_0.png");
+		modelLogger.accept("preMax", new Info().model(model).data(dataset)
+				.title("Pre Maximization (" + stepid + ", " + free_endo + ", " + true_scm + ")"));
+
+		boolean converged = maximization(model, counts, free_endo, true_scm, stepid);
+
+		// DetailedDotSerializer.saveModel(model, null, f.format(stepid) + "_1.png");
+		modelLogger.accept("postMax", new Info().model(model).data(dataset)
+				.title("Post Maximization (" + stepid + ", " + free_endo + ", " + true_scm + ")"));
 
 		likelihoods.add(counts.getMetadata());
 		if (converged) {
-			DetailedDotSerializer.saveModel(model, null, f.format(stepid) + "_2.png");
+			// DetailedDotSerializer.saveModel(model, null, f.format(stepid) + "_2.png");
 
-			var extreme = getExtreme(model);
-			System.out.println("Lock: " + extreme.getLeft() + "->" + extreme.getRight());
+			if (true_scm) {
+				var extreme = getExtreme(model);
+				// System.out.println("Lock: " + extreme.getLeft() + "->" + extreme.getRight());
 
-			if (extreme.getKey() == -1) {
-				// nothing found, nothing else to do
-				// we converged and do not have any further variable to lock
+				if (extreme.getKey() == -1) {
+					// nothing found, nothing else to do
+					// we converged and do not have any further variable to lock
+					return false;
+				}
+				lock(model, extreme.getKey(), extreme.getValue());
+
+				// what was locked (for plot)
+				var s = new SingletonMap<Integer, Set<Integer>>(extreme.getKey(),
+						Collections.singleton(extreme.getValue()));
+
+				modelLogger.accept("locked", new Info().model(model).data(dataset).highlight(s)
+						.title("Locked (" + stepid + ", " + free_endo + ", " + true_scm + ")"));
+
+			} else {
+				// converged, no more steps
 				return false;
 			}
-			lock(model, extreme.getKey(), extreme.getValue());
-
-			var s = new SingletonMap<Integer, Set<Integer>>(extreme.getKey(),
-					Collections.singleton(extreme.getValue()));
-
-			DetailedDotSerializer.saveModel(model, null, f.format(stepid) + "_3.png", s);
 		}
-		return true;
+		return true; // likely more steps
 	}
 
-	
-	
-	
-	
+	/**
+	 * Compute expected counts for the exogenous variables.
+	 * 
+	 * @param model
+	 * @param data
+	 * @param stepid
+	 * @return
+	 * @throws InterruptedException
+	 */
 	public PUTable expectation(StructuralCausalModel model, DoubleTable data, int stepid) throws InterruptedException {
 
 		int[] columns = model.getEndogenousVars(true); // ArraysUtil.append(model.getEndogenousVars(),
@@ -234,8 +280,8 @@ class ComponentEM {
 
 				// Likelihood of this observation is the normalizing factor
 				BayesianFactor ll = phidden_obs.marginalize(u);
-				System.out.println(observation + ""+FastMath.log(ll.getData()[0]) * w);
-				
+				// System.out.println(observation + "" + FastMath.log(ll.getData()[0]) * w);
+
 				// by the definition of a CComponent we always have P(E) as the
 				// normalizing factor. So only the first is needed
 				if (first) {
@@ -268,7 +314,8 @@ class ComponentEM {
 	 * @param counts
 	 * @return
 	 */
-	public boolean maximization(StructuralCausalModel model, PUTable counts, boolean include_endo, int stepid) {
+	public boolean maximization(StructuralCausalModel model, PUTable counts, boolean include_endo,
+			boolean deterministic, int stepid) {
 
 		int[] to_maximize = include_endo ? variables : model.getExogenousVars();
 
@@ -305,7 +352,7 @@ class ComponentEM {
 				}
 			}
 
-			// check if there was an impossible column
+			// check if there was an impossible column (p=0)
 			// thanks Laura for the debug support (rubberduck)!!!
 
 			factor.setData(data);
@@ -318,8 +365,8 @@ class ComponentEM {
 
 			// ready to use data with internal values on the factor,
 			// not just the normalizing factor.
-			double zero = 0;
-			double one = 1;
+//			double zero = 0;
+//			double one = 1;
 
 			boolean impossible = false;
 			for (int i = 0; i < norm_data.length; ++i) {
@@ -328,13 +375,14 @@ class ComponentEM {
 
 				int[] cstates = norm_domain.statesOf(i);
 				int offset = domain.getPartialOffset(norm_domain.getVariables(), cstates);
-				int fix = argmax(data, offset, stride, states);
 
-				for (int state = 0; state < states; ++state) {
-					data[offset + state * stride] = fix == state ? one : zero;
-				}
-				norm_data[i] = norm_factor.isLog() ? 0 : 1;
 				impossible = true;
+
+				double low = deterministic ? 0 : 1.0 / states;
+				double high = deterministic ? 1 : 1.0 / states;
+
+				lock(data, variable, states, stride, offset, low, high);
+				norm_data[i] = norm_factor.isLog() ? 0 : 1;
 			}
 
 			if (impossible) {
@@ -350,7 +398,7 @@ class ComponentEM {
 		double diff = Math.abs(oldll - counts.getMetadata());
 
 		oldll = counts.getMetadata();
-		return diff <= 0.001;
+		return diff == 0;
 	}
 
 	/**
@@ -383,7 +431,7 @@ class ComponentEM {
 //		vars.retainAll(obs.keySet());
 		StructuralCausalModel infModel = model;
 		TIntIntMap newObs = new TIntIntHashMap(obs);
-		//rem.filter(newObs);
+		// rem.filter(newObs);
 
 //		for (int x : vars.toArray()) {
 //			newObs.put(x, obs.get(x));
@@ -447,18 +495,27 @@ class ComponentEM {
 		int states = factor.getDomain().getCardinality(variable);
 
 		double[] data = factor.getInteralData();
-
-		int top = argmax(data, offset, stride, states);
-
 		double one = factor.isLog() ? 0 : 1;
 		double zero = factor.isLog() ? Double.NEGATIVE_INFINITY : 0;
 
-		for (int i = 0; i < states; ++i) {
-			int id = i * stride + offset;
-			data[id] = i == top ? one : zero;
+		lock(data, variable, states, stride, offset, zero, one);
+	}
+
+	void lock(double[] data, int variable, int states, int stride, int offset, double low, double high) {
+
+		int top = argmax(data, offset, stride, states);
+
+		for (int state = 0; state < states; ++state) {
+			data[state * stride + offset] = state == top ? high : low;
 		}
+
+		int fix = argmax(data, offset, stride, states);
+
+		for (int state = 0; state < states; ++state) {
+			data[offset + state * stride] = fix == state ? high : low;
+		}
+
 		endoLocked.get(variable).add(offset);
-		// System.out.println("Lock " + variable + " - " + offset);
 	}
 
 	/**
@@ -578,29 +635,7 @@ class ComponentEM {
 //		IntStream indices = IntStream.iterate(0, s -> s < states, s -> s + 1).map(state -> column_offset + state * stride);
 //		return indices.mapToDouble(factor::getValueAt).filter(v -> v > 0).map(v -> v * FastMath.log(v)).sum();
 	}
-	
-	
+
 	// getters and setters
-	
-	
-	
-	public void setOptimizeEquations(boolean equations) {
-		this.equations = equations;
-	}
-	
-	public boolean isOptimizeEquations() {
-		return this.equations;
-	}
-	
-	public void setMaxIterations(int iters) {
-		this.maxIterations = iters;
-	}
-	
-	public int getMaxIterations() {
-		return this.maxIterations;
-	}
-	
-	public void setNumberRuns(int runs) {
-		this.numRuns = runs;
-	}
+
 }

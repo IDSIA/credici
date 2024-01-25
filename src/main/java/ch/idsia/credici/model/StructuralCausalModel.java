@@ -32,6 +32,9 @@ import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.RandomUtil;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
+
+import gnu.trove.list.TIntList;
+import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -62,15 +65,32 @@ import java.util.stream.Stream;
  * kind of variables: exogenous and endogenous
  */
 public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, SparseDirectedAcyclicGraph> {
+	
+	public enum VarType {
+		ENDOGENOUS, EXOGENOUS, DEPENDENCY
+	}
 
-
+	private HashMap<String, Object> data;
+	public synchronized Object getData(String key) {
+		if (data == null) return null;
+		else return data.get(key);	
+	}
+	
+	public synchronized void setData(String key, Object value) {
+		if (this.data == null) {
+			data = new HashMap<String, Object>();
+		}
+		data.put(key, value);
+	}
+	
+	
 	private String name="";
 
 	/** set of variables that are exogenous. The rest are considered to be endogenous */
-	private Set<Integer> exogenousVars = new HashSet<Integer>();
+	//private Set<Integer> exogenousVars = new HashSet<Integer>();
 	
 	/** variables that are a link to another Component. Always observed **/
-	private Set<Integer> dependencyVars = new HashSet<Integer>();
+	private Map<Integer, VarType> varType = new HashMap<>();
 
 	
 
@@ -152,18 +172,33 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public StructuralCausalModel copy(){
 
 		StructuralCausalModel copy = new StructuralCausalModel();
-		for (int v: this.getVariables()){
-			int vid = copy.addVariable(v, this.getSize(v), this.isExogenous(v));
+		copy.setName(this.getName());
+		if (this.data != null) {
+			copy.data = new HashMap<String, Object>(data);
+		}
+		
+		for (int v: this.getVariables()) {
+			copy.addVariable(v, this.getSize(v), this.getVariableType(v));
 		}
 
-		for (int v : copy.getVariables()){
+		for (int v : copy.getVariables()) {
 			copy.addParents(v, this.getParents(v));
-			if(this.getFactor(v)!=null)
+			if(this.getFactor(v) != null)
 				copy.setFactor(v, this.getFactor(v).copy());
 		}
 
-
 		return copy;
+	}
+
+
+	@Override
+	public int addVariable(int size) {
+		return addVariable(size, false);
+	}
+	
+	@Override
+	public int addVariable(int vid, int size){
+		return addVariable(vid, size, false);
 	}
 
 	/**
@@ -176,43 +211,30 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return int - the label/index/id assigned to the variable
 	 */
 	public int addVariable(int size, boolean exogenous) {
-		int vid = super.addVariable(size);
-		if(exogenous)
-			this.exogenousVars.add(vid);
+		int vid = addVariable(size, exogenous ? VarType.EXOGENOUS : VarType.ENDOGENOUS);
 		return vid;
 	}
 
 	
 	public int addVariable(int vid, int size, boolean exogenous){
-		if(vid>max) max = vid;
-		max++;
-		this.cardinalities.put(vid, size);
-		network.addVariable(vid, size);
-		if(exogenous)
-			this.exogenousVars.add(vid);
+		addVariable(vid, size,exogenous? VarType.EXOGENOUS : VarType.ENDOGENOUS);
 		return vid;
 	}
 
-	public enum VarType {
-		ENDOGENOUS, EXOGENOUS, DEPENDENCY
+
+	public int addVariable(int size, VarType type){
+		int vid = super.addVariable(size);
+		
+		varType.put(vid, type);	
+		return vid;
 	}
 	
+	
+	
 	public int addVariable(int vid, int size, VarType type){
-		if(vid>max) max = vid;
-		max++;
-		this.cardinalities.put(vid, size);
-		network.addVariable(vid, size);
+		super.addVariable(vid, size);
 		
-		switch(type) {
-		case EXOGENOUS:
-			this.exogenousVars.add(vid);
-			break;
-		case DEPENDENCY:
-			this.dependencyVars.add(vid);
-			break;
-		default:
-			break;
-		}
+		varType.put(vid, type);	
 		return vid;
 	}
 	
@@ -223,29 +245,37 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	@Override
 	public void removeVariable(int variable) {
 		super.removeVariable(variable);
-		
-		//if(exogenousVars.contains(variable))
-		if(exogenousVars.remove(variable)) return;
-		
+	
 		//else if(dependencyVars.contains(variable)) {
-		dependencyVars.remove(variable);
+		varType.remove(variable);
 	}
 
+	
+	public VarType getVariableType(int variable) {
+		return varType.get(variable);
+	}
+	
+	
 	/**
 	 * Array with IDs of the exogenous variables
 	 * @return
 	 */
 	public int[] getExogenousVars() {
-		return Ints.toArray(exogenousVars);
+		TIntList list = new TIntArrayList();
+		varType.forEach((k,v) -> { if (v==VarType.EXOGENOUS) list.add(k); });
+		return list.toArray();
 	}
 
+	boolean is(int variable, VarType type) {
+		return varType.get(variable) == type;
+	}
 	/**
 	 * Allows to know if a variable is exogenous
 	 * @param variable
 	 * @return
 	 */
 	public boolean isExogenous(int variable){
-		return exogenousVars.contains(variable);
+		return is(variable, VarType.EXOGENOUS);
 	}
 
 	/**
@@ -254,14 +284,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return
 	 */
 	public boolean isEndogenous(int variable) {
-		return !isExogenous(variable) && !isDependency(variable);
+		return is(variable, VarType.ENDOGENOUS);
 	}
 
 	/**
 	 * Check var is an additional Depencency
 	 */
 	public boolean isDependency(int variable) {
-		return dependencyVars.contains(variable);
+		return is(variable, VarType.DEPENDENCY);
 	}
 	
 	public int[] getEndogenousVars() {
@@ -275,15 +305,19 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 * @return a list of variables
 	 */
 	public int[] getEndogenousVars(boolean includeDepencies) {
-		Set<Integer> endogenousVars = new HashSet<Integer>();
+		TIntList endogenousVars = new TIntArrayList(getVariablesCount());
+		
+		//Set<Integer> endogenousVars = new HashSet<Integer>();
 
 		for(int v : this.getVariables()) {
+			VarType type = varType.get(v);
+			
 			// v must not be endogenous AND (NOT dependency OR includeAllDependencies)
-			if(!this.exogenousVars.contains(v) && ((!dependencyVars.contains(v)) || includeDepencies)) {
+			if(type == VarType.ENDOGENOUS || (includeDepencies && type == VarType.DEPENDENCY) ) {
 				endogenousVars.add(v);
 			}
 		}
-		return Ints.toArray(endogenousVars);
+		return endogenousVars.toArray();
 	}
 
 
@@ -332,7 +366,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 				this.getChildren(v)
 		);
 	}
-
+	
+	public int[] getEndogenousParents(int child) {
+		return IntStream.of(getParents(child)).filter(this::isEndogenous).toArray();
+	}
 
 	/**
 	 * Retruns an array with the IDs of children that are endogenous variables

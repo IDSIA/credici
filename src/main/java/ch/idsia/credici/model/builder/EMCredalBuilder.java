@@ -400,7 +400,7 @@ public class EMCredalBuilder extends CredalBuilder{
 					.setStopCriteria(stopCriteria)
 					.setThreshold(threshold)
 					//.setSmoothing(1)
-					//.setInferenceVariation(0)
+					.setInferenceVariation(1)
 					.usePosteriorCache(true);
 			stepArgs = (Collection) Arrays.asList(data);
 		}else{

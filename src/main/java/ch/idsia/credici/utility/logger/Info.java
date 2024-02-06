@@ -13,9 +13,15 @@ public class Info {
 	private DoubleTable data;
 	private String modelName;
 	private String title;
+
+	private int runId;
+	private int iterations;
+	private int pscmId;
+	private int pscmIterations;
+
 	private Function<Integer, String> nodeName;
 	private Map<Integer, Set<Integer>> highlight;
-	
+
 	public Info model(GraphicalModel<BayesianFactor> model) {
 		this.model = model;
 		return this;
@@ -24,7 +30,7 @@ public class Info {
 	public GraphicalModel<BayesianFactor> getModel() {
 		return model;
 	}
-	
+
 	public DoubleTable getData() {
 		return data;
 	}
@@ -70,8 +76,45 @@ public class Info {
 		return this;
 	}
 
+	public Info runId(int runid) {
+		this.runId = runid;
+		return this;
+	}
+
+	public Info iterations(int iterations) {
+		this.iterations = iterations;
+		return this;
+	}
+
+	public Info PSCMId(int pscmrun) {
+		this.pscmId = pscmrun;
+		return this;
+	}
+
+	public Info PSCMIterations(int piter) {
+		this.pscmIterations = piter;
+		return this;
+	}
+
+	public int getRunId() {
+		return runId;
+	}
+	public int getIterations() {
+		return iterations;
+	}
+	
+	public int getPSCMId() {
+		return pscmId;
+	} 
+	
+	public int getPSCMIterations() {
+		return pscmIterations;
+	}
+	
+	
 	public Info(GraphicalModel<BayesianFactor> model, DoubleTable data, String modelName, String title,
-			Function<Integer, String> nodeName, Map<Integer, Set<Integer>> highlight) {
+			Function<Integer, String> nodeName, Map<Integer, Set<Integer>> highlight, int run, int iter, int pscm,
+			int pscmiter) {
 		super();
 		this.model = model;
 		this.data = data;
@@ -79,8 +122,12 @@ public class Info {
 		this.title = title;
 		this.nodeName = nodeName;
 		this.highlight = highlight;
+		this.runId = run;
+		this.iterations = iter;
+		this.pscmId = pscm;
+		this.pscmIterations = pscmiter;
 	}
 
 	public Info() {
-	}	
+	}
 }

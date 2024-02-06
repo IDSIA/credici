@@ -14,9 +14,9 @@ import gnu.trove.map.hash.TIntIntHashMap;
 public class DoubleTable extends DataTable<Double, Double> {
 
 	public DoubleTable(int[] columns) {
-		super(columns, 1d, 0d, (a,b)->a+b, (i)->new Double[i]);
+		super(columns, 1d, 0d, (a, b) -> a + b, (i) -> new Double[i]);
 	}
-	
+
 	public DoubleTable(int[] columns, int[][] data) {
 		this(columns);
 
@@ -26,7 +26,7 @@ public class DoubleTable extends DataTable<Double, Double> {
 			}
 		}
 	}
-	
+
 	/**
 	 * Create a Table from an array of {@link TIntIntMap}s.
 	 * 
@@ -44,18 +44,43 @@ public class DoubleTable extends DataTable<Double, Double> {
 			add(inst);
 		}
 	}
-	
+
 	public DoubleTable subtable(int[] cols) {
 		DoubleTable tofill = new DoubleTable(cols);
 		return super.subtable(tofill);
 	}
+
 	
-	public double[] getWeights(int[] vars, int[] sizes) {
-		Double[] dta = super.getWeightsFor(vars, sizes);
-		return Arrays.stream(dta).mapToDouble(i->i).toArray();
+	/**
+	 * Scale weights between 0 and 1
+	 * @return
+	 */
+	public DoubleTable scale() {
+		double small = 0;
+		
+		for (var entry : dataTable.entrySet()) {
+			small = Math.max(small, entry.getValue());
+		}
+		
+		//System.out.println("AMX " + small);
+		if (small == 0) return this;
+		
+		DoubleTable res = new DoubleTable(columns);
+		for (var entry : dataTable.entrySet()) {
+			res.add(entry.getKey(), entry.getValue() / small);
+		}
+		
+		return res;
 	}
 	
 	
+	
+	
+	public double[] getWeights(int[] vars, int[] sizes) {
+		Double[] dta = super.getWeightsFor(vars, sizes);
+		return Arrays.stream(dta).mapToDouble(i -> i).toArray();
+	}
+
 	public double[] getWeights2(int[] vars, int[] sizes) {
 
 		// cumulative size
@@ -88,7 +113,7 @@ public class DoubleTable extends DataTable<Double, Double> {
 
 		return results;
 	}
-	
+
 	TIntIntMap getKeyMap(int[] index) {
 		TIntIntMap map = new TIntIntHashMap();
 		for (int i = 0; i < index.length; ++i) {
@@ -96,20 +121,14 @@ public class DoubleTable extends DataTable<Double, Double> {
 		}
 		return map;
 	}
-	
+
 	public TIntIntMap[] toMap(boolean roundup) {
-		return dataTable
-				.entrySet()
-				.stream()
-				.flatMap(
-						row -> IntStream
-							.range(0, (int)(row.getValue() + (roundup ? 0.5: 0)))
-						    .mapToObj(i-> this.getKeyMap(row.getKey()))
-				)
+		return dataTable.entrySet().stream().flatMap(row -> IntStream
+				.range(0, (int) (row.getValue() + (roundup ? 0.5 : 0))).mapToObj(i -> this.getKeyMap(row.getKey())))
 				.toArray(TIntIntHashMap[]::new);
-		
+
 	}
-	
+
 	/**
 	 * Read a table from a whitespace separated file. The whitespace can be any
 	 * regex \s character.
@@ -147,19 +166,49 @@ public class DoubleTable extends DataTable<Double, Double> {
 			return ret;
 		}
 	}
+
+	static int parseInt(String value) {
+		return (int) Double.parseDouble(value);
+	}
 	
-	
+	public static DoubleTable readTable(String filename, int skip, String sep, Map<String, Integer> columns_out)
+			throws IOException {
+		try (BufferedReader input = new BufferedReader(new FileReader(filename))) {
+			for (int i = 0; i < skip; ++i)
+				input.readLine().split(sep);
+
+			String[] values = input.readLine().split(sep);
+			int[] columns = IntStream.range(0, values.length).toArray();
+			if (columns_out != null) {
+				for (int i = 0; i < values.length; ++i) {
+					columns_out.put(values[i], columns[i]);
+				}
+			}
+
+			DoubleTable ret = new DoubleTable(columns);
+
+			String line;
+			while ((line = input.readLine()) != null) {
+				values = line.split(sep);
+
+				int[] row = Arrays.stream(values).mapToInt(DoubleTable::parseInt).toArray();
+				ret.add(row, 1d);
+			}
+			return ret;
+		}
+	}
+
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		String head = Arrays.stream(columns).mapToObj(Integer::toString).collect(Collectors.joining(" | "));
 		sb.append(head).append(" | weight\n");
-		
+
 		for (Map.Entry<int[], Double> row : dataTable.entrySet()) {
 			String key = Arrays.stream(row.getKey()).mapToObj(Integer::toString).collect(Collectors.joining(" | "));
 			sb.append(key).append(" | ").append(row.getValue()).append("\n");
 		}
 		return sb.toString();
-	
-	
+
 	}
+
 }

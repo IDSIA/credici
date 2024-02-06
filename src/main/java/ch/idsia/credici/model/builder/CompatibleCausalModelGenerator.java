@@ -371,13 +371,13 @@ public class CompatibleCausalModelGenerator {
                 System.out.println("----" + s);
                 CompatibleCausalModelGenerator gen = new CompatibleCausalModelGenerator()
                         .setMaxIndegree(3)
-                        .setMaxDataResamples(20)
-                        .setMaxCofoundedVars(2)
+                        .setMaxDataResamples(40)
+                        .setMaxCofoundedVars(1)
                         .setMinCompatibilityDegree(0.975)
-                        .setDatasize(1000)
+                        .setDatasize(5000)
                         .setDataIncrementFactor(0.5)
-                        .setNumNodes(8)
-                        .setMarkovianity(2);
+                        .setNumNodes(5)
+                        .setMarkovianity(1);
 
                 gen.run();
                 StructuralCausalModel m = gen.getModel();

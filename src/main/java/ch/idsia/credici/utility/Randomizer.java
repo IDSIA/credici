@@ -1,5 +1,7 @@
 package ch.idsia.credici.utility;
 
+import java.util.Arrays;
+
 import org.apache.commons.rng.UniformRandomProvider;
 import org.apache.commons.rng.sampling.distribution.DirichletSampler;
 import org.apache.commons.rng.simple.RandomSource;
@@ -30,13 +32,13 @@ public class Randomizer {
 	 * @param sorted whether domain should be sorted
 	 * @return a new {@link BayesianFactor} CPT with random distributions
 	 */
-	public BayesianFactor randomFactor(Strides domain, int variable, boolean sorted) {
+	public BayesianFactor randomFactor(Strides domain, int variable, boolean sorted, boolean log) {
 
 		if (sorted) {
 			domain = domain.sort();
 		}
 		
-		BayesianFactor factor = new BayesianFactor(domain);
+		BayesianFactor factor = new BayesianFactor(domain,log);
 		randomizeInplace(factor, variable);
 		return factor;
 	}
@@ -48,6 +50,8 @@ public class Randomizer {
 	 * This will generate a probability sampled from a dirichlet with alpha == 1.
 	 */
 	public void randomizeInplace(BayesianFactor factor, int variable){
+		boolean log = factor.isLog();
+		
 		Strides domain = factor.getDomain();
 		Strides left = domain.retain(new int[] { variable });
 		Strides right = domain.remove(variable);
@@ -57,6 +61,8 @@ public class Randomizer {
 		double[] dta = Doubles.concat(data);
 		int[] order = left.concat(right).getVariables();
 		
+//		if (log) dta = Arrays.stream(dta).map(Math::log).toArray();
+		// log if needed
 		factor.setData(order, dta);
 	}
 	

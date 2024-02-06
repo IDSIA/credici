@@ -163,6 +163,7 @@ public class CComponents {
 
         StructuralCausalModel newmodel = new StructuralCausalModel("" + name);
         newmodel.setData(CC_KEY, name);
+        
         // same random source
         // newmodel.setRandomSource(model.getRandomSource());
 
@@ -302,6 +303,21 @@ public class CComponents {
         };
     }
 
+    public long combinations() {
+    	long comb = 1;
+    	for (var entry : results.entrySet()) {
+    		comb *= entry.getValue().size();
+    	}
+    	return comb;
+    }
+    
+    public void simplify() {
+    	for (var entry : results.entrySet()) {
+        	Set<StructuralCausalModel> s = new HashSet<>(entry.getValue());
+        	entry.getValue().clear();
+        	entry.getValue().addAll(s);
+    	}
+    }
 
     /** 
      * Re-compose the results into complete models connecting the CComponents again. 
@@ -311,10 +327,17 @@ public class CComponents {
      * @return an interator over full and Fully specified {@link StructuralCausalModel}s.
      */
     public Iterator<StructuralCausalModel> exaustiveIterator() {
-        final Collection<Collection<StructuralCausalModel>> data = results.values().stream().map(a -> {return (Collection<StructuralCausalModel>) a; }).collect(Collectors.toList());
+        final Collection<Collection<StructuralCausalModel>> items = results.entrySet().stream()
+        .map(a -> {
+        	return (Collection<StructuralCausalModel>) a.getValue(); 
+        }).collect(Collectors.toList());
+        
+        final CombinationsIterator<StructuralCausalModel> iter = new CombinationsIterator<>(items);
+
+        
         return new Iterator<StructuralCausalModel>() {
 
-            CombinationsIterator<StructuralCausalModel> iter = new CombinationsIterator<>(data);
+            
         
             @Override
             public boolean hasNext() {

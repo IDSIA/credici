@@ -3,9 +3,13 @@ package ch.idsia.credici.utility.table;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -14,6 +18,8 @@ import org.apache.commons.lang3.tuple.Pair;
 import ch.idsia.credici.collections.FIntIntHashMap;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.set.TIntSet;
+import gnu.trove.set.hash.TIntHashSet;
 
 public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	protected final int[] columns;
@@ -21,6 +27,7 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 
 	protected T unit;
 	protected T zero;
+	protected T virtualcounts;
 	protected BiFunction<T, T, T> add;
 	protected Function<Integer, T[]> createArray;
 
@@ -38,21 +45,62 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 		return metadata;
 	}
 
-
+	
 
 	protected DataTable(int[] columns, T unit, T zero, BiFunction<T, T, T> add, Function<Integer, T[]> array) {
 		this.columns = columns;
 		this.unit = unit;
 		this.zero = zero;
+		this.virtualcounts = zero;
 		this.add = add;
 		this.createArray = array;
 		this.dataTable = new TreeMap<>(Arrays::compare);
-
 	}
 
 	
+	protected DataTable(int[] columns, T unit, T zero, BiFunction<T, T, T> add, Function<Integer, T[]> array, Map<int[], T> data) {
+		this.columns = columns;
+		this.unit = unit;
+		this.zero = zero;
+		this.virtualcounts = zero;
+		this.add = add;
+		this.createArray = array;
+		
+		this.dataTable = new TreeMap<>(Arrays::compare);
+		this.dataTable.putAll(data);
+	}
+	
+	
+	
+	private static int[] max(int[] a, int[] b) {
+		int[] ret = a.clone();
+		for (int i = 0; i < a.length; ++i) {
+			ret[i] = Math.max(a[i], b[i]);
+		}
+		return ret;
+	}
+	
+	public TIntSet[] getStates() {
+		TIntSet[] accum = IntStream.range(0, columns.length).mapToObj(TIntHashSet::new).toArray(TIntSet[]::new);
+		
+		for(var entry : dataTable.entrySet()) {
+			var v = entry.getKey();
+			for (int i = 0; i < accum.length;++i) {
+				accum[i].add(v[i]);
+			}
+		}
+		return accum;
+	}
+	
 
-
+	public int[] getSizes() {
+		int[] accum = new int[columns.length];
+		
+		int[] v = dataTable.entrySet().stream().map(Entry::getKey).reduce(accum, DataTable::max);
+		for (int i = 0; i < v.length;++i) ++v[i];
+		return v;
+	}
+	
 	/**
 	 * Sort and Expand or limit the map to the columns of the table.
 	 * 
@@ -78,12 +126,28 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	 * specified columns assuming each column has the indicated number of possible
 	 * states.
 	 * 
+	 * A default number of virtual counts is added to each count. 
+	 * If not changed this is zero
+	 * 
 	 * @param vars
 	 * @param sizes
 	 * @return
 	 */
 	public T[] getWeightsFor(int[] vars, int[] sizes) {
-
+		return getWeightsFor(vars, sizes, virtualcounts);
+	}
+	
+	/**
+	 * Get Weights table for the specified variables and a virtual count of s.
+	 * variables sizes need to be provided.
+	 * 
+	 * @param vars
+	 * @param sizes
+	 * @param s
+	 * @return
+	 */
+	public T[] getWeightsFor(int[] vars, int[] sizes, T s) {
+		
 		// cumulative size
 		int cumsize = 1;
 
@@ -103,7 +167,7 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 
 		T[] results = createArray.apply(cumsize);
 		for (int i = 0; i< results.length; ++i) {
-			results[i] = zero;
+			results[i] = s;
 		}
 		
 		for (var item : dataTable.entrySet()) {
@@ -255,4 +319,22 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	public int[] getColumns() {
 		return this.columns;
 	}
+	
+	
+	public <J, DT extends DataTable<J,O>> DT map(Supplier<DT> creator, BiFunction<int[], T, Map.Entry<int[], J>> converter) {
+		final var store = creator.get();
+		
+		dataTable.entrySet()
+		.stream()
+		.map((v) -> converter.apply(v.getKey(), v.getValue()))
+		.forEach(v -> store.add(v.getKey(), v.getValue()));
+		return store;
+		
+	}
+	
+	
+	public Set<Map.Entry<int[], T>> entries() {
+		return dataTable.entrySet();
+	}
+
 }

@@ -14,10 +14,14 @@ public class Info {
 	private String modelName;
 	private String title;
 
+	private boolean tables;
+
 	private int runId;
 	private int iterations;
 	private int pscmId;
 	private int pscmIterations;
+
+	private long time;
 
 	private Function<Integer, String> nodeName;
 	private Map<Integer, Set<Integer>> highlight;
@@ -96,22 +100,46 @@ public class Info {
 		return this;
 	}
 
+	public Info hideTables() {
+		this.tables = false;
+		return this;
+	}
+
+	public Info showTables() {
+		this.tables = true;
+		return this;
+	}
+
+	public Info time(long time) {
+		this.time = time;
+		return this;
+	}
+
+
+	public boolean getShowAsTable() {
+		return this.tables;
+	}
+
 	public int getRunId() {
 		return runId;
 	}
+
 	public int getIterations() {
 		return iterations;
 	}
-	
+
 	public int getPSCMId() {
 		return pscmId;
-	} 
-	
+	}
+
 	public int getPSCMIterations() {
 		return pscmIterations;
 	}
 	
-	
+	public long getTime() {
+		return time;
+	}
+
 	public Info(GraphicalModel<BayesianFactor> model, DoubleTable data, String modelName, String title,
 			Function<Integer, String> nodeName, Map<Integer, Set<Integer>> highlight, int run, int iter, int pscm,
 			int pscmiter) {
@@ -126,8 +154,10 @@ public class Info {
 		this.iterations = iter;
 		this.pscmId = pscm;
 		this.pscmIterations = pscmiter;
+
 	}
 
 	public Info() {
+		tables = true;
 	}
 }

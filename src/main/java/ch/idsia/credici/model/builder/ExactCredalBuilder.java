@@ -187,7 +187,7 @@ public class ExactCredalBuilder extends CredalBuilder {
         // Transforms the factor if needed and set it to the model
         if(vertex){
         	//System.out.println(u);
-        	constFactor.printLinearProblem();
+        	//constFactor.printLinearProblem();
         	
             VertexFactor fu = new HalfspaceToVertex().apply(constFactor);
             if(fu.getData()[0]==null)

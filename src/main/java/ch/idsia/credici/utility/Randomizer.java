@@ -72,4 +72,11 @@ public class Randomizer {
 		randomizeInplace(c, variable);
 		return c;
 	}
+
+	public void uniformInplace(BayesianFactor factor, int variable) {
+		int size = factor.getDomain().getCardinality(variable);
+		double p = factor.isLog() ? Math.log(1.0/size) : 1.0 / size;
+		double[] data = factor.getInteralData();
+		for (int i = 0; i < data.length; ++i) data[i] = p;
+	}
 }

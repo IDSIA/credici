@@ -5,6 +5,8 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.tools.CausalInfo;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.credici.utility.logger.DetailedDotSerializer;
+import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.VariableElimination;
@@ -26,6 +28,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
     private int[] elimOrder;
 
     public CausalVE(StructuralCausalModel model){
+    	//DetailedDotSerializer.saveModel("WE,png", new Info().model(model));
         this.model = model.copy();
         this.elimOrder = null;
     }

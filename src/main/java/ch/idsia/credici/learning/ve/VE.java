@@ -265,6 +265,6 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
 
 
     public void setEvidence(TIntIntMap obs) {
-        throw new NotImplementedException("");
+        setInstantiation(obs);
     }
 }

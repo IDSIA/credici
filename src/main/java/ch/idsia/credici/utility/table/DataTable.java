@@ -1,13 +1,17 @@
 package ch.idsia.credici.utility.table;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -16,7 +20,9 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 
 import ch.idsia.credici.collections.FIntIntHashMap;
+import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
@@ -31,11 +37,16 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	protected BiFunction<T, T, T> add;
 	protected Function<Integer, T[]> createArray;
 
+	protected IntFunction<String> naming = Integer::toString;
+	
+	/** needed only if interested in a sorted list */
+	protected Comparator<T> comparator;
+
 	/**
 	 * Using a {@link TreeMap}. This will use a comparator that we can provide.
 	 * HashMap uses the object's hash that won't work correctly for arrays of int.
 	 */
-	protected TreeMap<int[], T> dataTable;
+	protected Map<int[], T> dataTable;
 
 	public void setMetadata(O data) {
 		this.metadata = data;
@@ -71,6 +82,13 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	}
 	
 	
+	public void setNames(String[] names) {
+		this.naming = (i) -> names[i];
+	}
+	
+	public void setNaming(IntFunction<String> name) {
+		this.naming = name;
+	}
 	
 	private static int[] max(int[] a, int[] b) {
 		int[] ret = a.clone();
@@ -267,6 +285,7 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 		return tofill;
 	}
 
+	
 	/**
 	 * Covert weights of a Table
 	 * 
@@ -283,6 +302,11 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	}
 
 	
+	public List<Map.Entry<int[], T>> sorted() {
+		var data = new ArrayList<>(this.dataTable.entrySet());
+		data.sort((a,b)->comparator.compare(a.getValue(), b.getValue()));
+		return data;
+	}
 
 	@Override
 	public Iterator<Map.Entry<int[], T>> iterator() {
@@ -297,6 +321,7 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 			public Iterator<Pair<TIntIntMap, T>> iterator() {
 
 				var iter = dataTable.entrySet().iterator();
+//				var iter = sorted().iterator();
 				return new Iterator<Pair<TIntIntMap, T>>() {
 
 					@Override
@@ -307,7 +332,7 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 					@Override
 					public Pair<TIntIntMap, T> next() {
 						var nextVal = iter.next();
-						TIntIntMap ret = new FIntIntHashMap(columns, nextVal.getKey());
+						TIntIntMap ret = new TIntIntHashMap(columns, nextVal.getKey());
 						return Pair.of(ret, nextVal.getValue());
 					}
 				};

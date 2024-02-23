@@ -4,13 +4,10 @@ package ch.idsia.credici.model.transform;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.stream.IntStream;
-
-import org.jgrapht.traverse.TopologicalOrderIterator;
+import java.util.function.BiFunction;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.StructuralCausalModel.VarType;
-import ch.idsia.credici.utility.DAGUtil;
 import ch.idsia.credici.utility.Randomizer;
 import ch.idsia.credici.utility.logger.DetailedDotSerializer;
 import ch.idsia.credici.utility.logger.Info;
@@ -18,37 +15,55 @@ import ch.idsia.credici.utility.table.DoubleTable;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.iterator.TIntIterator;
-import gnu.trove.list.TIntList;
-import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.list.linked.TIntLinkedList;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
-public class EmpiricalNetwork {
+public class EmpiricalNetwork implements BiFunction<StructuralCausalModel, DoubleTable, BayesianNetwork>{
 	
+	TIntSet dependant;
 	public BayesianNetwork apply(StructuralCausalModel model, DoubleTable data) {
 		var m2 = model.copy();
 
 		// dependent variable are third party components
-		for (int v : m2.getDependentSet().toArray()) {
+		dependant = new TIntHashSet(m2.getDependentSet());
+		for (int v : dependant.toArray()) {
 			int u = m2.addVariable(2, VarType.EXOGENOUS);
 			m2.addParent(v, u);
 			m2.setVariableType(v, VarType.ENDOGENOUS);
 		}
 		
+		for (int variable : model.getEndogenousVars()) {
+			if(model.getParents(variable).length == 0) {
+				dependant.add(variable);
+			}
+		}
+		
+		// just because rafa's method requires distributions set
 		Randomizer r = new Randomizer();
 		for (var v : m2.getVariables()) {
 			var factor = r.randomFactor(m2.getFullDomain(v), v, false, false); // domain is already sorted
 			m2.setFactor(v, factor);
 		}
 		
+		
 		BayesianNetwork bn = m2.getEmpiricalNet();
-		DetailedDotSerializer.saveModel("bn.png", new Info().model(bn));
-		quantify(bn, data);
-
+		DetailedDotSerializer.saveModel("ban.png", new Info().model(bn).hideTables());
+		quantify(bn, data, bn.getVariables());
+		
+	//	DetailedDotSerializer.saveModel("ban.png", new Info().model(bn));
+//		for (int w : model.getDependentSet().toArray()) {
+//			Strides domain = model.getFullDomain(w);
+//			BayesianFactor bf = new BayesianFactor(domain, true);
+//			bn.setFactor(w, bf);
+//		}
+		
+	//	DetailedDotSerializer.saveModel("bn.png", new Info().model(bn));
+		
 		return bn;
 	}
 	
@@ -87,15 +102,25 @@ public class EmpiricalNetwork {
 		
 		int[] vars = net.getVariables();
 		
+		int[] cols = dataset.getColumns();
+		int[] order = ArraysUtil.order(cols);
+		cols = ArraysUtil.at(cols, order);
+
 		double ll = 0;
-		for (var row : dataset) {
-			int[] states = row.getKey();
+		for (var row : dataset.sorted()) {
+			int[] states = ArraysUtil.at(row.getKey(), order);
 			double rowll = 0;
 			for(int variable : vars) {
 				var factor = net.getFactor(variable);
-				int offset = factor.getDomain().getPartialOffset(dataset.getColumns(), states);
-				double p = factor.getValueAt(offset);
-				rowll += Math.log(p);
+				double[] idata = factor.getInteralData();
+				
+				int offset = factor.getDomain().getPartialOffset(cols, states);
+				double p = idata[offset];
+				
+				if (!factor.isLog())
+					rowll += Math.log(p);
+				else 
+					rowll += p;
 			}
 			ll += rowll * row.getValue();
 		}
@@ -104,25 +129,41 @@ public class EmpiricalNetwork {
 
 	
 	
-	private void quantify(BayesianNetwork bn, DoubleTable data) {
+	
+	private void quantify(BayesianNetwork bn, DoubleTable data, int[] variables) {
 
-		for (int variable : bn.getVariables()) {
+		for (int variable : variables) {
 			int[] parents = bn.getParents(variable);
-			
 			int[] target = new int[parents.length + 1];
 			System.arraycopy(parents, 0, target, 0, parents.length);
 			target[parents.length] = variable;
 			Arrays.sort(target);
 			
 			Strides domain = bn.getDomain(target);
-			double[] values = data.getWeights(domain.getVariables(), domain.getSizes());
-			
-			BayesianFactor factor = new BayesianFactor(domain, values, false);
-			factor = factor.normalize(parents);
+			double[] values;
+			BayesianFactor factor;
+			if (dependant.contains(variable)) {
+//				double lsize = - Math.log(domain.getCardinality(variable)); // log(1/size)
+				values = new double[domain.getCombinations()];
+				
+				//by default arrays are initialized to zero
+//				for (int i = 0; i < values.length;++i) {
+//					values[i] = 0;//lsize;
+//				}
+				factor = new BayesianFactor(domain, values, true);
+			} else {
+				values = data.getWeights(domain.getVariables(), domain.getSizes());
+				for (int i = 0; i < values.length; i++) {
+					values[i] = Math.log(values[i]);
+				}
+				factor = new BayesianFactor(domain, values, true);
+				factor = factor.normalize(parents);
+			}
 			
 			bn.setFactor(variable, factor);
 		}
 	}
+	
 	
 	private TIntObjectMap<TIntSet> components(StructuralCausalModel model) {
 	

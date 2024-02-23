@@ -88,7 +88,7 @@ public class EquationBuilder {
         if(chU.length==1 && exoVars.length==1){
             eqs = new HashMap<Integer, BayesianFactor>();
             eqs.put(chU[0], EquationBuilder.of(model).withAllAssignments(chU[0]));
-        }if(chU.length>1 && exoVars.length==1){
+        }else if(chU.length>1 && exoVars.length==1){
             eqs = (HashMap) EquationBuilder.of(model).withAllAssignmentsQM(exoVars[0]);
         }else{
             throw new NotImplementedException("Not implemented conservative specification for non-quaisi markovian");

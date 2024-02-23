@@ -12,7 +12,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -20,7 +19,6 @@ import java.util.stream.IntStream;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.lang3.tuple.Triple;
 import org.apache.commons.math3.random.SobolSequenceGenerator;
-import org.apache.commons.math3.util.FastMath;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.table.DoubleTable;
@@ -37,7 +35,7 @@ import ch.idsia.crema.utility.CombinationsIterator;
  * this parents.  
  */
 public class CComponents {
-	private static final String CC_KEY = "CC-Key";
+	public static final String CC_KEY = "CC-Key";
 	
 	AtomicInteger modelCounter; 
 	
@@ -106,7 +104,14 @@ public class CComponents {
 
     private Map<Integer, List<StructuralCausalModel>> results;
 
+    public synchronized Map<Integer, List<StructuralCausalModel>> getResults() {
+    	return results;
+    }
 
+    public synchronized List<StructuralCausalModel> getResults(Integer id) {
+    	return new ArrayList<>(results.get(id));
+    }
+        
     
     public synchronized void addResult(StructuralCausalModel model) {
     	Integer k = (Integer) model.getData(CC_KEY);
@@ -206,21 +211,24 @@ public class CComponents {
         	domain.add(x);
         	
             int[] dom_vars = domain.stream().mapToInt(i->i).sorted().toArray();
-            newmodel.addParents(x, ArraysUtil.removeAllFromSortedArray(dom_vars, x));
+            int[] sparents = ArraysUtil.removeAllFromSortedArray(dom_vars, x);
+            newmodel.addParents(x, sparents);
             
             if (dataset != null) {
 	            // interesting parents 
 	            Strides s = model.getDomain(dom_vars);
-	            double[] marginal = dataset.getWeights(s.getVariables(), s.getSizes());
+//	            double[] marginal = dataset.getWeights(s.getVariables(), s.getSizes());
+	            double[] marginal = new double[s.getCombinations()];
 	            
 	            var factor = model.getFactor(x);
 	            boolean log = factor != null ? factor.isLog() : false;
-	            if (log) {
-	            	marginal = Arrays.stream(marginal).map(FastMath::log).toArray();
+	            if (!log) {
+	            	for (int i = 0; i < marginal.length; ++i) marginal[i] = 1;
+//	            	marginal = Arrays.stream(marginal).map(FastMath::log).toArray();
 	            }
 	            
 	            BayesianFactor f = new BayesianFactor(s, marginal, log);
-	            f = f.normalize();
+//	            f = f.divide(f.marginalize(x));
 	            newmodel.setFactor(x, f);
             }
         }

@@ -1,50 +1,34 @@
 package ch.idsia.credici.learning.eqem;
 
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.BiConsumer;
-import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.IntStream;
 
 import org.apache.commons.lang3.tuple.Pair;
-import org.apache.commons.math3.optim.linear.SolutionCallback;
 
-import com.google.common.util.concurrent.AtomicDouble;
+import com.google.common.base.Supplier;
 
-import ch.idsia.credici.learning.eqem.ComponentSolution.Stage;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.StructuralCausalModel.VarType;
-import ch.idsia.credici.model.predefined.RandomChainNonMarkovian;
 import ch.idsia.credici.model.transform.CComponents;
 import ch.idsia.credici.model.transform.EmpiricalNetwork;
 import ch.idsia.credici.utility.Randomizer;
-import ch.idsia.credici.utility.logger.DetailedDotSerializer;
 import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.credici.utility.table.DoubleTable;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
-import ch.idsia.crema.utility.ArraysUtil;
-import ch.idsia.crema.utility.RandomUtil;
-import gnu.trove.list.TDoubleList;
-import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
 public class EQEMLearner {
+	
+	private Config settings;
 
-	private Config settings = new Config();
-
-	private Function<String, Consumer<Info>> loggerGenerator = EQEMLearner::noCallbackGenerator;
+	private Function<Integer, Consumer<Supplier<Info>>> loggerGenerator = EQEMLearner::noCallbackGenerator;
 
 	private StructuralCausalModel model;
 	private StructuralCausalModel prior;
@@ -52,21 +36,19 @@ public class EQEMLearner {
 	private DoubleTable data;
 	private TIntSet freeVariables;
 
-	public EQEMLearner(StructuralCausalModel prior, DoubleTable data, TIntIntMap exosizes, boolean log) {
-		this(prior, data, exosizes, new TIntHashSet(prior.getVariables()), log);
+	public EQEMLearner(StructuralCausalModel prior, DoubleTable data, TIntIntMap exosizes, boolean log, Config settings) {
+		this(prior, data, exosizes, new TIntHashSet(prior.getVariables()), log, settings);
 	}
 
-	public EQEMLearner(StructuralCausalModel prior, DoubleTable data, TIntIntMap exosizes, TIntSet free, boolean log) {
-		this.random = new Randomizer(0);
+	public EQEMLearner(StructuralCausalModel prior, DoubleTable data, TIntIntMap exosizes, TIntSet free, boolean log, Config settings) {
+		this.settings = settings != null ? settings : new Config();
+		this.random = new Randomizer();
 		this.prior = prior;
 		this.freeVariables = new TIntHashSet(free);
 		this.model = initModel(prior, exosizes, log);
 		this.data = data;
 	}
 
-	public void setConfig(Config config) {
-		this.settings = config;
-	}
 
 	public CComponents run() throws InterruptedException {
 		return run(null);
@@ -80,10 +62,11 @@ public class EQEMLearner {
 	 * @return
 	 * @throws InterruptedException
 	 */
-	public CComponents run(final Consumer<ComponentSolution> callback) throws InterruptedException {
-		Consumer<Info> modelLogger = loggerGenerator.apply("EQEM");
-		modelLogger.accept(new Info().model(this.prior).title("Prior model"));
-		modelLogger.accept(new Info().model(this.model).title("Starting model"));
+	public CComponents run(final Consumer<ModelInfo> callback) throws InterruptedException {
+		
+		var	modelLogger = loggerGenerator.apply(null);
+		modelLogger.accept(()->new Info().model(this.prior).title("Prior model"));
+		modelLogger.accept(()->new Info().model(this.model).title("Starting model"));
 		
 		CComponents cc = new CComponents();
 
@@ -93,36 +76,51 @@ public class EQEMLearner {
 		for (var pair : components) {
 			StructuralCausalModel component_model = pair.getLeft();
 			DoubleTable component_data = pair.getRight();
-			
-			ComponentEM cem = new ComponentEM(pair.getKey(), pair.getValue(), settings);
-			cem.setModelLogger(loggerGenerator.apply("CC" + em.size()));
-			
+		
 			EmpiricalNetwork en = new EmpiricalNetwork();
 			BayesianNetwork network = en.apply(component_model, component_data);
-
 			double ll2 = en.loglikelihood(network, component_data);
+		
+			System.out.println("LL*: " + ll2);
+			
+			ComponentEM cem = new ComponentEM(pair.getKey(), pair.getValue(), ll2, settings);
+			cem.setModelLogger(loggerGenerator.apply(cem.getId()));
+
 			em.add(Pair.of(cem, ll2));
 		}
 		
-		for (int r = 0 ; r < settings.numRuns(); ++r) {
+		boolean didsomething = true; 
+		for (int r = 0 ; r < settings.maxRuns() && didsomething; ++r) {
+			
+			didsomething = false; // we are hopefull that we will not do anuthing
 			for (var pair : em) {
-				AtomicInteger accepted = new AtomicInteger(0);
-				AtomicInteger rejected = new AtomicInteger(0);
-
-				Map<Stage, Integer> counts = Collections.synchronizedMap(new HashMap<Stage, Integer>());
 				ComponentEM cem = pair.getLeft();
-				final double llmax = pair.getRight();
+				final Integer id = cem.getId();
+		
+				int num_models = cc.getResults(id).size(); 
+				if (num_models >=  settings.numRuns()) continue;
 				
-//				System.out.println("--------------------------------------");
-//				System.out.println("Component: " + cem.getId());
-//				System.out.println("LL*: " + llmax);
-//				
+				didsomething = true; // actually doing somehting
+				
+				final double llmax = pair.getRight();
+				final double EPS = settings.llEPS();
+				//				
 				cem.run(r, (sol) -> {
-					if (llmax - sol.loglikelihood < 0.0001) 
-						cc.addResult(sol.model());
+					sol.componentId(id);
+					if (sol.stage.success()) {
+						double delta = llmax - sol.loglikelihood;
+						if (delta <= EPS) {
+							sol.accept();
+							cc.addResult(sol.getModel());
+							if (delta < -EPS) System.out.println("NBONONONO");
+						}  else { 
+							sol.reject();
+						}
+					}
 					
 					if (callback != null) {
 						sol.llmax(llmax);
+
 						callback.accept(sol);
 					}
 				});
@@ -143,12 +141,19 @@ public class EQEMLearner {
 	 * @return
 	 */
 	private StructuralCausalModel initModel(StructuralCausalModel prior, TIntIntMap exosizes, boolean log) {
-		StructuralCausalModel model = new StructuralCausalModel(prior.getName());
-		prior.copyData(prior);
 
+		// ignore exosizes if not freeing endogenous
+		if (!settings.freeEndogenous()) {
+			exosizes = new TIntIntHashMap();
+			freeVariables.removeAll(prior.getEndogenousVars());
+		}
+		
+		
+		StructuralCausalModel model = new StructuralCausalModel(prior.getName());
+		model.copyData(prior);
 		for (int variable : prior.getVariables()) {
 			int size = prior.getSize(variable);
-			if (exosizes.containsKey(variable)) {
+			if (exosizes != null && exosizes.containsKey(variable)) {
 				size = exosizes.get(variable);
 			}
 
@@ -167,22 +172,29 @@ public class EQEMLearner {
 
 		for (int variable : model.getVariables()) {
 			if (freeVariables.contains(variable)) {
-				int[] domain = ArraysUtil.append(new int[] { variable }, model.getParents(variable));
-				Arrays.sort(domain);
-
-				Strides dom = model.getDomain(domain);
+				Strides dom = model.getFullDomain(variable);
+//				Arrays.sort(domain);
+//
+//				Strides dom = model.getDomain(domain);
+//				if (prior.getFactor(variable) == null) {
 				BayesianFactor factor = new BayesianFactor(dom, log);
 				random.randomizeInplace(factor, variable);
 				model.setFactor(variable, factor);
+//				} else {
+//					model.setFactor(variable, prior.getFactor(variable));
+//				}
 
 			} else {
-				var f = prior.getFactor(variable).copy();
+				var f = prior.getFactor(variable);
 				// make sure that if log is required we actually log
 				if (log && !f.isLog()) {
-					double[] dta = f.getInteralData();
+					double[] dta = f.getInteralData().clone();
 					for (int i = 0; i < dta.length; ++i) {
 						dta[i] = Math.log(dta[i]);
 					}
+					f = new BayesianFactor(f.getDomain(), dta, true);
+				} else {
+					f = f.copy(); // make a copy
 				}
 				model.setFactor(variable, f);
 			}
@@ -192,51 +204,18 @@ public class EQEMLearner {
 		return model;
 	}
 
-	public static void main(String[] args) {
-
-		int N = 5000;
-//		int numRun = 1000; // EM internal iterations
-//		int maxIter = 1000;
-
-		int n = 4;
-		int endoVarSize = 2;
-		int exoVarSize = 5;
-
-		RandomUtil.setRandomSeed(1000);
-		StructuralCausalModel causalModel = RandomChainNonMarkovian.buildModel(n, endoVarSize, exoVarSize);
-
-		TIntIntMap[] data = IntStream.range(0, N).mapToObj(i -> causalModel.sample(causalModel.getEndogenousVars()))
-				.toArray(TIntIntMap[]::new);
-
-		int[] exo = causalModel.getExogenousVars();
-		Strides dom = causalModel.getDomain(exo);
-		int[] sz = dom.getSizes();
-
-		DoubleTable dataTable = new DoubleTable(data);
-		DetailedDotSerializer.saveModel("input.png", new Info().model(causalModel).data(dataTable));
-
-		EQEMLearner learner = new EQEMLearner(causalModel, dataTable, new TIntIntHashMap(exo, sz), true);
-		try {
-			learner.run();
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-
-	}
-
 	/**
 	 * Set a callback function called at each step of the learner execution The
 	 * function is passed into each component.
 	 */
-	public void setDebugLoggerGenerator(Function<String, Consumer<Info>> generator) {
+	public void setDebugLoggerGenerator(Function<Integer, Consumer<Supplier<Info>>> generator) {
 		this.loggerGenerator = generator;
 	}
 
-	private static void noCallback(Info data) {
+	private static void noCallback(Supplier<Info> data) {
 	}
 
-	private static Consumer<Info> noCallbackGenerator(String name) {
+	private static Consumer<Supplier<Info>> noCallbackGenerator(Integer name) {
 		return EQEMLearner::noCallback;
 	}
 

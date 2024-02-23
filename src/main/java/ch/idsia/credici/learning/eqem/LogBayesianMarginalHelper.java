@@ -1,10 +1,7 @@
 package ch.idsia.credici.learning.eqem;
 
-import ch.idsia.crema.factor.bayesian.BayesianFactor;
-
-import java.util.Arrays;
-
-import org.apache.commons.math3.util.FastMath;
+import net.jafama.FastMath;
+//import org.apache.commons.math3.util.FastMath;
 
 /**
  * A collector to marginalize a variable out of a domain in logspace.
@@ -41,13 +38,26 @@ public class LogBayesianMarginalHelper {
 		double value = logdata[source + offsets[0]]; 
 		for (int i = 1; i < size; ++i) {
 			double v = logdata[source + offsets[i]]; 
-
+			if (v == Double.NEGATIVE_INFINITY) continue;
+			
 			if (v > value) {
-				value = v + Math.log1p(FastMath.exp(value - v));
+				value = v + FastMath.log1p(FastMath.exp(value - v));
 			} else {
-				value += Math.log1p(FastMath.exp(v - value));
+				value += FastMath.log1p(FastMath.exp(v - value));
 			}
 		}
 		return value;
+	}
+
+	public static double logsum(double value1, double value2) {
+
+			if (value2 == Double.NEGATIVE_INFINITY) return value1;
+			if (value1 == Double.NEGATIVE_INFINITY) return value2;
+			
+			if (value2 > value1) {
+				return value2 + FastMath.log1p(FastMath.exp(value1 - value2));
+			} else {
+				return value1 + FastMath.log1p(FastMath.exp(value2 - value1));
+			}
 	}
 }

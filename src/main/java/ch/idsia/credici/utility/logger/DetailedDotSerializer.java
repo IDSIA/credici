@@ -7,8 +7,6 @@ import java.nio.file.Path;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.Arrays;
-import java.util.Map;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -105,7 +103,7 @@ public class DetailedDotSerializer {
 			int[] parents = model.getParents(i);
 			
 			BayesianFactor factor = model.getFactor(i);
-			if (factor != null) {
+			if (factor != null && record.getShowAsTable()) {
 				Strides domain = factor.getDomain();
 				Strides conditioning = domain.remove(i);
 
@@ -176,7 +174,8 @@ public class DetailedDotSerializer {
 
 		builder.append(arcs);
 		
-		if (record.getTitle() != null) builder.append("labelloc=\"t\"\nlabel=\"").append(record.getTitle()).append("\"\n");
+		if (record.getTitle() != null) 
+			builder.append("labelloc=\"t\"\nlabel=\"").append(record.getTitle()).append(" ").append(record.getRunId()).append("\"\n");
 		
 		builder.append("}");
 		return builder.toString();

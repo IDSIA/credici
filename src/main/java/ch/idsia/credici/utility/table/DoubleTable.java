@@ -15,6 +15,7 @@ public class DoubleTable extends DataTable<Double, Double> {
 
 	public DoubleTable(int[] columns) {
 		super(columns, 1d, 0d, (a, b) -> a + b, (i) -> new Double[i]);
+		comparator = Double::compare;
 	}
 
 	public DoubleTable(int[] columns, int[][] data) {
@@ -200,7 +201,7 @@ public class DoubleTable extends DataTable<Double, Double> {
 
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
-		String head = Arrays.stream(columns).mapToObj(Integer::toString).collect(Collectors.joining(" | "));
+		String head = Arrays.stream(columns).mapToObj(naming).collect(Collectors.joining(" | "));
 		sb.append(head).append(" | weight\n");
 
 		for (Map.Entry<int[], Double> row : dataTable.entrySet()) {
@@ -209,6 +210,10 @@ public class DoubleTable extends DataTable<Double, Double> {
 		}
 		return sb.toString();
 
+	}
+
+	public int size() {
+		return dataTable.size();
 	}
 
 }

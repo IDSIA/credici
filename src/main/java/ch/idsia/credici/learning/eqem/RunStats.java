@@ -1,10 +1,6 @@
 package ch.idsia.credici.learning.eqem;
 
-import java.util.stream.IntStream;
-
-import gnu.trove.list.TDoubleList;
-import gnu.trove.list.array.TDoubleArrayList;
-
+/// unused
 public class RunStats {
 	double llmax;
 	

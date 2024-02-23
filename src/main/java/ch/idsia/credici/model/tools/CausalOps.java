@@ -278,7 +278,7 @@ public class CausalOps {
             }
 
         // Fix the value of the intervened variable
-        Strides dom = model.getFactor(var).getDomain().sort().intersection(var);
+        Strides dom = model.getDomain(var);//model.getFactor(var).getDomain().sort().intersection(var);
         GenericFactor f = getDeterministic(model.getFactor(var), dom, state);
         do_model.setFactor(var, f);
         return do_model;

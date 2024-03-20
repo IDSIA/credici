@@ -15,6 +15,8 @@ import org.apache.commons.lang3.tuple.Triple;
 import com.google.common.base.Supplier;
 
 import ch.idsia.credici.learning.eqem.ModelInfo.Stage;
+import ch.idsia.credici.learning.eqem.fixing.EquationFixing;
+import ch.idsia.credici.learning.eqem.fixing.MinEntropyFixing;
 import ch.idsia.credici.learning.eqem.stop.LLStar;
 import ch.idsia.credici.learning.eqem.stop.LLStop;
 import ch.idsia.credici.learning.ve.VE;
@@ -27,6 +29,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
+import ch.javasoft.metabolic.generate.FaColiTest;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.TIntObjectMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
@@ -45,6 +48,9 @@ public class ComponentEM {
 	private DoubleTable dataset;
 
 	private TIntObjectMap<TIntSet> endoLocked;
+	private EquationFixing determinismStrategy;
+	
+	
 	private TIntSet doNotTouch;
 
 	private int[] variables;
@@ -91,7 +97,8 @@ public class ComponentEM {
 	private void init(StructuralCausalModel themodel, DoubleTable dataset, double llStar, Config settings) {
 		this.settings = settings;
 		this.id = (Integer) themodel.getData(CComponents.CC_KEY);
-
+		this.determinismStrategy = new MinEntropyFixing();
+		
 		this.logger = Logger.getLogger("ComponentEM");
 
 		logger.config("Setting up inference for: " + themodel.getName() + " ("
@@ -263,7 +270,8 @@ public class ComponentEM {
 		if (converged) {
 
 			if (true_scm) {
-				var extreme = getExtreme(model, data);
+				
+				var extreme = determinismStrategy.choose(model, data, endoLocked);
 
 				if (extreme.getLeft() == -1) {
 					// nothing found, nothing else to do
@@ -382,16 +390,16 @@ public class ComponentEM {
 			int states = domain.getCardinality(variable);
 
 			double[] original = factor.getInteralData();
+			
+			// compute the data over the whole variable. The locked columns will be 
+			// restored next
 			double[] data = counts.getWeights(domain);
 			if (!factor.isLog()) {
 				data = Arrays.stream(data).map(FastMath::exp).toArray();
 			}
-//			data = Arrays.stream(data).map(Math::log).toArray();
 
-			// locked columns need their data to be restore to the original
+			// locked columns need their data to be restored to the original
 			// values.
-//			@SuppressWarnings("unused")
-//			int changed = 0;
 			if (endoLocked.containsKey(variable)) {
 				TIntSet locked = endoLocked.get(variable);
 				var iter = locked.iterator();
@@ -402,13 +410,11 @@ public class ComponentEM {
 						int id = offset + state * stride;
 						data[id] = original[id];
 					}
-//					++changed;
 				}
 			}
 
 			// check if there was an impossible column (p=0)
 			// thanks Laura for the debug support (rubberduck)!!!
-
 			factor.setInteralData(data);
 
 			BayesianFactor norm_factor = marginalize_fix(factor, variable);
@@ -440,7 +446,7 @@ public class ComponentEM {
 					low = factor.isLog() ? Math.log(1.0 / states) : 1.0 / states;
 					high = factor.isLog() ? Math.log(1.0 / states) : 1.0 / states;
 				}
-				int state = argmax(factor.getInteralData(), offset, stride, states);
+				int state = EquationFixing.argmax(factor.getInteralData(), offset, stride, states);
 				lock(data, variable, states, stride, offset, state, low, high);
 				norm_data[i] = norm_factor.isLog() ? 0 : 1;
 			}
@@ -600,31 +606,6 @@ public class ComponentEM {
 	}
 
 	/**
-	 * Find argmax of the data in the specified array using strides and size to
-	 * advance.
-	 * 
-	 * The data can be normal or in log space.
-	 * 
-	 * @param data   double[] the source data
-	 * @param offset int start offset
-	 * @param stride int item stride
-	 * @param size   int number of items
-	 * @return the state of the variable with max value
-	 */
-	int argmax(double[] data, int offset, int stride, int size) {
-		int index = 0;
-		double max = Double.NEGATIVE_INFINITY;
-		for (int i = 0; i < size; ++i) {
-			int idx = offset + stride * i;
-			if (data[idx] > max) {
-				max = data[idx];
-				index = i;
-			}
-		}
-		return index;
-	}
-
-	/**
 	 * Lock a variable into some state.
 	 * 
 	 * @param model    the model where we lock the variable
@@ -633,153 +614,52 @@ public class ComponentEM {
 	 */
 	void lock(StructuralCausalModel model, int variable, int offset, int state) {
 		BayesianFactor factor = model.getFactor(variable);
-		int stride = factor.getDomain().getStride(variable);
-		int states = factor.getDomain().getCardinality(variable);
-
-		double[] data = factor.getInteralData();
-		double one = factor.isLog() ? 0 : 1;
-		double zero = factor.isLog() ? Double.NEGATIVE_INFINITY : 0;
-
-		lock(data, variable, states, stride, offset, state, zero, one);
+		
+		// if markovian
+		if (model.isMarkovian()) {
+			int u = model.getExogenousParents(variable)[0];
+			int exostride = factor.getDomain().getStride(u);
+			
+				
+		} else {		
+			// here check if the things are working
+			int stride = factor.getDomain().getStride(variable);
+			int states = factor.getDomain().getCardinality(variable);
+	
+			double[] data = factor.getInteralData();
+			double one = factor.isLog() ? 0 : 1;
+			double zero = factor.isLog() ? Double.NEGATIVE_INFINITY : 0;
+	
+			lock(data, variable, states, stride, offset, state, zero, one);
+		}
 	}
 
+	/** 
+	 * When we lock we need to check whether the problem is still reacheable. 
+	 * This means that each observation needs to have a corresponding Probability
+	 * 
+	 * 
+	 * @param data
+	 * @param variable
+	 * @param states
+	 * @param stride
+	 * @param offset
+	 * @param top
+	 * @param low
+	 * @param high
+	 */
 	void lock(double[] data, int variable, int states, int stride, int offset,int top, double low, double high) {
 
-
+		
 		for (int state = 0; state < states; ++state) {
 			data[state * stride + offset] = state == top ? high : low;
 		}
 
-//		int fix = argmax(data, offset, stride, states);
-//
-//		for (int state = 0; state < states; ++state) {
-//			data[offset + state * stride] = fix == state ? high : low;
-//		}
 
 		endoLocked.get(variable).add(offset);
 	}
 
-	/**
-	 * Get the most exreme endogenous distribution. This will look for the column in
-	 * each endogenous factor that is closest to be deterministic. And which is not
-	 * already deterministic (locked).
-	 * 
-	 * Method returns a triplet (variable, column offset, state)
-	 * 
-	 * @return
-	 */
-	Triple<Integer, Integer, Integer> getExtreme(StructuralCausalModel model, DoubleTable table) {
-		int best_var = -1;
-
-		double best_score = Double.MAX_VALUE;
-		int best_offset = 0;
-		int best_state = 0;
-
-		for (int endo : model.getEndogenousVars()) {
-			if (!endoLocked.containsKey(endo))
-				continue;
-
-			TIntSet locked = endoLocked.get(endo);
-
-			BayesianFactor factor = model.getFactor(endo);
-			Strides domain = factor.getDomain();
-			Strides parents = domain.remove(endo);
-
-			int stride = domain.getStride(endo);
-			int states = domain.getCardinality(endo);
-
-			var iterator = domain.getIterator(parents);
-			while (iterator.hasNext()) {
-				int offset = iterator.next();
-				if (locked.contains(offset))
-					continue;
-
-				double score = scoreExtreme(factor, offset, stride, states);
-				if (score < best_score) {
-					best_score = score;
-//					best_parents_states = iterator.getPositions().clone();
-					best_offset = offset;
-					best_var = endo;
-					best_state = argmax(factor.getInteralData(), offset, stride, states);
-				}
-			}
-		}
-		return Triple.of(best_var, best_offset, best_state);
-	}
-
-	/**
-	 * Get the min mae of the current column from the nearest deterministic
-	 * function.
-	 * 
-	 * In the deterministic function only one state will have p=1 all other will
-	 * have p=0; The method traverses the column only once. It will not look for the
-	 * maximum first, but will continuously correct the score if a higher p is
-	 * found.
-	 * 
-	 * @param factor        the factor
-	 * @param column_offset the column to be considered
-	 * @param stride        the stride of the variable
-	 * @param states        the number of strates of the variable
-	 * @return
-	 */
-	@SuppressWarnings("unused")
-	private double scoreExtremeMae(BayesianFactor factor, int column_offset, int stride, int states) {
-		// start with an impossibly high value for both score and high_delta.
-		// at the first state we will cancel them out
-		double score = 2;
-		double high_delta = score;
-		double low_delta = 0;
-
-		for (int state = 0; state < states; ++state) {
-			double v = factor.getValueAt(column_offset + state * stride);
-			double h = 1 - v;
-
-			if (h < high_delta) {
-				// found a better winner, fix score
-				score -= high_delta;
-				score += low_delta;
-
-				// this is the winner now
-				score += h;
-
-				// remember values to be able to cancel the winner out
-				high_delta = h;
-				low_delta = v;
-
-			} else {
-				// not a winning state
-				score += v;
-			}
-		}
-		return score / states;
-	}
-
-	/**
-	 * Get the entropy of the specified column.
-	 * 
-	 * @param factor        the factor
-	 * @param column_offset the column to be considered
-	 * @param stride        the stride of the variable
-	 * @param states        the number of strates of the variable
-	 * @return
-	 */
-	private double scoreExtreme(BayesianFactor factor, int column_offset, int stride, int states) {
-		final double l2 = 1. / FastMath.log(states);
-		double score = 0;
-		for (int state = 0; state < states; ++state) {
-			double v = factor.getValueAt(column_offset + state * stride);
-			if (v == 0)
-				continue; // 0log0 == 0
-			score += v * FastMath.log(v);
-		}
-		return -score * l2; // / Math.log(2); // to get log2 results
-
-		// same with streams
-//		IntStream indices = IntStream.iterate(0, s -> s < states, s -> s + 1).map(state -> column_offset + state * stride);
-//		return indices.mapToDouble(factor::getValueAt).filter(v -> v > 0).map(v -> v * FastMath.log(v)).sum();
-	}
-
-	// getters and setters
+	
 
 	public BayesianFactor marginalize_fix(BayesianFactor factor, int variable) {
 		Strides domain = factor.getDomain();

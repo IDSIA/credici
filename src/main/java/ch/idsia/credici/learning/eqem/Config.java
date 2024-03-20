@@ -45,8 +45,10 @@ public class Config {
 		this.deterministicEndogenous = deterministicEndogenous;
 	}
 //	public Config priorModel(StructuralCausalModel model) { this.priorModel = model; return this; }
-	public Config numRun(int numRuns) { this.numRuns = numRuns; return this; }
-	public Config maxRun(int maxRuns) { this.maxRuns = maxRuns; return this; }
+	
+	public Config numRun(int numRuns) { this.numRuns = numRuns; if (this.maxRuns < numRuns) this.maxRuns = numRuns; return this; }
+	public Config maxRun(int maxRuns) { this.maxRuns = maxRuns; if (this.numRuns > maxRuns) this.numRuns = maxRuns; return this; }
+	
 	public Config numIterations(int numIterations) { this.numIterations = numIterations; return this; } 
 	public Config numPSCMRuns(int numPSCMRuns) { this.numPSCMRuns = numPSCMRuns; return this; }
 	public Config numPSCMInterations(int numPSCMIterations) { this.numPSCMIterations = numPSCMIterations; return this; }

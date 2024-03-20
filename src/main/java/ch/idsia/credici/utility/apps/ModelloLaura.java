@@ -25,6 +25,7 @@ import ch.idsia.credici.model.transform.EmpiricalNetwork;
 import ch.idsia.credici.utility.logger.DetailedDotSerializer;
 import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.credici.utility.table.DoubleTable;
+import ch.idsia.credici.utility.table.ListTable;
 import ch.idsia.credici.utility.table.MinMaxTable;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
@@ -60,12 +61,14 @@ public class ModelloLaura {
 	 * @param left_cols
 	 * @param lifestyle
 	 * @param diabetes
-	 * @param mapping a mapping between left and star worlds. Keys are the non starred variables in the data
+	 * @param mapping   - a mapping between left and star worlds. Keys are the non
+	 *                  starred variables in the data
 	 * @return map of row -> [ diabetes, diabetes_star ]
 	 */
-	public static TreeMap<int[], double[]> query(StructuralCausalModel model, DoubleTable data, int[] left_cols, int exo, int target, TIntIntMap mapping, int state) {
+	public static TreeMap<int[], double[]> query(StructuralCausalModel model, DoubleTable data, int[] left_cols,
+			int exo, int target, TIntIntMap mapping, int state, boolean useRealDiabetes) {
 		int[] seq = new MinFillOrdering().apply(model);
-		
+
 		TreeMap<int[], BayesianFactor> pUs = new TreeMap<int[], BayesianFactor>(Arrays::compare);
 		TreeMap<int[], BayesianFactor> pDiabetes = new TreeMap<int[], BayesianFactor>(Arrays::compare);
 		TreeMap<int[], double[]> pDiabetes_star = new TreeMap<int[], double[]>(Arrays::compare);
@@ -86,7 +89,11 @@ public class ModelloLaura {
 			pDiabetes.put(states, pdia);
 
 			ve = new VE<>(seq);
-			ve.setEvidence(new TIntIntHashMap(left_cols, states));
+			if (useRealDiabetes) {
+				ve.setEvidence(new TIntIntHashMap(left_cols, states));
+			} else {
+				ve.setEvidence(ev_no_dia);
+			}
 			ve.setFactors(model.getFactors());
 			ve.setNormalize(true);
 
@@ -94,80 +101,104 @@ public class ModelloLaura {
 			pUs.put(states, pU);
 		}
 
-		
-		
 		for (var entry : data.mapIterable()) {
 			TIntIntMap row = entry.getKey();
-			
+
 			var left_states = Arrays.stream(left_cols).map(row::get).toArray();
-			
+
 			var pU = pUs.get(left_states);
 
 			model.copy();
 			model.setFactor(exo, pU);
 
-			// build evidence 
+			// build evidence
 			final TIntIntMap evidence = new TIntIntHashMap(left_cols, left_states);
-			mapping.forEachEntry((s,t) -> { evidence.put(s, row.get(t)); return true; });
+			mapping.forEachEntry((s, t) -> {
+				evidence.put(s, row.get(t));
+				return true;
+			});
 			evidence.remove(target);
-					
+
 			VE<BayesianFactor> ve = new VE<>(seq);
 			ve.setEvidence(evidence); // full evidence
 			ve.setFactors(model.getFactors());
 			ve.setNormalize(true);
 			BayesianFactor pDia_star = ve.run(target);
-			
+
 			var pDia = pDiabetes.get(left_states);
-			
+
 			int[] row_arr = Arrays.stream(data.getColumns()).map(row::get).toArray();
-			
-			if (pDiabetes_star.containsKey(row_arr)) 
+
+			if (pDiabetes_star.containsKey(row_arr))
 				System.out.println("WTF");
-			
-			
-			double[] values = new double[] { pDia.getValue(state), pDia_star.getValue(state) };
+
+			double[] values = new double[] { pDia.getValue(state), pDia_star.getValue(state),
+					pDia_star.getValue(state) - pDia.getValue(state) };
 			pDiabetes_star.put(row_arr, values);
-			
+
 		}
 		return pDiabetes_star;
 	}
 
-	
-	
-	
-	
 	private static double[] minmax(BayesianFactor factor, int state, double[] current) {
 		double value = factor.getValue(state);
-		
+
 		if (current == null) {
-			return new double[] {value, value};
-		}
-		else {
+			return new double[] { value, value };
+		} else {
 			current[0] = Math.min(current[0], value);
 			current[1] = Math.max(current[1], value);
 			return current;
-		}	
+		}
 	}
-	
-	
-	
-	
-	public static DoubleTable binarize(DoubleTable data, TIntIntMap thresholds) {
+
+	public static DoubleTable remap(DoubleTable data, TIntObjectMap<int[]> threshold_lessequal) {
 		final int[] columns = data.getColumns();
 
-		int[] chid = IntStream.range(0, columns.length).filter(i -> thresholds.containsKey(columns[i])).toArray();
+		int[] chid = IntStream.range(0, columns.length).filter(i -> threshold_lessequal.containsKey(columns[i]))
+				.toArray();
 
 		DoubleTable target = new DoubleTable(columns);
 		for (var row : data.entries()) {
 			int[] key = row.getKey().clone();
 			for (int i : chid) {
 				int col = columns[i];
-				int th = thresholds.get(col);
-				key[i] = key[i] <= th ? 0 : 1;
+				int[] th = threshold_lessequal.get(col);
+				int state = 0;
+				for (state = 0; state < th.length; ++state)
+					if (key[i] <= th[state])
+						break;
+				key[i] = state;
 			}
 			target.add(key, row.getValue());
 		}
 		return target;
+	}
+
+	public static DoubleTable binarize(DoubleTable data, TIntIntMap thresholds) {
+		final TIntObjectMap<int[]> map = new TIntObjectHashMap<int[]>();
+
+		thresholds.forEachEntry((k, v) -> {
+			map.put(k, new int[] { v });
+			return true;
+		});
+
+		return remap(data, map);
+//		final int[] columns = data.getColumns();
+//
+//		int[] chid = IntStream.range(0, columns.length).filter(i -> thresholds.containsKey(columns[i])).toArray();
+//
+//		DoubleTable target = new DoubleTable(columns);
+//		for (var row : data.entries()) {
+//			int[] key = row.getKey().clone();
+//			for (int i : chid) {
+//				int col = columns[i];
+//				int th = thresholds.get(col);
+//				key[i] = key[i] <= th ? 0 : 1;
+//			}
+//			target.add(key, row.getValue());
+//		}
+//		return target;
 	}
 
 	public static DoubleTable filter(DoubleTable data, TIntIntMap conditions) {
@@ -190,17 +221,31 @@ public class ModelloLaura {
 
 	public static void main_binary(String[] args) throws IOException, InterruptedException {
 
-		String datafile = args[0];//"/Users/dhuber/Development/credici/src/test/java/ch/idsia/credici/model/eqmc/data_smaller.csv";
+		String datafile = args[0];// "/Users/dhuber/Development/credici/src/test/java/ch/idsia/credici/model/eqmc/data_smaller.csv";
+		int stcnt = Integer.parseInt(args[1]); // 128
+		int iter = Integer.parseInt(args[2]); // 200
+		double eps = Double.parseDouble(args[3]); // 0.000001
+		String file = args[4];
+		int ssex = Integer.parseInt(args[5]);
+		int sage = Integer.parseInt(args[6]);
+		int BMI_states = Integer.parseInt(args[7]);
+
+		boolean useRealDiabetes = "WithDia".equals(args[8]);
+
+		System.out.println(Arrays.toString(args));
+		System.out.println("-------------------------------------");
+
 		final TreeMap<String, Integer> cols = new TreeMap<>();
 		DoubleTable fulldata = DoubleTable.readTable(datafile, 0, ",", cols);
-	
+
 		TreeMap<Integer, String> colNames = new TreeMap<Integer, String>();
 		cols.entrySet().forEach(v -> colNames.put(v.getValue(), v.getKey()));
 
-		String[] names = { "LDL", "BMI", "Pressure", "Diabetes", "TG", "HDL", "FBS", "BMI_final", "FBS_final", "age", "sex" };
+		String[] names = { "LDL", "BMI", "Pressure", "Diabetes", "TG", "HDL", "FBS", "BMI_final", "FBS_final", "age",
+				"sex" };
 		String[] names_inf = { "LDL", "BMI", "Pressure", "Diabetes", "TG", "HDL", "FBS" };
-		String[] names_star = { "LDL", "BMI", "Pressure", "Diabetes", "TG", "HDL", "FBS", "BMI_final", "FBS_final"};
-		
+		String[] names_star = { "LDL", "BMI", "Pressure", "Diabetes", "TG", "HDL", "FBS", "BMI_final", "FBS_final" };
+
 		int[] interest = Arrays.stream(names).map(cols::get).mapToInt(Integer::intValue).toArray();
 		int[] interest_inf = Arrays.stream(names_inf).map(cols::get).mapToInt(Integer::intValue).toArray();
 		int[] interest_query = Arrays.stream(names_star).map(cols::get).mapToInt(Integer::intValue).toArray();
@@ -212,8 +257,6 @@ public class ModelloLaura {
 		thresholds.put(cols.get("Pressure"), 1);
 		thresholds.put(cols.get("TG"), 1);
 
-		thresholds.put(cols.get("BMI"), 2);
-		thresholds.put(cols.get("BMI_final"), 2);
 		thresholds.put(cols.get("LDL"), 2);
 
 		thresholds.put(cols.get("HDL"), 0);
@@ -221,15 +264,52 @@ public class ModelloLaura {
 		thresholds.put(cols.get("FBS_final"), 0);
 		DoubleTable target = binarize(data, thresholds);
 
+//		classe 0: BMI <=1
+//		classe 1: BMI = 2
+//		classe 2: BMI >=3 #default
+		TIntObjectMap<int[]> remap_states = new TIntObjectHashMap<int[]>();
+		switch (BMI_states) {
+		case 2:
+			remap_states.put(cols.get("BMI"), new int[] { 2 });
+			remap_states.put(cols.get("BMI_final"), new int[] { 2 });
+			break;
+		case 3:
+			remap_states.put(cols.get("BMI"), new int[] { 1, 2 }); // results in 3 states
+			remap_states.put(cols.get("BMI_final"), new int[] { 1, 2 }); // results in 3 states
+			break;
+		case 5:
+			remap_states.put(cols.get("BMI"), new int[] { 1, 2, 3, 4 }); // results in 5 states
+			remap_states.put(cols.get("BMI_final"), new int[] { 1, 2, 3, 4 }); // results in 5 states
+			break;
+		default:
+			System.exit(-1);
+		}
+	
+		target = remap(target, remap_states);
+	
+		int[] sexes = new int[] { 0, 1 };
+		int[] ages = new int[] { 0, 1 };
+
+		for (int s : sexes) {
+			for (int a : ages) {
+				TIntIntMap insta = new TIntIntHashMap();
+				insta.put(cols.get("sex"), s);
+				insta.put(cols.get("age"), a);
+
+				DoubleTable tmp = filter(target, insta);
+				tmp = tmp.subtable(interest_inf);
+				System.out.println("Subproblem size " + s + " " + a + " is " + tmp.size());
+			}
+		}
+
 		TIntIntMap insta = new TIntIntHashMap();
-		insta.put(cols.get("sex"), 1);
-		insta.put(cols.get("age"), 1);
+		insta.put(cols.get("sex"), ssex);
+		insta.put(cols.get("age"), sage);
 		target = filter(target, insta);
 
-		
 		// ###############################################################
 		// learning
-		
+
 		data = target.subtable(interest_inf);
 
 		int[] sizes = data.getSizes();
@@ -291,18 +371,12 @@ public class ModelloLaura {
 		}
 //		data = target.subtable(model.getEndogenousVars(true));// .scale();
 
-		System.out.println("SIZE " + data.size());
-		var t = data.sorted();
-		for (var me : t) {
-			System.out.println(me.getValue());
-		}
-
-		DetailedDotSerializer.saveModel("out.png", new Info().model(model).nodeName(colNames::get));
+//		DetailedDotSerializer.saveModel("out.png", new Info().model(model).nodeName(colNames::get));
 
 		TIntIntMap s = new TIntIntHashMap();
-		s.put(Lifesyle, 128);
+		s.put(Lifesyle, stcnt);
 
-		var config = new Config().deterministic(false).numPSCMRuns(0).numRun(200).maxRun(2000).numIterations(100000000).llEPS(0.01);
+		var config = new Config().deterministic(false).numPSCMRuns(0).numRun(iter).numIterations(100000000).llEPS(eps);
 		EQEMLearner eq = new EQEMLearner(model, data, s, true, config);
 
 		var log = Logger.getLogger(ModelloLaura.class);
@@ -311,49 +385,49 @@ public class ModelloLaura {
 		eq.setDebugLoggerGenerator((c) -> (igen) -> {
 			var i = igen.get();
 			StructuralCausalModel mm = (StructuralCausalModel) i.getModel();
-			if (i.getIterations() % 1000 == 0) {
+//			if (i.getIterations() % 1000 == 0) {
 				int ite = i.getIterations() + 1;
-
 				System.out.println(i.getTime() + " " + i.getIterations() + " " + mm.getData(ComponentEM.LL_DATA));
-			}
+//			}
 		});
-		
-		
-		
+
 		// ###############################################################
-		// getting ready to query 
-		
+		// getting ready to query
+
 		final var query_data = target.subtable(interest_query);
-		
+
 		final TIntIntMap query_mapping = new TIntIntHashMap();
 		query_mapping.put(cols.get("BMI"), cols.get("BMI_final"));
 		query_mapping.put(cols.get("FBS"), cols.get("FBS_final"));
-		
-		
-		
+
 		// ###############################################################
 		// learn and query
-		MinMaxTable table = new MinMaxTable(query_data.getColumns(), 2);
+		MinMaxTable table = new MinMaxTable(query_data.getColumns(), 3);
+		ListTable<Double, Double> intermediate = new ListTable<Double, Double>(query_data.getColumns());
 		
 		var cc = eq.run((sol) -> {
-
 			if (sol.getStage().success()) {
 				System.out.println();
 				System.out.println(sol.getIterations() + " " + sol.getLogLikelihood() + " vs " + sol.getLLmax());
 				if (sol.isAccepted()) {
+					System.out.println("Accepted");
 					// hell yeah
 					StructuralCausalModel scm = (StructuralCausalModel) sol.getModel();
-					var q = query(scm, query_data, interest_inf, Lifesyle, Diabetes, query_mapping, 1);
+					
+					var q = query(scm, query_data, interest_inf, Lifesyle, Diabetes, query_mapping, 1, useRealDiabetes);
+					
+					q.entrySet().stream().forEach((e) -> intermediate.add(e.getKey(), e.getValue()[1]));
+					
 					table.addAll(q);
 				}
+				//intermediate.toCSV("F_" + sol.getIterations() + ".csv", colNames::get);
 			} else {
 				System.out.println("FAIL");
 			}
 		});
 
-		table.toCSV("prova.csv", colNames::get, "Pdiabetes", "Pdiabetes_star");
-		
-		
+		table.toCSV(file, colNames::get, "Pdiabetes", "Pdiabetes_star", "Pdelta");
+
 //("[Lifestyle][age][sex]
 //[LDL|Lifestyle:sex:age]
 //[BMI|Lifestyle:sex:age]

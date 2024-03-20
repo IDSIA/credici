@@ -50,7 +50,12 @@ public class DoubleTable extends DataTable<Double, Double> {
 		DoubleTable tofill = new DoubleTable(cols);
 		return super.subtable(tofill);
 	}
-
+	
+	public DoubleTable filter(TIntIntMap fixed) {
+		int[] cols = Arrays.stream(columns).filter(i -> !fixed.containsKey(i)).toArray();
+		DoubleTable tofill = new DoubleTable(cols);
+		return super.filteredSubTable(tofill, fixed);
+	}
 	
 	/**
 	 * Scale weights between 0 and 1

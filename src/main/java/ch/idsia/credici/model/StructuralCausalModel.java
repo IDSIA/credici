@@ -109,6 +109,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	/** variables that are a link to another Component. Always observed **/
 	private Map<Integer, VarType> varType = new HashMap<>();
 
+	
+	
 	/**
 	 * Create the directed model using the specified network implementation.
 	 */
@@ -182,6 +184,17 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return CausalBuilder.of(dag, endoVarSizes).build();
 	}
 
+	
+	public boolean isMarkovian() {
+		for (var e : getExogenousVars()) {
+			if (getChildren(e).length > 1) return false;
+		}
+		for (var e : getEndogenousVars()) {
+			if (getExogenousParents(e).length > 1) return false;
+		}
+		return true;
+	}
+	
 	public boolean same(StructuralCausalModel other, double eps) {
 		int[] myvars = getVariables();
 		int[] hisvars = other.getVariables();

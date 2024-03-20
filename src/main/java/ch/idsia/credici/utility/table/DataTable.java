@@ -268,23 +268,44 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	 * @return a new Table
 	 */
 	protected <SUB extends DataTable<T,O>> SUB subtable(SUB tofill) {
+		return filteredSubTable(tofill, null);
+	}
+
+	
+	/**
+	 * Fills the provided sub-table with aggregated data from this table. 
+	 * Columns missing in this table are set to zero.
+	 * 
+	 * @param cols the subset of columns
+	 * @return a new Table
+	 */
+	protected <SUB extends DataTable<T,O>> SUB filteredSubTable(SUB tofill, TIntIntMap missingStates) {
 		int[] cols = tofill.columns;
 		
-		// indices of the desired columns
+		// indices of the desired columns in this datatable, (-1) if missing
 		int[] idx = Arrays.stream(cols).map(col -> ArrayUtils.indexOf(columns, col)).toArray();
+		
 		//int[] matching = IntStream.of(idx).map(id -> columns[id]).toArray();
-
 		for (Map.Entry<int[], T> entry : dataTable.entrySet()) {
-			int[] values = entry.getKey();
+			int[] states = entry.getKey();
 			T count = entry.getValue();
 
-			int[] newkey = Arrays.stream(idx).map(i -> i < 0 ? 0 : values[i]).toArray();
+			if (missingStates != null) {
+				// check if row is compatible with filter
+				for (int source_index = 0; source_index < columns.length; ++source_index) { 
+					if (missingStates.containsKey(columns[source_index])) {
+						// if not compatible ignore row
+						if (missingStates.get(columns[source_index]) != states[source_index]) continue;
+					}
+				}
+			}
+			
+			int[] newkey = Arrays.stream(idx).map(i -> i < 0 ? 0 : states[i]).toArray();
 			tofill.add(newkey, count);
 		}
 		
 		return tofill;
 	}
-
 	
 	/**
 	 * Covert weights of a Table

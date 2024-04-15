@@ -4,7 +4,7 @@ This bundle contains the manuscript submitted to the _International Journal of A
 The organisation  is the following:
 
 - _example_: code for replicating the examples in the paper and an additional toy example.
-- _experiments_: Java files for replicating the experiments.
+- _experiments_: Java files for replicating the code.
 - _lib_: packages needed for running the code.
 - _models_: set of structural causal models in UAI format considered in the experimentation.
 
@@ -158,11 +158,11 @@ System.out.println(resHybrid);
 
 ## Experiments with the synthetic models
 
-The experiemnts has been conducted with the code  in `experiments/LearnSelectBias.java` and `experiments/LearnMultiStudy.java`. 
+The experiemnts has been conducted with the code  in `code/LearnSelectBias.java` and `code/LearnMultiStudy.java`. 
 For details about its usage, run:
 
 ```bash
-java -cp lib/credici.jar experiments/LearnSelectBias.java --help 
+java -cp lib/credici.jar code/LearnSelectBias.java --help 
 ```
 ```bash
 Usage: <main class> [-hqw] [--debug] [-rw] [-as=<addSeed>] [-l=<logfile>]
@@ -198,7 +198,7 @@ Usage: <main class> [-hqw] [--debug] [-rw] [-as=<addSeed>] [-l=<logfile>]
 ```
 
 ```bash
-java -cp lib/credici.jar experiments/LearnMultiStudy.java --help 
+java -cp lib/credici.jar code/LearnMultiStudy.java --help 
 ```
 ```bash
 

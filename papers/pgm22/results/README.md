@@ -28,5 +28,5 @@ The fields in the csv file are described below. Each row corresponds to a single
 Notes
 -------
 
-set1 and set2 are the first bunch of experiments, though a problem in the sampling
+set1 and set2 are the first bunch of code, though a problem in the sampling
 was found: topologycal order was not always found

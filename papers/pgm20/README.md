@@ -7,7 +7,7 @@ to the PGM 2020. The code is organised as follows.
 - [./examples](examples) contains java files with the examples
 shown in the paper.
 
-- [./experiments](experiments) contains the notebooks for reproducing
+- [./code](experiments) contains the notebooks for reproducing
 the numerical tests given.
 
 

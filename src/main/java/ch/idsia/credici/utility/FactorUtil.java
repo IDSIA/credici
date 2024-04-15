@@ -111,7 +111,7 @@ public class FactorUtil {
 					strAssig+=", ";
 			}
 
-			System.out.println("P("+strAssig+") = " + +p.getValue(states));
+			System.out.println("f("+strAssig+") = " + +p.getValue(states));
 		}
 		System.out.println("-------------------------------");
 
@@ -125,6 +125,9 @@ public class FactorUtil {
 
 		Strides dom = p.getDomain();
 		int[] vars = dom.getVariables();
+
+		if(varNames==null) varNames = new HashMap<>();
+		if(domNames==null) domNames = new HashMap<>();
 
 
 		int lpos = ArraysUtil.indexOf(leftVar, vars);

@@ -1,0 +1,24 @@
+#!/bin/bash
+#SBATCH --time=3-00:00:00
+#SBATCH -o /mnt/beegfs/rcabanas/dev/credici/papers/causal_flavour/logs/%x.%j.out
+
+
+
+echo ${init_seed}
+echo ${maxiter}
+
+N=10
+
+for i in $(seq 0 ${SLURM_NTASKS}); do
+  seed=$[init_seed+i]
+  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u leard.py $maxiter $seed 2> /dev/null &
+done
+
+
+
+
+wait
+
+
+
+## usage: sbatch  --export=maxiter=1000,init_seed=0 -n 25 learn_select_bias.sbs

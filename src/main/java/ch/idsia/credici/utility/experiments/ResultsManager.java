@@ -39,8 +39,11 @@ public class ResultsManager {
         if(includeLabel) add(label,"label",label);
     }
 
+    public void addExperiment() {
+        addExperiment(String.valueOf(results.size()));
+    }
 
-    public void add(String label, String field, double[] value) {
+        public void add(String label, String field, double[] value) {
         for(int i=0; i<value.length; i++)
             add(label, field+"_"+i, value[i]);
     }

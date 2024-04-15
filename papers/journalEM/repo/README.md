@@ -4,7 +4,7 @@ This bundle contains the manuscript submitted to the _International Journal of A
 The organisation  is the following:
 
 - _example_: code for replicating the examples in the paper and an additional toy example.
-- _experiments_: Java files for replicating the experiments.
+- _experiments_: Java files for replicating the code.
 - _lib_: packages needed for running the code.
 - _models_: set of structural causal models in UAI format considered in the experimentation.
 
@@ -143,12 +143,12 @@ K(vars[]|[]) [0.3874948230439201]
 
 ## Experiments with the synthetic models
 
-The experiemnts has been conducted with the code  in `experiments/BoundPNS.java`. As an example, let us consider the model
-in `./models/synthetic/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai`. Then the following command run the experiments with r=10 and
+The experiemnts has been conducted with the code  in `code/BoundPNS.java`. As an example, let us consider the model
+in `./models/synthetic/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai`. Then the following command run the code with r=10 and
 a maximum number of iterations of 100.
 
 ```bash
-java -cp lib/credici.jar experiments/BoundPNS.java -rw -w -x 10 -m 100 -a EMCC --debug --seed 0 ./models/synthetic/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
+java -cp lib/credici.jar code/BoundPNS.java -rw -w -x 10 -m 100 -a EMCC --debug --seed 0 ./models/synthetic/random_mc2_n5_mid3_d1000_05_mr098_r10_12.uai
 
 ```
 
@@ -187,7 +187,7 @@ For more details about its usage, run:
 
 
 ```bash
-java -cp lib/credici.jar experiments/BoundPNS.java --help 
+java -cp lib/credici.jar code/BoundPNS.java --help 
 ```
 ```
 Usage: <main class> [-hqw] [--debug] [-rw] [-a=<alg>] [-c=<inputCause>]

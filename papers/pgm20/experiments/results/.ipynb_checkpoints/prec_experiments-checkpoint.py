@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 prj_path = "/home/rcabanas/causal/crema/CreMA/"
 
 
-exp_folder = f"{prj_path}/papers/pgm20/experiments/"
+exp_folder = f"{prj_path}/papers/pgm20/code/"
 log_folder = f"{exp_folder}/logs/"
 res_folder = f"{exp_folder}/results/"
 jarfile=f"{prj_path}/target/CreMA-0.1.1-SNAPSHOT-jar-with-dependencies.jar"

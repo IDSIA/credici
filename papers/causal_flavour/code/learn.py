@@ -82,7 +82,7 @@ args = ""
 args += f"-m {maxiter} "
 args += f"-o {Path(res_folder, f'miter{maxiter}')} "
 args += f"--data {Path(data_folder, f'simple_learner_10Q_data.csv')} "
-#args += "-rw "
+args += "-rw "
 args += f"-s {seed} "
 args += f"{Path(model_folder, f'simple_learner_10Q.uai')} "
 

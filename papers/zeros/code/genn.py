@@ -51,7 +51,7 @@ def strtime():
 prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/")
 prj_path = Path(str(Path("../../../").resolve())+"/")
 exp_folder = Path(prj_path, "papers/zeros/")
-model_folder = Path(exp_folder, "models")
+model_folder = Path(exp_folder, "models/s2/")
 code_folder = Path(exp_folder, "code")
 
 

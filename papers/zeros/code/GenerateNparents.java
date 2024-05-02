@@ -7,6 +7,7 @@ import ch.idsia.credici.model.builder.CausalBuilder;
 import ch.idsia.credici.utility.*;
 import ch.idsia.credici.utility.experiments.ResultsManager;
 import ch.idsia.credici.utility.experiments.Terminal;
+import ch.idsia.credici.utility.experiments.Watch;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.model.graphical.SparseDirectedAcyclicGraph;
@@ -105,34 +106,55 @@ public class GenerateNparents extends Terminal {
         m = CausalBuilder.of(dag,2).build();
         m.fillExogenousWithRandomFactors(3);
         int u  = m.getExogenousParents(0)[0];
+        int y = m.getEndogenousChildren(u)[0];
         zeroPerturbation(u);
         logger.info(String.valueOf(m));
+        sampleData(y);
 
+    }
 
-        data = m.samples(1000, m.getEndogenousVars());
+    private void sampleData(int y) {
+        boolean zeroX = false;
+        for(int i = 0; i<10; i++){
+            data = m.samples(1000, m.getEndogenousVars());
+            BayesianFactor p = DataUtil.getJointProb(data, m.getDomain(m.getEndogenousVars()));
+            p = p.marginalize(y);
+            zeroX = ArraysUtil.where(p.getData(), v -> v==0).length>0;
+            if(!zeroX)
+                break;
+        }
+        if(zeroX) throw new IllegalStateException("Conditioning on zero values");
+
         logger.info("Sampled "+data.length+" data instances");
-
     }
 
     private void inference() throws InterruptedException {
         logger.info("Starting exact inference ");
 
         // Exact solution
+        Watch.start();
         CredalCausalVE ccve = new CredalCausalVE(m, data);
+        long tlearn = Watch.stop();
+
         for(int i = 1; i<= numParents; i++) {
+            Watch.start();
             VertexFactor res = ccve.probSufficiency(i, Y, 1,0,1,0);
+            long tinfer = Watch.stop();
             double[] bounds = new double[]{Arrays.stream(Doubles.concat(res.getData()[0])).min().getAsDouble(),
                     Arrays.stream(Doubles.concat(res.getData()[0])).max().getAsDouble()};
             logger.info("PS(V"+i+",V"+Y+") in " + Arrays.toString(bounds) + "");
-            addQueryInfo("PS", i, Y, bounds);
+            addQueryInfo("PS", i, Y, bounds, tlearn, tinfer);
         }
 
         for(int i = 1; i<= numParents; i++) {
+            Watch.start();
             VertexFactor res = ccve.probNecessity(i, Y, 1,0,1,0);
+            long tinfer = Watch.stop();
+
             double[] bounds = new double[]{Arrays.stream(Doubles.concat(res.getData()[0])).min().getAsDouble(),
                     Arrays.stream(Doubles.concat(res.getData()[0])).max().getAsDouble()};
             logger.info("PN(V"+i+",V"+Y+") in " + Arrays.toString(bounds) + " ");
-            addQueryInfo("PN", i, Y, bounds);
+            addQueryInfo("PN", i, Y, bounds, tlearn, tinfer);
         }
     }
 
@@ -205,7 +227,7 @@ public class GenerateNparents extends Terminal {
     }
 
 
-    public void addQueryInfo(String query, int i, int Y, double[] bounds) {
+    public void addQueryInfo(String query, int i, int Y, double[] bounds, long tlearn, long tinfer) {
 
         if(info==null) info = new ResultsManager().setIncludeLabel(false);
 
@@ -215,6 +237,10 @@ public class GenerateNparents extends Terminal {
         info.add(String.valueOf(idinfo), "effect", "V"+ Y);
         info.add(String.valueOf(idinfo), "low", bounds[0]);
         info.add(String.valueOf(idinfo), "upp", bounds[1]);
+        info.add(String.valueOf(idinfo), "tlearn", tlearn);
+        info.add(String.valueOf(idinfo), "tinfer", tinfer);
+
+
 
         idinfo++;
     }

@@ -28,9 +28,9 @@ public class BuildModel {
 
     public static void main(String[] args) throws IOException, CsvException {
         // If needed, update
-        Path wdir = Path.of(".");
+        Path wdir = Path.of("./papers/causal_flavour/");
         Path modelsFolder = wdir.resolve("./models/");
-        String modelname = "simple_learner_10Q";
+        String modelname = "simple_learner_4Q";
 
         ////////////////
 

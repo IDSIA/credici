@@ -71,7 +71,7 @@ public class LearnCF extends Terminal {
 
     public static void main(String[] args) {
         argStr = String.join(";", args);
-        CommandLine.run(new code.GenerateNparents(), args);
+        CommandLine.run(new LearnCF(), args);
         if(errMsg!="")
             System.exit(-1);
         System.exit(0);

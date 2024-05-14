@@ -14,10 +14,10 @@ public class PlotModel {
     public static void main(String[] args) throws IOException, InterruptedException, CsvException {
 
         // If needed, update
-        Path wdir = Path.of(".");
+        Path wdir = Path.of("./papers/causal_flavour/");
         Path dataFolder = wdir.resolve("./data/");
         Path modelsFolder = wdir.resolve("./models/");
-        String modelname = "simple_learner";
+        String modelname = "simple_learner_10Q";
 
         /////////////
 

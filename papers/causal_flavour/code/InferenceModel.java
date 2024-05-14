@@ -19,17 +19,14 @@ import java.util.stream.Collectors;
 
 public class InferenceModel {
     public static void main(String[] args) throws IOException, InterruptedException, CsvException {
-        // Learning parameters
-        int numRuns = 100;
-        int maxIter = 500;
 
         // If needed, update
-        Path wdir = Path.of(".");
+        Path wdir = Path.of("./papers/causal_flavour/");
         Path dataFolder = wdir.resolve("./data/");
         Path modelsFolder = wdir.resolve("./models/");
-        Path outputFolder = wdir.resolve("./learntmodels/");
+        Path outputFolder = wdir.resolve("./learntmodels/miter1000/");
 
-        String modelname = "simple_learner";
+        String modelname = "simple_learner_10Q";
 
         /////////////
 
@@ -86,7 +83,7 @@ public class InferenceModel {
         // Probability of sufficiency
         res = (VertexFactor) inf.probSufficiency(X,Y,xtrue,xfalse,ytrue,yfalse);
         System.out.println(res);
-
+/*
         //CollectionTools.getKey(varnames, "VQ1");
         int target = CollectionTools.getKey(varnames, "USI");
         res = (VertexFactor) inf.query(target);
@@ -98,9 +95,10 @@ public class InferenceModel {
 
         int VQ1 =  CollectionTools.getKey(varnames, "VQ1");
         System.out.println(inf.query(VQ1));
-
+*/
         double maxLL = Probability.maxLogLikelihood(model, data);
         System.out.println("Maximum log-likelihood"+maxLL);
+        //double maxLL = 0;
         for(StructuralCausalModel m : inf.getInputModels()){
             System.out.println("LL(model_i) = "+m.logLikelihood(data)+"\tratio = "+(maxLL/m.logLikelihood(data)));
         }

@@ -17,7 +17,7 @@ maxiter, seed = 1,0
 maxiter = int(sys.argv[1])
 seed = int(sys.argv[2])
 
-
+modelname = "simple_learner_4Q"
 
 
 print(f"seed={seed}")
@@ -73,18 +73,14 @@ def runjava(javafile, args_str, heap_gbytes=None):
     exec_bash_print(cmd)
 
 
-# -m 1 --output ./papers/causal_flavour/learntmodels/miter1000/ -rw --debug
-# --data ./papers/causal_flavour/data/simple_learner_10Q_data.csv -s 1234
-# ./papers/causal_flavour/models/simple_learner_10Q.uai
-
 
 args = ""
 args += f"-m {maxiter} "
 args += f"-o {Path(res_folder, f'miter{maxiter}')} "
-args += f"--data {Path(data_folder, f'simple_learner_10Q_data.csv')} "
+args += f"--data {Path(data_folder, f'{modelname}_data.csv')} "
 args += "-rw "
 args += f"-s {seed} "
-args += f"{Path(model_folder, f'simple_learner_10Q.uai')} "
+args += f"{Path(model_folder, f'{modelname}.uai')} "
 
 
 

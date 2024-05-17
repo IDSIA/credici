@@ -17,7 +17,7 @@ maxiter, seed = 1,0
 maxiter = int(sys.argv[1])
 seed = int(sys.argv[2])
 
-modelname = "simple_learner_4Q"
+modelname = "simple_learner_4Q10k"
 
 
 print(f"seed={seed}")

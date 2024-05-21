@@ -2,7 +2,6 @@ package ch.idsia.credici.utility.sample;
 
 import java.util.stream.IntStream;
 
-import org.apache.commons.math3.random.UniformRandomGenerator;
 import org.apache.commons.rng.UniformRandomProvider;
 import org.apache.commons.rng.simple.RandomSource;
 
@@ -16,6 +15,7 @@ import gnu.trove.map.hash.TIntIntHashMap;
 
 public class Sampler {
 	private UniformRandomProvider source;
+	
 	public Sampler(long seed) {
 		 source = RandomSource.JDK.create(seed);
 	}
@@ -48,7 +48,17 @@ public class Sampler {
 	}
 	
 	
+	/**
+	 * Sample data from a model.
+	 * @param model
+	 * @param N
+	 * @param vars the vars to sample, if null or empty use all endogenous
+	 * @return
+	 */
 	public DoubleTable sample(StructuralCausalModel model, int N, int... vars) {
+		if (vars == null || vars.length == 0) 
+			vars = model.getEndogenousVars();
+
 		int[] order = DAGUtil.getTopologicalOrder(model.getNetwork());
 		DoubleTable result = new DoubleTable(vars);
 		for (int n = 0; n < N; ++n) {

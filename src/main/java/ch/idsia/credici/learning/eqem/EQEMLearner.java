@@ -24,11 +24,19 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
+/**
+ * Equation level EM learner. 
+ * This Class will build the necessary {@link ComponentEM} instances to 
+ * run an EM that may attempt also to initialize the Structural equations
+ * of the {@link StructuralCausalModel}.
+ */
 public class EQEMLearner {
 	
 	private Config settings;
 
 	private Function<Integer, Consumer<Supplier<Info>>> loggerGenerator = EQEMLearner::noCallbackGenerator;
+
+	private Function<Integer, Consumer<Supplier<ModelInfo<BayesianFactor, StructuralCausalModel>>>> convergenceLoggerGenerator = EQEMLearner::noCallbackGenerator;
 
 	private StructuralCausalModel model;
 	private StructuralCausalModel prior;
@@ -42,7 +50,7 @@ public class EQEMLearner {
 
 	public EQEMLearner(StructuralCausalModel prior, DoubleTable data, TIntIntMap exosizes, TIntSet free, boolean log, Config settings) {
 		this.settings = settings != null ? settings : new Config();
-		this.random = new Randomizer();
+		this.random = new Randomizer(settings.nextSeed());
 		this.prior = prior;
 		this.freeVariables = new TIntHashSet(free);
 		this.model = initModel(prior, exosizes, log);
@@ -80,12 +88,11 @@ public class EQEMLearner {
 			EmpiricalNetwork en = new EmpiricalNetwork();
 			BayesianNetwork network = en.apply(component_model, component_data);
 			double ll2 = en.loglikelihood(network, component_data);
-		
-			System.out.println("LL*: " + ll2);
 			
 			ComponentEM cem = new ComponentEM(pair.getKey(), pair.getValue(), ll2, settings);
 			cem.setModelLogger(loggerGenerator.apply(cem.getId()));
-
+			cem.setConvergenceLogger(convergenceLoggerGenerator.apply(cem.getId()));
+			
 			em.add(Pair.of(cem, ll2));
 		}
 		
@@ -100,11 +107,11 @@ public class EQEMLearner {
 				int num_models = cc.getResults(id).size(); 
 				if (num_models >=  settings.numRuns()) continue;
 				
-				didsomething = true; // actually doing somehting
+				didsomething = true; // actually doing something
 				
 				final double llmax = pair.getRight();
 				final double EPS = settings.llEPS();
-				//				
+						
 				cem.run(r, (sol) -> {
 					sol.componentId(id);
 					if (sol.stage.success()) {
@@ -112,7 +119,10 @@ public class EQEMLearner {
 						if (delta <= EPS) {
 							sol.accept();
 							cc.addResult(sol.getModel());
-							if (delta < -EPS) System.out.println("NBONONONO");
+							
+							if (delta < -EPS) // runtime problem!
+								throw new IllegalStateException(" LL is larger than LL*");
+							
 						}  else { 
 							sol.reject();
 						}
@@ -169,9 +179,10 @@ public class EQEMLearner {
 		// create random factors for all variables
 
 		// default randomize all variables
-
+		
 		for (int variable : model.getVariables()) {
-			if (freeVariables.contains(variable)) {
+			var f = prior.getFactor(variable);
+			if (f == null || (freeVariables.contains(variable) && settings.randomize())) {
 				Strides dom = model.getFullDomain(variable);
 //				Arrays.sort(domain);
 //
@@ -185,7 +196,7 @@ public class EQEMLearner {
 //				}
 
 			} else {
-				var f = prior.getFactor(variable);
+					
 				// make sure that if log is required we actually log
 				if (log && !f.isLog()) {
 					double[] dta = f.getInteralData().clone();
@@ -204,6 +215,11 @@ public class EQEMLearner {
 		return model;
 	}
 
+	
+	public void setConvergenceLoggerGenerator(Function<Integer, Consumer<Supplier<ModelInfo<BayesianFactor, StructuralCausalModel>>>> generator) {
+		this.convergenceLoggerGenerator = generator;
+	}
+	
 	/**
 	 * Set a callback function called at each step of the learner execution The
 	 * function is passed into each component.
@@ -212,10 +228,10 @@ public class EQEMLearner {
 		this.loggerGenerator = generator;
 	}
 
-	private static void noCallback(Supplier<Info> data) {
+	private static <T> void noCallback(Supplier<T> data) {
 	}
 
-	private static Consumer<Supplier<Info>> noCallbackGenerator(Integer name) {
+	private static <T> Consumer<Supplier<T>> noCallbackGenerator(Integer name) {
 		return EQEMLearner::noCallback;
 	}
 

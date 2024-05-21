@@ -1,13 +1,11 @@
 package ch.idsia.credici.model.transform;
 
-
 import org.junit.Test;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.logger.DetailedDotSerializer;
 import ch.idsia.credici.utility.logger.Info;
 
-import static org.junit.Assert.fail;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;

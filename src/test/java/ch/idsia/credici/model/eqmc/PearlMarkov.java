@@ -63,43 +63,34 @@ public class PearlMarkov {
 		
 		var canonical = Experiments.canonical(model);
 		DetailedDotSerializer.saveModel("cano.png", new Info().model(canonical).data(data));
-//		var ccve = Experiments.runccve(canonical, data, 0, 2);
-//		System.out.println("ccve: " + Experiments.array2string(ccve));
-//		
-//		
 		
+		var ccve = Experiments.runccve(canonical, data, 0, 2);
+		System.out.println("ccve: " + Experiments.array2string(ccve));
+
 		var emcc = Experiments.runemcc(canonical, data, 0, 2, 100);
 		System.out.println("EMCC: " + Experiments.array2string(emcc));
 
-		
 		Config config_emcc = new Config().deterministic(false).freeEndogenous(false).numRun(5000).maxRun(30000).numIterations(10000).numPSCMRuns(0).numPSCMInterations(10000);
 		var emmc = Experiments.runrelax(canonical, data, 0, 2, config_emcc, null, 10000, "scmem.png");
-		System.out.println("EMCC: " + Experiments.array2string(emmc));
+		System.out.println("EMCC NEW:" + Experiments.array2string(emcc));
+		
+		for (int s : new int[] {5, 8, 10, 26}) {
+			TIntIntMap sizes = new TIntIntHashMap();
+			for (var exo : model.getExogenousVars()) {
+				int esize = canonical.getSize(exo);
+				sizes.put(exo, Math.min(esize, s));
+			}
+		
+			Config config_relax = new Config().deterministic(false).numRun(5000).maxRun(300).numIterations(1000).numPSCMRuns(0).numPSCMInterations(1000);
+			var relax = Experiments.runrelax(model, data, 0, 2, config_relax, sizes, 100000, "scmbn.png");
+			System.out.println("RELAX ("+s+"):" + Experiments.array2string(relax));
+			
+//			0.03364706486183784,0.04963043245336572
 
-		TIntIntMap sizes = new TIntIntHashMap();
-		sizes.put(sim.u_gender, 2);
-		sizes.put(sim.u_treatment, 4);
-		sizes.put(sim.u_recovery, 16);
-		
-		
-		
-// 100 runs
-//		EMCC: 0,0.035
-//		300 + 0 + 0
-//		RELAX: 0.002,0.028
-//	5000 runs 
-//		1(5000); 2(5000); 3(5000)
-//		RELAX: 0,0.028
-		
-		Config config_relax = new Config().deterministic(false).numRun(5000).maxRun(30000).numIterations(10000).numPSCMRuns(0).numPSCMInterations(10000);
-		var relax = Experiments.runrelax(model, data, 0, 2, config_relax, sizes, 10000, "scmbn.png");
-		System.out.println("RELAX: " + Experiments.array2string(relax));
-		
-//		0.03364706486183784,0.04963043245336572
-
-		Config config_dete = new Config().deterministic(true).numRun(200).maxRun(30000).numIterations(10000).numPSCMRuns(20).numPSCMInterations(10000);
-		var dete = Experiments.runrelax(model.copy(), data, 0, 2, config_dete, sizes, 10000, "scmem.png");
-		System.out.println("DETE: " + Experiments.array2string(dete));
-		
+			Config config_dete = new Config().deterministic(true).numRun(200).maxRun(300).numIterations(1000).numPSCMRuns(20).numPSCMInterations(1000);
+			var dete = Experiments.runrelax(model.copy(), data, 0, 2, config_dete, sizes, 100000, "scmem.png");
+			System.out.println("DETE ("+s+"): " + Experiments.array2string(dete));
+		}
+		// CCVE: 0.089,0.426
 	}
 }

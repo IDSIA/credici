@@ -30,7 +30,7 @@ public interface EquationFixing {
 	 * @param size   int number of items
 	 * @return the state of the variable with max value
 	 */
-	static int argmax(double[] data, int offset, int stride, int size) {
+	 static int argmax(double[] data, int offset, int stride, int size) {
 		int index = 0;
 		double max = Double.NEGATIVE_INFINITY;
 		for (int i = 0; i < size; ++i) {

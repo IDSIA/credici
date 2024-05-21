@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 public class CompatibleCausalModelGenerator {
 
     // Parameters
-    private boolean DAGfromBNG = true;
+    private boolean DAGfromBNG = false;
 
     /** Number of nodes in the first DAG .*/
     private int numNodes = 5;

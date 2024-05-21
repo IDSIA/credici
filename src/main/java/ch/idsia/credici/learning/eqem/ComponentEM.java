@@ -6,8 +6,10 @@ import java.util.Set;
 import java.util.function.Consumer;
 import java.util.function.DoublePredicate;
 import java.util.logging.Logger;
+import java.util.stream.IntStream;
 
 import org.apache.commons.collections4.map.SingletonMap;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.tuple.Pair;
 //import org.apache.commons.math3.util.FastMath;
 import org.apache.commons.lang3.tuple.Triple;
@@ -22,6 +24,7 @@ import ch.idsia.credici.learning.eqem.stop.LLStop;
 import ch.idsia.credici.learning.ve.VE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.transform.CComponents;
+import ch.idsia.credici.utility.ArraysTools;
 import ch.idsia.credici.utility.Randomizer;
 import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.credici.utility.table.DoubleTable;
@@ -37,6 +40,11 @@ import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 import net.jafama.FastMath;
 
+
+/**
+ * Component limited EM. 
+ * An EM working on a connected component only.
+ */
 public class ComponentEM {
 	public static final String LL_DATA = "LL-data";
 
@@ -51,37 +59,49 @@ public class ComponentEM {
 	private EquationFixing determinismStrategy;
 	
 	
+	/**
+	 * Variables that should not be touched by the determinization
+	 */
 	private TIntSet doNotTouch;
 
+	/**
+	 * The variables that we are optimizing
+	 */
 	private int[] variables;
 
+	/**
+	 * Elimination sequence
+	 */
 	private int[] sequence;
 
+	/**
+	 * Randomized used to initialize variables' distributions
+	 */
 	private Randomizer random;
 
+	/**
+	 * A "unique" (unique per source network) id of the Component. No two components of the same SCM should have the same ID.
+	 */
 	private Integer id;
-
+	
 	public Integer getId() {
 		return id;
 	}
 
 	/* default no logging and no log generation */
-	private Consumer<Supplier<Info>> modelLogger = (b) -> {
-	};
+	private Consumer<Supplier<Info>> modelLogger = (b) -> {};
 
+	private Consumer<Supplier<ModelInfo<BayesianFactor, StructuralCausalModel>>> convergenceLogger = (b) -> {};
+	
 	/**
 	 * A stop criteria that receives probabilities and computes whether the EM
 	 * converged (CAN BE STATEFUL)
 	 */
 	private StopCriterion stop;
 
-	public ComponentEM(StructuralCausalModel model, DoubleTable dataset, double llStar, Config settings, long seed) {
-		this.random = new Randomizer(seed);
-		init(model, dataset, llStar, settings);
-	}
 
 	public ComponentEM(StructuralCausalModel model, DoubleTable dataset, double llStar, Config settings) {
-		random = new Randomizer(2);
+		random = new Randomizer(settings.nextSeed());
 		init(model, dataset, llStar, settings);
 	}
 
@@ -89,6 +109,11 @@ public class ComponentEM {
 		this.modelLogger = mlogger;
 	}
 
+	
+	public void setConvergenceLogger(Consumer<Supplier<ModelInfo<BayesianFactor, StructuralCausalModel>>> clogger) {
+		this.convergenceLogger = clogger;
+	}
+	
 	/**
 	 * Initialize the EM
 	 * 
@@ -117,7 +142,6 @@ public class ComponentEM {
 
 		// setup stop criteria
 		this.stop = new LLStar(llStar, settings.llEPS()); // MaxKL(); //
-//		initCache(sourceModel);
 	}
 
 	/**
@@ -128,23 +152,31 @@ public class ComponentEM {
 	 */
 	private StructuralCausalModel runInit(int runid) {
 		logger.config("Starting new run (#" + runid + ") on " + sourceModel.getName());
-
 		StructuralCausalModel model = sourceModel.copy();
 
 		for (int variable : variables) {
-			random.randomizeInplace(model.getFactor(variable), variable);
+			double alpha = 1;
+			if (model.isEndogenous(variable))
+				alpha = settings.alpha();
+			random.randomizeInplace(model.getFactor(variable), variable, alpha);
 			// random.uniformInplace(model.getFactor(variable), variable); // TODO
 		}
-
-		modelLogger.accept(() -> new Info().model(model).data(dataset).title("Init").runId(runid));
 
 		doNotTouch = new TIntHashSet();
 		initLocked(model);
 
+		if(settings.deterministic()) {
+			SemiDeterministic initializer = new SemiDeterministic();
+			model = initializer.apply(model, dataset, endoLocked);
+		}
+		
+		final StructuralCausalModel finalModel = model;
+		modelLogger.accept(() -> new Info().model(finalModel).data(dataset).title("Init").runId(runid));
+
 		// reset stop criteria
 		stop.reset();
 
-		return model;
+		return finalModel;
 	}
 
 	/**
@@ -161,6 +193,8 @@ public class ComponentEM {
 		}
 	}
 
+	int locks = 0;
+	
 	/**
 	 * Main optimization start. This will execute runs in sequence for a single
 	 * component. Generated models will NOT be stored by this class, but will be
@@ -176,14 +210,16 @@ public class ComponentEM {
 	 */
 	public boolean run(int runid, Consumer<ModelInfo<BayesianFactor, StructuralCausalModel>> resultsCallback)
 			throws InterruptedException {
+		
 		long tm = System.currentTimeMillis();
+
 		StructuralCausalModel model = runInit(runid);
 		int iteration = 0;
 		modelLogger.accept(() -> new Info().model(model).title("prerun").runId(runid));
 		try {
 			for (iteration = 0; iteration < settings.numIterations(); ++iteration) {
 				int stepid = (runid << 24) + (iteration << 16);
-				boolean more = step(model, dataset, true, settings.deterministic(), stepid);
+				boolean more = step(model, dataset, true, settings.deterministic(), stepid, runid, iteration, -1,-1);
 
 				final int tmp = iteration;
 				long time = System.currentTimeMillis() - tm;
@@ -215,7 +251,7 @@ public class ComponentEM {
 				int pscm_iteration = 0;
 				for (pscm_iteration = 0; pscm_iteration < settings.numPSCMIterations(); ++pscm_iteration) {
 					int stepid = (pscm_runs << 8) + (pscm_iteration) + (runid << 24) << (iteration << 16);
-					boolean more = step(model, dataset, false, settings.deterministic(), stepid);
+					boolean more = step(model, dataset, false, settings.deterministic(), stepid, runid, iteration, pscm_runs, pscm_iteration);
 					if (!more)
 						break;
 				}
@@ -245,8 +281,8 @@ public class ComponentEM {
 	 * @throws UnreacheableSolutionException
 	 * @throws InterruptedException
 	 */
-	protected boolean step(StructuralCausalModel model, DoubleTable data, boolean free_endo, boolean true_scm,
-			int stepid) throws UnreacheableSolutionException, InterruptedException {
+	protected boolean step(final StructuralCausalModel model, final DoubleTable data, final boolean free_endo, final boolean true_scm,
+			final int stepid, final int runid, final int iteration, final int pscmrun, final int pscmiter) throws UnreacheableSolutionException, InterruptedException {
 
 		// modelLogger.accept(new Info().model(model).data(dataset).title("Expectation
 		// Model (" + stepid + ", " + free_endo + ", " + true_scm + ")"));
@@ -269,7 +305,14 @@ public class ComponentEM {
 
 		if (converged) {
 
-			if (true_scm) {
+			// report that we converged
+			if (locks == 0)
+				convergenceLogger.accept(() -> ModelInfo.bayesConverged(model.copy(), runid, iteration));
+			else 
+				convergenceLogger.accept(() -> ModelInfo.mixedConverged(model.copy(), runid, iteration));
+			
+			// only if we have free endogenous we need to lock
+			if (true_scm && free_endo) {
 				
 				var extreme = determinismStrategy.choose(model, data, endoLocked);
 
@@ -278,9 +321,11 @@ public class ComponentEM {
 					// we converged and do not have any further variable to lock
 					return false;
 				}
-
+				
 				lock(model, extreme.getLeft(), extreme.getMiddle(), extreme.getRight());
-
+				++locks;
+			
+				
 //				modelLogger.accept(() -> {
 //					// what was locked (for plot)
 //					var s = new SingletonMap<Integer, Set<Integer>>(extreme.getKey(),
@@ -302,7 +347,7 @@ public class ComponentEM {
 	}
 
 	/**
-	 * Compute expected counts for the exogenous variables.
+	 * Compute expected counts for the exogenous variables (the latent variables).
 	 * 
 	 * @param model
 	 * @param data
@@ -503,30 +548,9 @@ public class ComponentEM {
 		return (BayesianFactor) fve.apply(infModel, query, newObs);
 	}
 
-//	private TIntObjectMap<TIntObjectMap<int[]>> cacheVars;
-//
-//	private void initCache(StructuralCausalModel model) {
-//		cacheVars = new TIntObjectHashMap<TIntObjectMap<int[]>>();
-//		for (var query : model.getExogenousVars()) {
-//			var vars = new TIntObjectHashMap<int[]>();
-//			cacheVars.put(query, vars);
-//			for (int child : model.getEndogenousChildren(query)) {
-//
-//				var px = model.getFactor(child);
-//				var domain = px.getDomain();
-//
-//				int[] vars_array = new int[domain.getSize() - 1];
-//				int j = 0;
-//				for (var variable : domain.getVariables()) {
-//					if (variable != query) {
-//						vars_array[j++] = variable;
-//					}
-//				}
-//				vars.put(child, vars_array);
-//			}
-//		}
-//	}
 
+	
+	
 	// compute P(U,e)
 	BayesianFactor quasi_inference(StructuralCausalModel model, int query, TIntIntMap obs) throws InterruptedException {
 		// we have a single p(U) so query is alone
@@ -541,6 +565,7 @@ public class ComponentEM {
 			pu = Arrays.stream(pu).map(Math::log).toArray();
 			System.out.println("BAAAD");
 		}
+		
 		// the dependent variables are all 1 anyway
 //		for (int extra : model.getDependentSet().toArray()) {
 //			var px = model.getFactor(extra);
@@ -599,8 +624,6 @@ public class ComponentEM {
 		endoLocked = new TIntObjectHashMap<TIntSet>();
 
 		for (int endo : model.getEndogenousVars()) {
-//			int[] parents = model.getParents(endo);
-//			Strides conditioning = model.getDomain(parents);
 			endoLocked.put(endo, new TIntHashSet());
 		}
 	}
@@ -614,21 +637,89 @@ public class ComponentEM {
 	 */
 	void lock(StructuralCausalModel model, int variable, int offset, int state) {
 		BayesianFactor factor = model.getFactor(variable);
-		
-		// if markovian
-		if (model.isMarkovian()) {
+		Strides domain = factor.getDomain();
+
+		double[] data = factor.getInteralData();
+		double one = factor.isLog() ? 0 : 1;
+		double zero = factor.isLog() ? Double.NEGATIVE_INFINITY : 0;
+
+		// if markovian and something already locked for variable
+		if (model.isMarkovian() && endoLocked.containsKey(variable)) {
 			int u = model.getExogenousParents(variable)[0];
-			int exostride = factor.getDomain().getStride(u);
+			int usize = model.getSize(u);
+			int vsize = model.getSize(variable);
+			int vstride = domain.getStride(variable);
+			int ustride = domain.getStride(u);
+
+			var obs = domain.observationOf(offset);
+						
+			int[] parents = model.getEndogenousParents(variable, true);
+			int[] states = Arrays.stream(parents).map(obs::get).toArray();
 			
+			// parents offset
+			int poffset = domain.getPartialOffset(parents, states);
+			
+			// given parent states count how many times the variable states are locked
+			// this is: given pa(V)=pa, for each state s in V count for each u in U the occurrences of P(V=s|pa,U=u) == 1
+			int[] locks = new int[vsize];
+			TIntSet locked = endoLocked.get(variable);
+
+			for (int ustate = 0; ustate < usize; ++ustate) {
+				///offset of current Ustate + parentstate 
+				int o = poffset + ustate * ustride;
+				if (locked.contains(o)) {
+					for (int vstate = 0; vstate < vsize; ++vstate) {
+						if (factor.getValueAt(o + vstride * vstate) == 1) {
+							// found the deterministic state
+							++locks[vstate];
+							
+							break;
+						}
+					}
+				}
+			}
+			
+			// locking state is ok
+			boolean didAlreadyLock = false;
+			if (locks[state] == 0) {
+				lock(data, variable, vsize, vstride, offset, state, zero, one);
+				++locks[state];
+				didAlreadyLock = true;
+			}
+			
+			// count how many states are not fixed yet
+			int zeros = Arrays.stream(locks).map(x -> x==0 ? 1 : 0).sum();
+			if (zeros == 0 && !didAlreadyLock) {
+				lock(data, variable, vsize, vstride, offset, state, zero, one);
+				return;
+			}
+			
+			// count how many of the exogenous states are already used to fix something
+			int total = Arrays.stream(locks).sum();
+			
+			// are there enough free U states to cover the zeros?
+			// if there are exactly enough we need to lock them all!
+			if (usize - total == zeros) {
 				
+				// naively we just fix any state
+				// FIXME make this smarted based on current P(V|pa, u)
+				// get the states still in need of fixing
+				
+				int[] indices = IntStream.range(0, locks.length).filter(i -> locks[i] == 0).toArray();
+				int current = 0;
+				for (int ustate = 0; ustate < usize; ++ustate) {
+					int o = poffset + ustate * ustride;
+					if (locked.contains(o)) continue;
+					
+					lock(data, variable, vsize, vstride, poffset + ustate * ustride, indices[current++], zero, one);
+				}
+			} else if(!didAlreadyLock) {
+				lock(data, variable, vsize, vstride, offset, state, zero, one);
+			}
 		} else {		
 			// here check if the things are working
 			int stride = factor.getDomain().getStride(variable);
 			int states = factor.getDomain().getCardinality(variable);
-	
-			double[] data = factor.getInteralData();
-			double one = factor.isLog() ? 0 : 1;
-			double zero = factor.isLog() ? Double.NEGATIVE_INFINITY : 0;
 	
 			lock(data, variable, states, stride, offset, state, zero, one);
 		}
@@ -648,13 +739,10 @@ public class ComponentEM {
 	 * @param low
 	 * @param high
 	 */
-	void lock(double[] data, int variable, int states, int stride, int offset,int top, double low, double high) {
-
-		
+	void lock(double[] data, int variable, int states, int stride, int offset,int top, double low, double high) {		
 		for (int state = 0; state < states; ++state) {
 			data[state * stride + offset] = state == top ? high : low;
 		}
-
 
 		endoLocked.get(variable).add(offset);
 	}

@@ -24,8 +24,13 @@ public class Canonical implements Function<StructuralCausalModel, StructuralCaus
 
 	@Override
 	public StructuralCausalModel apply(StructuralCausalModel cm) {
+		return apply(cm, System.nanoTime());
+	}
+	
+	public StructuralCausalModel apply(StructuralCausalModel cm, long seed) {
+
 		StructuralCausalModel canonical = new StructuralCausalModel(cm.getName());
-		Randomizer r = new Randomizer();
+		Randomizer r = new Randomizer(seed);
 
 		for (int endo : cm.getEndogenousVars(true)) {
 			canonical.addVariable(endo, cm.getSize(endo), cm.getVariableType(endo));
@@ -89,9 +94,9 @@ public class Canonical implements Function<StructuralCausalModel, StructuralCaus
 				}
 			}
 			canonical.setFactor(endo, f);
-			int [] order = new int[]{endo};
-			var ff = f.reorderDomain(ArraysUtil.append(ArraysUtil.append(order,cond.getVariables()), new int[]{exovar})); 
-			ff.toString();
+//			int [] order = new int[]{endo};
+//			var ff = f.reorderDomain(ArraysUtil.append(ArraysUtil.append(order,cond.getVariables()), new int[]{exovar})); 
+//			ff.toString();
 		}
 
 		for (int exo : cm.getExogenousVars()) {

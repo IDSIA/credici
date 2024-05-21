@@ -1,19 +1,13 @@
 package ch.idsia.credici.learning.eqem;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.List;
 
 import com.opencsv.exceptions.CsvException;
 
 import cern.colt.Arrays;
-import ch.idsia.credici.inference.CausalInference;
 import ch.idsia.credici.inference.CausalMultiVE;
 import ch.idsia.credici.inference.CausalVE;
-import ch.idsia.credici.learning.WeightedCausalEM;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.model.builder.CausalBuilder;
-import ch.idsia.credici.model.builder.CredalBuilder;
 import ch.idsia.credici.model.builder.EMCredalBuilder;
 import ch.idsia.credici.model.builder.EMCredalBuilder.SelectionPolicy;
 import ch.idsia.credici.model.io.uai.CausalUAIParser;
@@ -22,9 +16,7 @@ import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.logger.DetailedDotSerializer;
 import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.credici.utility.table.DoubleTable;
-import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
-import ch.idsia.crema.model.io.uai.UAIParser;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.map.TIntIntMap;

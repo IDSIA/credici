@@ -293,6 +293,10 @@ public class CComponents {
 
             @Override
             public boolean hasNext() {
+                for (var item : results.entrySet()) {
+                    List<StructuralCausalModel> nets = item.getValue();
+                    if(nets.isEmpty()) return false;
+                }
                 return true;
             }
 

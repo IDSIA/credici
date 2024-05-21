@@ -42,6 +42,7 @@ import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
+import org.apache.commons.collections.BidiMap;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.math3.optim.linear.NoFeasibleSolutionException;
@@ -66,6 +67,8 @@ import java.util.stream.Stream;
  */
 public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, SparseDirectedAcyclicGraph> {
 
+	
+	
 	public enum VarType {
 		ENDOGENOUS, EXOGENOUS, DEPENDENCY
 	}
@@ -205,11 +208,12 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		for (int variable : myvars) {
 			BayesianFactor myf = getFactor(variable);
 			BayesianFactor hif = other.getFactor(variable);
-			if (!Arrays.equals(myf.getInteralData(), hif.getInteralData()))
+			if (myf != hif && (myf == null || hif == null || !Arrays.equals(myf.getInteralData(), hif.getInteralData())))
 				return false;
 		}
 		return true;
 	}
+	
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof StructuralCausalModel) {
@@ -231,12 +235,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return hash << 32 + fh;
 	}
 
-	@Override
-	public int hashCode() {
-		long h =hash();
-		return hash_combine((int)(h>>32l), (int)(h&(0xFFFFFFFFl)));
-	}
-	
+
 	/**
 	 * Create a copy of this model (i.e. dag and factors are copied)
 	 * 
@@ -350,6 +349,10 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return varType.get(variable) == type;
 	}
 
+	boolean has(int variable) {
+		return this.cardinalities.containsKey(variable);
+	}
+	
 	/**
 	 * Allows to know if a variable is exogenous
 	 * 
@@ -425,10 +428,14 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	 */
 
 	public int[] getEndegenousParents(int... vars) {
-		return getEndegenousParents(false, vars);
+		return getEndegenousParents(vars, false);
 	}
 
-	public int[] getEndegenousParents(boolean includeDependency, int... vars) {
+	public int[] getEndegenousParents(int var, boolean includeDependencies) {
+		return ArraysUtil.intersection(this.getEndogenousVars(includeDependencies), this.getParents(var));
+	}
+
+	public int[] getEndegenousParents(int[] vars, boolean includeDependency) {
 		return ArraysUtil.unique(Ints.concat(IntStream.of(vars)
 				.mapToObj(v -> ArraysUtil.intersection(this.getEndogenousVars(includeDependency), this.getParents(v)))
 				.map(v -> IntStream.of(v).filter(x -> !ArraysUtil.contains(x, vars)).toArray()).toArray(int[][]::new)));
@@ -560,10 +567,8 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 
 	/**
 	 * Attach to each variable (endogenous) a random factor.
-	 * 
 	 */
 	public void fillWithRandomEquations() {
-
 		for (int x : getEndogenousVars()) {
 			Strides pa_x = this.getDomain(this.getParents(x));
 			int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);

@@ -124,10 +124,12 @@ public class PUTable extends DataTable<Item, Double> {
 			Map<Integer, double[]> probs = row.getValue().probs;
 
 			var iter = domain.getIterator(exogenous);
+			int[] exovars = exogenous.getVariables();
+			
   			while (iter.hasNext()) {
 				int[] exostate = iter.getPositions().clone();
 				int exoffset = iter.next();
-				int[] exovars = exogenous.getVariables();
+				
 				double prob = 0;
 				
 				for (int eid = 0; eid < exovars.length; ++eid) {
@@ -136,7 +138,7 @@ public class PUTable extends DataTable<Item, Double> {
 					
 					prob += probs.get(ev)[es];
 				}
-				target[offset + exoffset] = LogBayesianMarginalHelper.logsum(target[offset + exoffset],Math.log(base) + prob);
+				target[offset + exoffset] = LogBayesianMarginalHelper.logsum(target[offset + exoffset], Math.log(base) + prob);
 			}
 		}
 

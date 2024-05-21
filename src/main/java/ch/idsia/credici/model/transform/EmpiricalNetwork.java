@@ -241,7 +241,7 @@ public class EmpiricalNetwork implements BiFunction<StructuralCausalModel, Doubl
 		TIntLinkedList open_list = new TIntLinkedList();
 		
 		for (int variable : endo) {
-			if (model.getEndegenousParents(true, variable).length == 0) {
+			if (model.getEndegenousParents(variable, true).length == 0) {
 				open_list.add(variable);
 			}
 		}
@@ -259,7 +259,7 @@ public class EmpiricalNetwork implements BiFunction<StructuralCausalModel, Doubl
 			
 			if (closed.contains(item)) continue;
 			
-			int[] parents_array = model.getEndegenousParents(true, item);
+			int[] parents_array = model.getEndegenousParents(item, true);
 			if (closed.containsAll(parents_array)) {
 				// all parents processed 
 				closed.add(item);

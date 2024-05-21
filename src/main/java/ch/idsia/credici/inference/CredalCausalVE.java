@@ -114,6 +114,7 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
         ve.setNormalize(false);
         VertexFactor.CONVEX_HULL_MARG = this.convexHull;
         ve.setFactors(infModel.getFactors());
+
         return ((VertexFactor) ve.run(target)).normalize().convexHull(this.convexHull);
 
     }

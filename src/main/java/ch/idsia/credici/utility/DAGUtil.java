@@ -430,7 +430,7 @@ public class DAGUtil {
         // and we verified that this number is satisfatory:
         nIterations = 6*bn.getnNodes()*bn.getnNodes();
         
-        bn.inicializeGraph(); // Inicialize a simple ordered tree as a BN structure
+        bn.initializeGraph(); // Inicialize a simple ordered tree as a BN structure
         
         //// Generating process ////
         try {

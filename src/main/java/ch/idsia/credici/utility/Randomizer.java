@@ -1,13 +1,12 @@
 package ch.idsia.credici.utility;
 
-import java.util.Arrays;
-
 import org.apache.commons.rng.UniformRandomProvider;
 import org.apache.commons.rng.sampling.distribution.DirichletSampler;
 import org.apache.commons.rng.simple.RandomSource;
 
 import com.google.common.primitives.Doubles;
 
+import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
 
@@ -23,6 +22,52 @@ public class Randomizer {
 	}
 
 	
+	/**
+	 * Replace Endogenous variables' equations with a random ones. 
+	 * The original factor will remain valid but not associated to the variable.
+	 *
+	 * @param model
+	 */
+	public void randomEndogenousEquationsInplace(StructuralCausalModel model) {
+    	model.fillWithRandomEquations();
+	}
+	
+	public StructuralCausalModel randomEndogenousEquations(StructuralCausalModel model) {
+		StructuralCausalModel result = model.copy();
+		result.fillWithRandomEquations();
+		return result;
+	}
+	
+	
+	/**
+	 * Replace exogenous variables' factor with a random one. 
+	 * The original factor will remain valid but not associated to the variable.
+	 *
+	 * @param model
+	 */
+	public void randomExogenousInplace(StructuralCausalModel model) {
+    	for (int i : model.getExogenousVars()) {
+    		Strides dom = model.getFullDomain(i);
+    		BayesianFactor bf = randomFactor(dom, i, true, true);
+    		model.setFactor(i, bf);
+    	}
+	}
+	
+	/**
+	 * Create a new model with random exogenous distributions
+	 * The original factor will remain valid but not associated to the variable.
+	 *
+	 * @param model
+	 */
+	public StructuralCausalModel randomExogenous(StructuralCausalModel model) {
+		var result = model.copy();
+    	for (int i : result.getExogenousVars()) {
+    		Strides dom = result.getFullDomain(i);
+    		BayesianFactor bf = randomFactor(dom, i, true, true);
+    		result.setFactor(i, bf);
+    	}
+    	return result;
+	}
 	
 	/**
 	 * Create a random CPT for the given variable and domain.
@@ -42,21 +87,26 @@ public class Randomizer {
 		randomizeInplace(factor, variable);
 		return factor;
 	}
+
 	
+	public void randomizeInplace(BayesianFactor factor, int variable){
+		randomizeInplace(factor, variable, 1.0);
+	}
+
 	/**
 	 * randomize the given Bayesian factor. This will normalize assuming the factor to
 	 * define P(variable|...).
 	 * 
 	 * This will generate a probability sampled from a dirichlet with alpha == 1.
 	 */
-	public void randomizeInplace(BayesianFactor factor, int variable){
-		boolean log = factor.isLog();
+	public void randomizeInplace(BayesianFactor factor, int variable, double alpha){
+//		boolean log = factor.isLog();
 		
 		Strides domain = factor.getDomain();
 		Strides left = domain.retain(new int[] { variable });
 		Strides right = domain.remove(variable);
 
-        DirichletSampler x = DirichletSampler.symmetric(source, left.getCombinations(), 1);
+        DirichletSampler x = DirichletSampler.symmetric(source, left.getCombinations(), alpha);
 		double[][] data = x.samples(right.getCombinations()).toArray(len->new double[len][]);
 		double[] dta = Doubles.concat(data);
 		int[] order = left.concat(right).getVariables();

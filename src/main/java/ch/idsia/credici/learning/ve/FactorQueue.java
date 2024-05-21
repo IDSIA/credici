@@ -16,6 +16,11 @@ public class FactorQueue<F extends GenericFactor> implements Iterator<ArrayList<
 	private int[] sequence;
 	private ArrayList<F> results;
 
+	/**
+	 * Create a queue with the specified visiting order.
+	 * 
+	 * @param sequence
+	 */
 	public FactorQueue(int[] sequence) {
 		this.data = new TIntObjectHashMap<ArrayList<F>>();
 		this.sequence = sequence;
@@ -42,6 +47,11 @@ public class FactorQueue<F extends GenericFactor> implements Iterator<ArrayList<
 		results.add(factor);
 	}
 	
+	/**
+	 * Initialize the queue with a list of factors
+	 * 
+	 * @param factors
+	 */
 	public void init(List<F> factors) {
 		LinkedList<F> items = new LinkedList<F>(factors);
 		for (int variable : sequence) {
@@ -59,11 +69,16 @@ public class FactorQueue<F extends GenericFactor> implements Iterator<ArrayList<
 	public int getVariable() {
 		return sequence[0];
 	}
+	
 	@Override
 	public boolean hasNext() {
 		return sequence.length > 0;
 	}
 	
+	/**
+	 * visit and retrieve all factors containing the next variable
+	 * This moves to the next variable in the sequence.
+	 */
 	@Override
 	public ArrayList<F> next() {
 		int next = sequence[0];
@@ -80,6 +95,12 @@ public class FactorQueue<F extends GenericFactor> implements Iterator<ArrayList<
 		throw new UnsupportedOperationException();
 	}
 
+	/**
+	 * At complete elimination a list of factors may be left over. 
+	 * get them all 
+	 * 
+	 * @return
+	 */
     public Collection<F> getResults() {
         return results;
     }

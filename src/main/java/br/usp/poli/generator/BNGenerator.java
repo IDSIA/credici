@@ -69,6 +69,7 @@ import ch.idsia.crema.utility.RandomUtil;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.commons.math3.random.MersenneTwister;
 
 import com.opencsv.CSVWriter;
@@ -78,6 +79,7 @@ import java.util.Date;
 import java.util.Random;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.lang.Math;
 import java.lang.reflect.Field;
 import java.util.StringTokenizer;
@@ -109,13 +111,14 @@ public class BNGenerator {
     private int[][] sonMatrix;
     private int[] nStates;
     //private Random random = new Random();
-    private Random random = RandomUtil.getRandom();
-    int seed= (int)(100000*random.nextFloat());
-    private MersenneTwister rand= new MersenneTwister(seed+1);
-    private MersenneTwister randSampleArc= new MersenneTwister(seed+2);
-    private MersenneTwister randPolytree= new MersenneTwister(seed+3);
-    private MersenneTwister randMulti= new MersenneTwister(seed+4);
-    DFGenerator df = new DFGenerator();
+    
+
+    private MersenneTwister rand;
+    private MersenneTwister randSampleArc;
+    private MersenneTwister randPolytree;
+
+    DFGenerator df;
+    
     int numberStates=15000;							// for testing Uniformity
     int[] distribution = new int[numberStates];		// for testing Uniformity
     long[] matrixEq = new long[numberStates];			// for testing Uniformity
@@ -144,7 +147,22 @@ public class BNGenerator {
         parentMatrix = new int[nVertices][maxDeg+2];
         sonMatrix = new int[nVertices][maxDeg+2];
         nStates = new int[nVertices];
+        setSeed(new Date().getTime());
     }
+    
+    
+    public BNGenerator(int nVertices, int maxDeg, long seed) {
+    	this(nVertices, maxDeg);
+    	setSeed(seed);
+    }
+    
+    public void setSeed(long seed) {
+    	rand= new MersenneTwister(seed+1);
+        randSampleArc= new MersenneTwister(seed+2);
+        randPolytree= new MersenneTwister(seed+3);
+        df = new DFGenerator(seed);
+    }
+    
     public float getUpperP() {
         return upperP;
     }
@@ -527,7 +545,7 @@ public class BNGenerator {
             nIterations = 6*bn.getnNodes()*bn.getnNodes();
         
         boolean exist,conditionSatisfied; // auxiliary variables
-        bn.inicializeGraph(); // Inicialize a simple ordered tree as a BN structure
+        bn.initializeGraph(); // Inicialize a simple ordered tree as a BN structure
         
         if ( (testU.compareTo("yes") == 0))	{										// for testing Uniformity
             for (int i=0;i<bn.numberStates;i++ )  bn.repository[i] = new Matrix();	// for testing Uniformity
@@ -834,7 +852,7 @@ public class BNGenerator {
         //double rate1=0.7; // transition rate
         // double rate2=0.2; // transition rate
         //double rate3=0.1; // transition rate
-        inicializeGraph(); // Inicialize a simple ordered tree as a BN structure
+        initializeGraph(); // Inicialize a simple ordered tree as a BN structure
         int inducedWidth=1;
         int totalArcs=getnNodes()-1; // Simple tree has (nNodes-1)arcs
         int auxTotal = getMaxArcs();
@@ -1402,7 +1420,7 @@ public class BNGenerator {
             iwDistribution= new int[100];
             rand=new MersenneTwister(semente);
             randSampleArc=new MersenneTwister(semente);
-            inicializeGraph(); // Inicialize a simple ordered tree as a BN structure
+            initializeGraph(); // Inicialize a simple ordered tree as a BN structure
             generateMixedEJ(nGra,nIterati,maxVal,te,fo,baseFileNam,maxInducedWidt);
             if  (iwDistribution[3]<900)  {
                 System.out.println("A semente geradora de ciclo �:"+semente);
@@ -1416,7 +1434,7 @@ public class BNGenerator {
     /////////////////////////////////////////////////////////////////////////////////
     ///////////  Methods that implement operations /////////////////////////////////
     /////////////////////////////////////////////////////////////////////////////////
-    public void inicializeGraph(){		// initialize a simple ordered tree
+    public void initializeGraph(){		// initialize a simple ordered tree
         for (int i=0;i<getnNodes();i++ ) {
             for (int j=1;j<getMaxDegree()+1;j++ ) {
                 parentMatrix[i][j]=-5; //set first node
@@ -1867,6 +1885,21 @@ public class BNGenerator {
         return String.join(",", arcs);
     }
 
+    public List<Pair<Integer, Integer>> toArcs() {
+    	 List<Pair<Integer, Integer>> arcs = new ArrayList<>();
+         for (int i=0;i<getnNodes();i++ ) {
+             if (parentMatrix[i][0]!=1)  {
+                 int aux=parentMatrix[i][0];
+                 for (int j=1;j<aux;j++) {
+                     arcs.add(Pair.of(parentMatrix[i][j], i));
+                 }
+             }  // end of if
+         }
+         return arcs;
+    }
+    
+    
+    
     private void saveDAG(String name,String format,int n, int maxValues, int inducedWidth, int maxDegree, int maxInDegree, int maxOutDegree, int maxArcs) throws Exception { // Save BN in XML format
         String fileName = name.concat("" + (n+1) + "." + format);
         ArrayList<String> arcs = new ArrayList<>();
@@ -3319,7 +3352,7 @@ public class BNGenerator {
             distribution = new int[numberStates];
             for (int j=0;j<numberStates;j++ )  repository[j] = new Matrix();	// for testing Uniformity
             repository[0].inicializeTable(getnNodes(),getMaxDegree()+2);				// for testing Uniformity
-            inicializeGraph(); // Inicialize a simple ordered tree as a BN structure
+            initializeGraph(); // Inicialize a simple ordered tree as a BN structure
             generateMixedEJ(nGra,nIterati,maxVal,te,fo,baseFileNam,maxInducedW);
             computeQuiSquare(nGra);
             System.out.println("\tqui-Square set"+i+": "+quiSquare);
@@ -3355,7 +3388,7 @@ public class BNGenerator {
     // Routine for tests
     public void test(){
         boolean resp;
-        inicializeGraph();
+        initializeGraph();
         removeArc(2,3);
         resp=isConnected();
         System.out.println("Resposta:"+resp);
@@ -3390,7 +3423,7 @@ public class BNGenerator {
         else if	((structure.compareTo("multi") == 0)&&(maxInducedWidth==-1)) {	// multi-connected graph is the default structure
             generateMultiConnected(nGraphs,nIterations,maxValues,"no",format,baseFileName);
         } // end of if(structure=multi)
-        else if ((structure.compareTo("multi") == 0)&&(maxInducedWidth!=-1))	{	// generate multi-connected with maxIW constraint
+        else if ((structure.compareTo("pmmixed") == 0)&&(maxInducedWidth!=-1))	{	// generate multi-connected with maxIW constraint
             generateMixedEJ(nGraphs,nIterations,maxValues,"no",format,baseFileName,maxInducedWidth);
         } // end of if(structure=pmmixed)
     }

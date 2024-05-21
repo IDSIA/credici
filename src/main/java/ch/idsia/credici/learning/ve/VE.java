@@ -146,6 +146,8 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
             Collection<F> var_factors = queue.next();
 
             if (!var_factors.isEmpty()) {
+            	boolean isquery = Arrays.binarySearch(query, variable) >= 0;
+            	
 //                for (F f : var_factors) {
 //                   System.out.println(f);
 //                }
@@ -155,14 +157,10 @@ public class VE<F extends Factor<F>> implements JoinInference<F, F> {
                 if (instantiation != null && instantiation.containsKey(variable)) {
                     int state = instantiation.get(variable);
                     last = operator.filter(last, variable, state);
-                    //System.out.println("Filtered " + last);
                 }
-                if (Arrays.binarySearch(query, variable) >= 0) {
-                    // query var // nothing to do
-                    //System.out.println("Var is target");
-                } else {
+                
+                if(!isquery) {
                     last = operator.marginalize(last, variable);
-                    //System.out.println("Marginalized " + last);
                 }
                 queue.add(last);
             }

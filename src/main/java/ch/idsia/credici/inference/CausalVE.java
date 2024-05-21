@@ -49,7 +49,7 @@ public class CausalVE extends CausalInference<StructuralCausalModel, BayesianFac
         StructuralCausalModel infModel=null;
         if(!q.isCounterfactual()) {
             infModel = (StructuralCausalModel) CausalOps.applyInterventions(model, intervention);
-        }else{
+        } else {
             infModel = (StructuralCausalModel) CausalOps.counterfactualModel(model, intervention);
             //map the target to the alternative world
             q.setCounterfactualMapping(WorldMapping.getMap(infModel));

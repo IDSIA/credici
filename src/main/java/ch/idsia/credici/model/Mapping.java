@@ -10,10 +10,10 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.inference.CredalCausalVE;
+import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
+import ch.idsia.credici.model.io.dot.Info;
 import ch.idsia.credici.model.transform.Do;
 import ch.idsia.credici.model.transform.PNS;
-import ch.idsia.credici.utility.logger.DetailedDotSerializer;
-import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Domain;
 import ch.idsia.crema.model.NoSuchVariableException;

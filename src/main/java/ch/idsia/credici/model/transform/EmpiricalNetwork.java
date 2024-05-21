@@ -8,9 +8,9 @@ import java.util.function.BiFunction;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.StructuralCausalModel.VarType;
+import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
+import ch.idsia.credici.model.io.dot.Info;
 import ch.idsia.credici.utility.Randomizer;
-import ch.idsia.credici.utility.logger.DetailedDotSerializer;
-import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.credici.utility.table.DoubleTable;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;

@@ -1,4 +1,4 @@
-package ch.idsia.credici.utility.logger;
+package ch.idsia.credici.model.io.dot;
 
 import java.io.File;
 import java.io.IOException;

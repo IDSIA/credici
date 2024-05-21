@@ -4,8 +4,8 @@ import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.learning.ve.VE;
 import ch.idsia.credici.model.Mapping;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.utility.logger.DetailedDotSerializer;
-import ch.idsia.credici.utility.logger.Info;
+import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
+import ch.idsia.credici.model.io.dot.Info;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.ObservationBuilder;
@@ -63,6 +63,34 @@ public class PNS {
 		return fact.getData()[0]; // p(e)
 	}
 
+	
+	
+	public StructuralCausalModel pnsmodel(StructuralCausalModel model, int cause, int effect) {
+		return pnsmodel(model, cause, 1, 0, effect, 1, 0);
+	}
+	
+	
+	public StructuralCausalModel pnsmodel(StructuralCausalModel model, int cause, int cause_truestate, int cause_alternativestate,
+			int effect, int effect_truestate, int effect_alternativestate) {
+
+		Do<BayesianFactor, StructuralCausalModel> doing = new Do<>();
+		StructuralCausalModel factual = doing.execute(model, cause, cause_truestate);
+		StructuralCausalModel counter = doing.execute(model, cause, cause_alternativestate);
+
+		Mapping mapping = new Mapping(model.getExogenousSet());
+		mapping.add(factual);
+		mapping.add(counter);
+
+		StructuralCausalModel world = mapping.getModel();
+		int fe = mapping.mapToGlobal(factual, effect);
+		int ce = mapping.mapToGlobal(counter, effect);
+
+		RemoveBarren rb = new RemoveBarren();
+		return rb.execute(world, new int[] { fe, ce });
+
+	}
+	
+	
 	public static void main(String[] args) throws InterruptedException {
 		StructuralCausalModel one = new StructuralCausalModel();
 

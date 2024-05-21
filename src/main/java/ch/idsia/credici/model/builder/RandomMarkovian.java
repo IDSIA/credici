@@ -9,6 +9,8 @@ import br.usp.poli.generator.BNGenerator;
 import ch.idsia.credici.model.StructuralCausalModel;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 public class RandomMarkovian {
 
@@ -83,6 +85,7 @@ public class RandomMarkovian {
 	public void setNumberMaxArcs(int numberMaxArcs) {
 		this.numberMaxArcs = numberMaxArcs;
 	}
+
 
 	public StructuralCausalModel generate(int endo, int exoSize, boolean monoleaf) {
 		numberNodes = endo;
@@ -163,9 +166,10 @@ public class RandomMarkovian {
 			model.addParent(variable, exo);
 		}
 
+
 		return model;
 	}
-
+	
 	/** 
 	 * Get endogenous roots and leaves of the specified network
 	 * 
@@ -185,4 +189,5 @@ public class RandomMarkovian {
 		}
 		return Pair.of(roots.toArray(), leaves.toArray());
 	}
+
 }

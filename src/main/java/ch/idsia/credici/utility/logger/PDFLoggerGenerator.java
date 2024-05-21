@@ -10,6 +10,9 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
+import ch.idsia.credici.model.io.dot.Info;
+
 /**
  * A Logger that saves images of networks in a multipave PDF file.
  * In EQMC a logger is a function that creates consumers of info suppliers. 

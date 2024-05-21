@@ -11,10 +11,10 @@ import com.google.common.base.Supplier;
 
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.StructuralCausalModel.VarType;
+import ch.idsia.credici.model.io.dot.Info;
 import ch.idsia.credici.model.transform.CComponents;
 import ch.idsia.credici.model.transform.EmpiricalNetwork;
 import ch.idsia.credici.utility.Randomizer;
-import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.credici.utility.table.DoubleTable;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;

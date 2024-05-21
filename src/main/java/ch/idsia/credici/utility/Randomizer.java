@@ -9,6 +9,8 @@ import com.google.common.primitives.Doubles;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 public class Randomizer {
 	private UniformRandomProvider source;
@@ -128,5 +130,55 @@ public class Randomizer {
 		double p = factor.isLog() ? Math.log(1.0/size) : 1.0 / size;
 		double[] data = factor.getInteralData();
 		for (int i = 0; i < data.length; ++i) data[i] = p;
+	}
+	
+	
+	
+
+
+	public StructuralCausalModel makeRandom(StructuralCausalModel model, double ratio) {
+		TIntIntMap sizes = new TIntIntHashMap();
+		for (int exo : model.getExogenousVars()) {
+			int[] ch = model.getChildren(exo);
+			if (ch.length != 1) throw new IllegalStateException();
+			int[] p = model.getEndogenousParents(ch[0], true);
+			
+			int s = model.getSize(ch[0]);
+			int ps = model.getDomain(p).getCombinations();
+			
+			int sn = s * ps; // the size of a single mechanism
+			
+			// number of possible mechanisms * ratio
+			s = (int) (Math.pow(s, ps) * ratio);
+			
+			// at least the minimal number of mechanisms
+			s = Math.max(sn, s);
+			sizes.put(exo, s);
+		}
+		return makeRandom(model, sizes);
+	}
+	
+	public StructuralCausalModel makeRandom(StructuralCausalModel model, TIntIntMap sizes) {
+		StructuralCausalModel random = new StructuralCausalModel(model.getName());
+		random.copyData(model);
+		for (int variable : model.getVariables()) {
+			int size; 
+			if (sizes.containsKey(variable)) {
+				size = sizes.get(variable);
+			} else {
+				size = model.getSize(variable);
+			}
+			random.addVariable(variable, size, model.getVariableType(variable));
+		}
+		
+		for (int variable : model.getEndogenousVars(true)) {
+			int[] p = model.getParents(variable);
+			random.addParents(variable, p);
+		}
+		
+		randomEndogenousEquationsInplace(random);
+		randomExogenousInplace(random);
+		
+		return random;
 	}
 }

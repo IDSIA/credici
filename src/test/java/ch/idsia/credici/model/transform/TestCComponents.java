@@ -3,8 +3,8 @@ package ch.idsia.credici.model.transform;
 import org.junit.Test;
 
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.utility.logger.DetailedDotSerializer;
-import ch.idsia.credici.utility.logger.Info;
+import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
+import ch.idsia.credici.model.io.dot.Info;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 

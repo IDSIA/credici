@@ -217,10 +217,11 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	@Override
 	public boolean equals(Object obj) {
 		if (obj instanceof StructuralCausalModel) {
-		return same((StructuralCausalModel) obj, 0);
+			return same((StructuralCausalModel) obj, 0);
 		} 
 		return false;
 	}
+	
 	
 	int hash_combine(int lhs, int rhs) {
 		return lhs ^ (rhs + 0x9e3779b9 + (lhs << 6) + (lhs >> 2));
@@ -572,7 +573,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		for (int x : getEndogenousVars()) {
 			Strides pa_x = this.getDomain(this.getParents(x));
 			int[] assignments = RandomUtil.sampleUniform(pa_x.getCombinations(), this.getSize(x), true);
-
 			this.setFactor(x, BayesianFactor.deterministic(this.getDomain(x), pa_x, assignments));
 		}
 	}
@@ -587,7 +587,6 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	public TIntObjectMap[] getRandomFactors(int prob_decimals) {
 
 		StructuralCausalModel model = this.copy();
-
 		model.fillWithRandomFactors(prob_decimals);
 
 		TIntObjectMap<BayesianFactor> equations = new TIntObjectHashMap<>();

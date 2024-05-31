@@ -109,7 +109,7 @@ public class PUTable extends DataTable<Item, Double> {
 		// all other variables must be part of the domain
 		int[] cols = columns.clone();
 		Arrays.sort(cols);
- 		Strides exogenous = domain.remove(cols);
+ 		Strides exogenous = domain.sort().remove(cols);
 
 		double[] target = new double[domain.getCombinations()];
 		for (int i = 0; i < target.length; ++i) target[i] = Math.log(s);

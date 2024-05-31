@@ -10,12 +10,12 @@ import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.learning.eqem.Config;
 import ch.idsia.credici.learning.eqem.EQEMLearner;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
+import ch.idsia.credici.model.io.dot.Info;
 import ch.idsia.credici.model.transform.Canonical;
 import ch.idsia.credici.model.transform.EmpiricalNetwork;
 import ch.idsia.credici.model.transform.PNS;
 import ch.idsia.credici.utility.Randomizer;
-import ch.idsia.credici.utility.logger.DetailedDotSerializer;
-import ch.idsia.credici.utility.logger.Info;
 import ch.idsia.credici.utility.table.DoubleTable;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
@@ -108,9 +108,9 @@ public class TestEQMCLearner {
 
 		// learner.setDebugLoggerGenerator(new PDFLoggerGenerator("./run"));
 		var cc = learner.run();
-		long before = cc.combinations();
+		long before = cc.combinations().longValue();
 		cc.simplify();
-		long after = cc.combinations();
+		long after = cc.combinations().longValue();
 		System.out.println(before + " -> " + after);
 
 		var solutions = (after < 40000) ? cc.exaustiveIterator() : cc.sobolIterator();

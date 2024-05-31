@@ -20,10 +20,7 @@ import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
 import ch.idsia.crema.utility.IndexIterator;
 
 public class DetailedDotSerializer {
-	
-	
-	
-	
+
 	protected static Function<Integer, String> nodeName(GraphicalModel<BayesianFactor> model) {
 		if (model instanceof BayesianNetwork) {
 			return (node) -> {
@@ -40,12 +37,11 @@ public class DetailedDotSerializer {
 				} else {
 					label = "W";
 				}
-	
+
 				return label + "<sub>" + node + "</sub>";
 			};
 		}
 	}
-		
 
 	protected String apply(DoubleTable table, Function<Integer, String> nodeName) {
 		NumberFormat formatter = new DecimalFormat("0.###");
@@ -80,15 +76,15 @@ public class DetailedDotSerializer {
 	public String apply(Info record) {
 		String name = record.getModelName();
 		GraphicalModel<BayesianFactor> model = record.getModel();
-		final Function<Integer, String> nodeName = record.getNodeName() == null ? DetailedDotSerializer.nodeName(model) : record.getNodeName();
-		
+		final Function<Integer, String> nodeName = record.getNodeName() == null ? DetailedDotSerializer.nodeName(model)
+				: record.getNodeName();
+
 		var highlight = record.getHighlight();
-		
-		
+
 		StringBuilder builder = new StringBuilder();
 		if (name == null)
 			name = "model";
-		
+
 		builder.append("digraph \"").append(name).append("\" {\n node [shape=none];\n").append("\n");
 
 		if (record.getData() != null)
@@ -99,9 +95,9 @@ public class DetailedDotSerializer {
 		NumberFormat formatter = new DecimalFormat("0.###");
 
 		for (int i : model.getVariables()) {
-			
+
 			int[] parents = model.getParents(i);
-			
+
 			BayesianFactor factor = model.getFactor(i);
 			if (factor != null && record.getShowAsTable()) {
 				Strides domain = factor.getDomain();
@@ -164,7 +160,8 @@ public class DetailedDotSerializer {
 				builder.append("</TABLE>>];\n");
 
 			} else {
-				builder.append("N").append(i).append("[shape=\"circle\" label=<").append(nodeName.apply(i)).append(">];\n");
+				builder.append("N").append(i).append("[shape=\"circle\" label=<").append(nodeName.apply(i))
+						.append(">];\n");
 			}
 
 			for (int parent : parents) {
@@ -173,27 +170,32 @@ public class DetailedDotSerializer {
 		}
 
 		builder.append(arcs);
-		
-		if (record.getTitle() != null) 
-			builder.append("labelloc=\"t\"\nlabel=\"").append(record.getTitle()).append(" ").append(record.getRunId()).append("\"\n");
-		
+
+		if (record.getTitle() != null)
+			builder.append("labelloc=\"t\"\nlabel=\"").append(record.getTitle()).append(" ").append(record.getRunId())
+					.append("\"\n");
+
 		builder.append("}");
 		return builder.toString();
 
 	}
 
-
-	
-	
 	public static void saveModel(String filename, Info r) {
+		saveModel(new File(filename), r);
+	}
+
+	public static void saveModel(File target, Info r) {
 		try {
 			DetailedDotSerializer serializer = new DetailedDotSerializer();
 
-			File f = File.createTempFile(filename, ".dot");
+			File f = File.createTempFile("network", ".dot");
+			f.deleteOnExit();
 
 			String file = serializer.apply(r);
 			Files.writeString(Path.of(f.getAbsolutePath()), file);
-			ProcessBuilder b = new ProcessBuilder("/opt/homebrew/bin/dot", "-Tpng", "-o", filename,
+
+			// XXX: THIS IS BAD but I have no time now :'-(
+			ProcessBuilder b = new ProcessBuilder("/opt/homebrew/bin/dot", "-Tpng", "-o", target.getAbsolutePath(),
 					f.getAbsolutePath());
 			Process p = b.start();
 			p.waitFor();

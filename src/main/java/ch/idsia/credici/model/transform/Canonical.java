@@ -2,14 +2,12 @@ package ch.idsia.credici.model.transform;
 
 import java.util.function.Function;
 
-import ch.idsia.credici.factor.EquationBuilder;
 import ch.idsia.credici.factor.EquationOps;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.StructuralCausalModel.VarType;
 import ch.idsia.credici.utility.Randomizer;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
-import ch.idsia.crema.utility.ArraysUtil;
 
 public class Canonical implements Function<StructuralCausalModel, StructuralCausalModel> {
 
@@ -28,7 +26,7 @@ public class Canonical implements Function<StructuralCausalModel, StructuralCaus
 	}
 	
 	public StructuralCausalModel apply(StructuralCausalModel cm, long seed) {
-
+		
 		StructuralCausalModel canonical = new StructuralCausalModel(cm.getName());
 		Randomizer r = new Randomizer(seed);
 

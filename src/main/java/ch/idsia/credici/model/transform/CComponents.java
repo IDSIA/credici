@@ -1,5 +1,7 @@
 package ch.idsia.credici.model.transform;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -27,6 +29,7 @@ import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.CombinationsIterator;
+import jal.BYTE.Equals;
 
 /**
  * Convert a model into its Connected components submodels.
@@ -36,8 +39,10 @@ import ch.idsia.crema.utility.CombinationsIterator;
  */
 public class CComponents {
 	public static final String CC_KEY = "CC-Key";
-	
-	AtomicInteger modelCounter; 
+
+    private Map<Integer, List<StructuralCausalModel>> results;
+	private List<Pair<StructuralCausalModel, DoubleTable>> models;
+	private AtomicInteger modelCounter; 
 	
     public CComponents() { 
     	modelCounter = new AtomicInteger();
@@ -73,7 +78,7 @@ public class CComponents {
 
         Set<Integer> visited = new HashSet<>();
 
-        List<Pair<StructuralCausalModel, DoubleTable>> models = new ArrayList<>();
+        models = new ArrayList<>();
         
         for (Integer exoVar : exo) {
             
@@ -102,7 +107,6 @@ public class CComponents {
     }
 
 
-    private Map<Integer, List<StructuralCausalModel>> results;
 
     public synchronized Map<Integer, List<StructuralCausalModel>> getResults() {
     	return results;
@@ -315,22 +319,53 @@ public class CComponents {
         };
     }
 
-    public long combinations() {
-    	long comb = 1;
+    public BigInteger combinations() {
+    	BigInteger comb = BigInteger.ONE;
     	for (var entry : results.entrySet()) {
-    		comb *= entry.getValue().size();
+    		var size = BigInteger.valueOf(entry.getValue().size());
+    		comb = comb.multiply(size);
     	}
     	return comb;
     }
     
-    public void simplify() {
+    public boolean hasAtLeastCombinations(long count) {
+    	long comb = 1;
+    	boolean many = false;
     	for (var entry : results.entrySet()) {
-        	Set<StructuralCausalModel> s = new HashSet<>(entry.getValue());
-        	entry.getValue().clear();
-        	entry.getValue().addAll(s);
+    		int size = entry.getValue().size();
+    		if (size == 0) return false;
+    		
+    		comb *= size; // this might overflow
+    		if (comb > count) many = true;
+    	}
+    	return many;
+    }
+    
+    public void simplify() {
+    	record Wrapper(StructuralCausalModel model) { 
+    		
+    		@Override
+    		public int hashCode() {
+    			return Long.hashCode(model.hash());
+    		}
+    		
+    		@Override
+    		public boolean equals(Object o) {
+    			Wrapper m = (Wrapper) o;
+    			return model.same(m.model(), 0);
+    		}
+    	};
+    	
+    	for (var entry : results.entrySet()) {
+        	HashSet<Wrapper> s = new HashSet<>();
+        	var items = entry.getValue();
+        	items.stream().map(Wrapper::new).forEach(s::add);
+        	
+        	items.clear();
+        	s.stream().map(Wrapper::model).forEach(items::add);
     	}
     }
-
+    
     /** 
      * Re-compose the results into complete models connecting the CComponents again. 
      * FSCM of the different CCompoents can be reunited at will and do not have

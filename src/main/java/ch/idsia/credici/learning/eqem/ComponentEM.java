@@ -58,6 +58,7 @@ public class ComponentEM {
 	private TIntObjectMap<TIntSet> endoLocked;
 	private EquationFixing determinismStrategy;
 	
+	private double llStar;
 	
 	/**
 	 * Variables that should not be touched by the determinization
@@ -124,6 +125,7 @@ public class ComponentEM {
 		this.id = (Integer) themodel.getData(CComponents.CC_KEY);
 		this.determinismStrategy = new MinEntropyFixing();
 		
+		this.llStar = llStar;
 		this.logger = Logger.getLogger("ComponentEM");
 
 		logger.config("Setting up inference for: " + themodel.getName() + " ("
@@ -717,7 +719,7 @@ public class ComponentEM {
 				lock(data, variable, vsize, vstride, offset, state, zero, one);
 			}
 		} else {		
-			// here check if the things are working
+			// just lock it 
 			int stride = factor.getDomain().getStride(variable);
 			int states = factor.getDomain().getCardinality(variable);
 	

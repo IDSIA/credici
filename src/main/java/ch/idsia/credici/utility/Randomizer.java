@@ -1,5 +1,11 @@
 package ch.idsia.credici.utility;
 
+import java.math.BigInteger;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Random;
+
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.rng.UniformRandomProvider;
 import org.apache.commons.rng.sampling.distribution.DirichletSampler;
 import org.apache.commons.rng.simple.RandomSource;
@@ -7,10 +13,13 @@ import org.apache.commons.rng.simple.RandomSource;
 import com.google.common.primitives.Doubles;
 
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.transform.Canonical;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
+import gnu.trove.map.hash.TIntObjectHashMap;
 
 public class Randomizer {
 	private UniformRandomProvider source;
@@ -24,6 +33,7 @@ public class Randomizer {
 	}
 
 	
+	
 	/**
 	 * Replace Endogenous variables' equations with a random ones. 
 	 * The original factor will remain valid but not associated to the variable.
@@ -32,15 +42,22 @@ public class Randomizer {
 	 */
 	public void randomEndogenousEquationsInplace(StructuralCausalModel model) {
     	model.fillWithRandomEquations();
+    	for (int e : model.getEndogenousVars(true)) {
+    		var f = model.getFactor(e);
+    		f = f.reorderDomain(f.getDomain().sort());
+    		model.setFactor(e, f);
+    	}
 	}
+	
+
 	
 	public StructuralCausalModel randomEndogenousEquations(StructuralCausalModel model) {
 		StructuralCausalModel result = model.copy();
-		result.fillWithRandomEquations();
+		randomEndogenousEquationsInplace(result);
 		return result;
 	}
 	
-	
+
 	/**
 	 * Replace exogenous variables' factor with a random one. 
 	 * The original factor will remain valid but not associated to the variable.
@@ -71,6 +88,7 @@ public class Randomizer {
     	return result;
 	}
 	
+	
 	/**
 	 * Create a random CPT for the given variable and domain.
 	 * 
@@ -94,6 +112,7 @@ public class Randomizer {
 	public void randomizeInplace(BayesianFactor factor, int variable){
 		randomizeInplace(factor, variable, 1.0);
 	}
+
 
 	/**
 	 * randomize the given Bayesian factor. This will normalize assuming the factor to
@@ -125,6 +144,21 @@ public class Randomizer {
 		return c;
 	}
 
+	public void randomMarkovianEquationsInplace(BayesianFactor factor, int variable, int u) {
+		var domain = factor.getDomain().sort();
+		int[] rem = (u > variable) ? new int[] { variable, u } : new int[] { u, variable };
+		
+		var conditioning = domain.remove(rem);
+		int con = conditioning.getCombinations();
+		int size = domain.getCardinality(variable);
+		
+		BigInteger canonical = BigInteger.valueOf(size).pow(con);
+
+		int len = canonical.bitLength();
+		
+		
+	}
+	
 	public void uniformInplace(BayesianFactor factor, int variable) {
 		int size = factor.getDomain().getCardinality(variable);
 		double p = factor.isLog() ? Math.log(1.0/size) : 1.0 / size;
@@ -134,8 +168,38 @@ public class Randomizer {
 	
 	
 	
-
-
+	public StructuralCausalModel makeRandom(StructuralCausalModel model, int maxsize, int[] limits) {
+		
+		TIntIntMap sizes = new TIntIntHashMap();
+		for (int exo : model.getExogenousVars()) {
+			int[] ch = model.getChildren(exo);
+			if (ch.length != 1) throw new IllegalStateException();
+			int[] p = model.getEndogenousParents(ch[0], true);
+			
+			int s = model.getSize(ch[0]);
+			int ps = model.getDomain(p).getCombinations();
+			
+			int sn = s * ps; // the size of a single mechanism
+			
+			// limit the maxsize
+			int x = (int) Math.pow(s, ps);
+			if (limits != null) {
+				int xx = x;
+				for (var limit : limits) {
+					if (x > limit) xx = limit;
+				}
+				s=xx;
+			} else {
+				s = (int) Math.min(x, maxsize);
+			}
+			// at least the minimal number of mechanisms
+			//s = Math.max(sn, s);
+			sizes.put(exo, s);
+		}
+		return makeRandom(model, sizes);
+	}
+	
+	
 	public StructuralCausalModel makeRandom(StructuralCausalModel model, double ratio) {
 		TIntIntMap sizes = new TIntIntHashMap();
 		for (int exo : model.getExogenousVars()) {
@@ -181,4 +245,116 @@ public class Randomizer {
 		
 		return random;
 	}
+	
+	
+	static record Helper(
+		int offset,
+		double[] data)
+	{
+		
+		@Override
+		public int hashCode() {
+			return Arrays.hashCode(data);
+		}
+		
+		@Override
+		public boolean equals(Object obj) {
+			if (obj == null) return false;
+			return Arrays.equals(data, ((Helper) obj).data);
+		}
+	}
+	
+	public StructuralCausalModel makeRandomMarkovian(StructuralCausalModel dag) {
+		final var model = Canonical.LOG.apply(dag);
+		
+		TIntIntMap sizes = new TIntIntHashMap();
+		Arrays.stream(model.getExogenousVars()).forEach(y->sizes.put(y, model.getSize(y)));
+		
+		var x = makeRandom(model, sizes);
+		
+		var factors = new TIntObjectHashMap<HashSet<Helper>>();
+		StructuralCausalModel random = new StructuralCausalModel();
+		
+		for (var e : model.getEndogenousVars()) {
+			var px = model.getExogenousParents(e);
+			var pe = model.getEndogenousParents(e);
+			
+			var endo_vars = ArraysUtil.addToSortedArray(pe, e);
+			var endo_domain = model.getDomain(endo_vars);
+			var endo_size = endo_domain.getCombinations();
+			
+			var f = x.getFactor(e);
+			var interal = f.getInteralData();
+			
+			var dom = f.getDomain();
+			
+			var iexo = dom.getFiteredIndexIterator(endo_vars, new int[endo_vars.length]);
+			
+			HashSet<Helper> unique = new HashSet<>();
+			while(iexo.hasNext()) {
+				int exooff = iexo.next();
+			
+				var iendo = dom.getFiteredIndexIterator(px, new int[px.length]);
+				double[] data = new double[endo_size];
+				int i = 0;
+				while(iendo.hasNext()) {
+					int endooff = iendo.next();
+					data[i++] = interal[exooff + endooff];
+				}
+				boolean dup = unique.add(new Helper(exooff, data));
+			}
+			
+//			sizes.put(px[0], unique.size());
+			factors.put(e, unique);
+			
+			random.addVariable(e, x.getSize(e));
+			random.addVariable(px[0], unique.size(), true);
+		}
+		
+		for (var e : x.getVariables()) {
+			random.addParents(e, x.getParents(e));
+		}
+		
+		for (var e : random.getEndogenousVars()) {
+
+			var px = random.getExogenousParents(e);
+			var pe = random.getEndogenousParents(e);
+			
+			var endo_vars = ArraysUtil.addToSortedArray(pe, e);
+			var endo_domain = random.getDomain(endo_vars);
+			var endo_size = endo_domain.getCombinations();
+			
+			var dom = random.getFullDomain(e);
+			double[] fulldata = new double[dom.getCombinations()];
+			
+			var iexo = dom.getFiteredIndexIterator(endo_vars, new int[endo_vars.length]);
+			var dataiter = factors.get(e).iterator();
+			
+			while(iexo.hasNext()) {
+				Helper h = dataiter.next();
+				
+				int exooff = iexo.next();
+				
+				var iendo = dom.getFiteredIndexIterator(px, new int[px.length]);
+				double[] data = h.data();
+				int i = 0;
+				while(iendo.hasNext()) {
+					int endooff = iendo.next();
+					fulldata[exooff + endooff] = Math.log(data[i++]);
+				}
+			}
+			
+			var f = new BayesianFactor(dom, fulldata, true);
+			random.setFactor(e, f);
+		}
+		
+		for (var e : random.getExogenousVars()) {
+			var f = randomFactor(random.getDomain(e), e, true, true);
+			random.setFactor(e,f);
+		}
+		return random;
+	}
+	
+	
+	
 }

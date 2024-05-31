@@ -121,7 +121,7 @@ public class EQEMLearner {
 							cc.addResult(sol.getModel());
 							
 							if (delta < -EPS) // runtime problem!
-								throw new IllegalStateException(" LL is larger than LL*");
+								throw new IllegalStateException(" LL is larger than LL* " + delta);
 							
 						}  else { 
 							sol.reject();
@@ -134,8 +134,6 @@ public class EQEMLearner {
 						callback.accept(sol);
 					}
 				});
-				
-
 			}
 		}
 

@@ -7,11 +7,47 @@ import org.apache.commons.lang3.tuple.Pair;
 
 import br.usp.poli.generator.BNGenerator;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.model.change.NullChange;
 import gnu.trove.list.TIntList;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
 
+//
+//{
+//	{
+//		cardinalityChanger = new NullChange<BayesianFactor>() {
+//			public BayesianFactor removeState(BayesianFactor factor, int variable, int state) {
+//				var dom = factor.getDomain();
+//				var data = factor.getInteralData();
+//				
+//				int s = dom.getCardinality(variable);
+//				
+//				int datasize = (dom.getCombinations()/s) * (s-1);
+//				double[] newdata = new double[datasize];
+//
+//				int stride = dom.getStride(variable);
+//				int offset = stride * state;
+//				int j = 0;
+//				
+//				for (int i = 0; i < dom.getCombinations(); ++i) {
+//					int rst = (i / stride) % s;
+//					if (rst != state) {
+//						newdata[j++] = data[i];
+//					}
+//				}
+//				
+//				return new BayesianFactor();
+//			};
+//		};
+//	}
+//};
+
+
+/**
+ * Create a random markovian network
+ */
 public class RandomMarkovian {
 
 	// int totalDegree=10;
@@ -20,9 +56,9 @@ public class RandomMarkovian {
 	private int nIterations = 0;
 	private int maxInducedWidth = -1; // this value means that there is no induced width constraint
 	private int numberNodes = 4;
-	private int numberMaxDegree = 5;
-	private int numberMaxInDegree = 2;
-	private int numberMaxOutDegree = 2;
+	private int numberMaxDegree = 6;
+	private int numberMaxInDegree = 3;
+	private int numberMaxOutDegree = 3;
 	private int numberMaxArcs = 16;
 //	private int nPoints = 3; // default number of points used to generate credal sets
 	private float lowerP = 0;
@@ -101,6 +137,7 @@ public class RandomMarkovian {
 		bn.setMaxOutDegree(numberMaxOutDegree); // set maximum number of outgoing arcs
 		bn.setMaxArcs(numberMaxArcs); // set maxArcs(a global variable)
 		bn.setFixed_nValue(fixed_nVal);
+		
 		// bn.setnPointProb(nPoints);
 		bn.setLowerP(lowerP);
 		bn.setUpperP(upperP);
@@ -170,6 +207,8 @@ public class RandomMarkovian {
 		return model;
 	}
 	
+	
+
 	/** 
 	 * Get endogenous roots and leaves of the specified network
 	 * 

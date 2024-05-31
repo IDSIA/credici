@@ -27,6 +27,18 @@ import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
+/**
+ * A data table contains a dataset of unique rows without missing data
+ * each row is identified by an integer array (int[]) containing the actual instantiation 
+ * of the row.
+ * Each row may be labeled with an object of type T. When adding rows the value associated
+ * to existing rows will be increased by {@link DataTable#unit} or the amount passed to the 
+ * {@link #add(int[], T)} method, using the {@link #add} function object. 
+ * 
+ * the columns array may not be sorted
+ * @param <T>
+ * @param <O>
+ */
 public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	protected final int[] columns;
 	protected O metadata;

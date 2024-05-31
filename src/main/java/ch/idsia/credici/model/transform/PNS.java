@@ -31,7 +31,7 @@ public class PNS {
 
 	public double execute(StructuralCausalModel model, int cause, int cause_truestate, int cause_alternativestate,
 			int effect, int effect_truestate, int effect_alternativestate) {
-
+		
 		Do<BayesianFactor, StructuralCausalModel> doing = new Do<>();
 		StructuralCausalModel factual = doing.execute(model, cause, cause_truestate);
 		StructuralCausalModel counter = doing.execute(model, cause, cause_alternativestate);
@@ -63,7 +63,54 @@ public class PNS {
 		return fact.getData()[0]; // p(e)
 	}
 
-	
+	public double executeOther(StructuralCausalModel model, int cause, int cause_truestate, int cause_alternativestate,
+			int effect, int effect_truestate, int effect_alternativestate) {
+		
+		
+		StructuralCausalModel factual = model.copy();
+		StructuralCausalModel counter = model.copy();
+		
+		Mapping mapping = new Mapping(model.getExogenousSet());
+		mapping.add(factual);
+		mapping.add(counter);
+
+		StructuralCausalModel world = mapping.getModel();
+		int fe = mapping.mapToGlobal(factual, effect);
+		int ce = mapping.mapToGlobal(counter, effect);
+		
+		int fc = mapping.mapToGlobal(factual, cause);
+		int cc = mapping.mapToGlobal(counter, cause);
+
+		//Do<BayesianFactor, StructuralCausalModel> doing = new Do<>();
+		for (var p : world.getParents(cc))
+			world.removeParent(cc, p);
+		for (var p : world.getParents(fc))
+			world.removeParent(fc, p);
+		
+		var dc = world.getFullDomain(cc);
+		world.setFactor(cc, new BayesianFactor(dc, new double[dc.getCombinations()], true));
+
+		var df = world.getFullDomain(fc);
+		world.setFactor(fc, new BayesianFactor(df, new double[df.getCombinations()], true));
+		
+		RemoveBarren rb = new RemoveBarren();
+		var world1 = rb.execute(world, new int[] { fe, ce, fc, cc });
+
+		MinFillOrdering mf = new MinFillOrdering();
+		int[] order = mf.apply(world1);
+
+		VE<BayesianFactor> ve = new VE<BayesianFactor>(order);
+		ve.setFactors(world1.getFactors());
+		ve.setNormalize(false);
+		ve.setEvidence(ObservationBuilder.observe(fe, effect_truestate).and(ce, effect_alternativestate).and(fc, cause_truestate).and(cc, cause_alternativestate));
+
+		BayesianFactor fact = ve.run(fe, ce);
+		
+//		var filter = ObservationBuilder.observe(fe, effect_truestate).and(ce, effect_alternativestate);
+//		fact = fact.filter(filter);
+		
+		return fact.getData()[0]; // p(e)
+	}
 	
 	public StructuralCausalModel pnsmodel(StructuralCausalModel model, int cause, int effect) {
 		return pnsmodel(model, cause, 1, 0, effect, 1, 0);
@@ -72,7 +119,7 @@ public class PNS {
 	
 	public StructuralCausalModel pnsmodel(StructuralCausalModel model, int cause, int cause_truestate, int cause_alternativestate,
 			int effect, int effect_truestate, int effect_alternativestate) {
-
+	
 		Do<BayesianFactor, StructuralCausalModel> doing = new Do<>();
 		StructuralCausalModel factual = doing.execute(model, cause, cause_truestate);
 		StructuralCausalModel counter = doing.execute(model, cause, cause_alternativestate);

@@ -2,8 +2,9 @@ package ch.idsia.credici.model.eqmc;
 
 import ch.idsia.credici.learning.eqem.Config;
 import ch.idsia.credici.model.StructuralCausalModel;
-import ch.idsia.credici.utility.logger.DetailedDotSerializer;
-import ch.idsia.credici.utility.logger.Info;
+import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
+import ch.idsia.credici.model.io.dot.Info;
+import ch.idsia.credici.model.transform.Canonical;
 import ch.idsia.credici.utility.table.DoubleTable;
 import gnu.trove.map.TIntIntMap;
 import gnu.trove.map.hash.TIntIntHashMap;
@@ -53,7 +54,9 @@ public class PearlMarkov {
 
 		return model;
 	}
-
+	
+	
+	
 	public static void main(String[] args) throws InterruptedException {
 		
 		PearlMarkov sim = new PearlMarkov();
@@ -61,7 +64,8 @@ public class PearlMarkov {
 		var data = sim.createData();
 		var model = sim.createModel();
 		
-		var canonical = Experiments.canonical(model);
+		var canonical = Canonical.LOG.apply(model);
+		
 		DetailedDotSerializer.saveModel("cano.png", new Info().model(canonical).data(data));
 		
 		var ccve = Experiments.runccve(canonical, data, 0, 2);

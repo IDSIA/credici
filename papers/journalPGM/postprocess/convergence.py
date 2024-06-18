@@ -4,6 +4,7 @@ from scipy.stats import beta as beta_dist
 from scipy.special import hyp2f1
 from scipy.special import beta as beta_func
 from scipy.integrate import nquad, quad
+#from mpmath import quad
 #from scipy.integrate import dblquad as double_integral
 
 
@@ -20,7 +21,6 @@ def double_integral(func, a, b, gfun, hfun, args=(), epsabs=1.49e-8, epsrel=1.49
             opts={"epsabs": epsabs, "epsrel": epsrel, 'limit':500}) #, 'limit':100
 
 
-
 def _pjoint(x, y, L, alpha, beta, n):
     ''' 
     Helper function for the computation of the convergence probability
@@ -35,7 +35,7 @@ def _pjoint(x, y, L, alpha, beta, n):
     ) ** n
 
 
-def p_eps_convergence(samples, eps, eps2, abs, rel, method="single", n = -1):
+def p_eps_convergence(samples, eps, eps2=None, abs=1.49e-8, rel=1.49e-8, method="single", n = -1, fitmethod="MLE"):
     """ 
     Evaluation probability that the epsilon reduced true interval is 
     within the interval defined by the provided samples.
@@ -62,7 +62,10 @@ def p_eps_convergence(samples, eps, eps2, abs, rel, method="single", n = -1):
 
     if a - eps * L < 0 : # we are sure that a* is within 0 and a
         itype = "y"
-        alpha, beta = beta_dist.fit(samples, floc = 0, fscale = b + L*eps2 )[:2]
+        if eps2 is None:
+            alpha, beta = beta_dist.fit(samples)[:2]
+        else:
+            alpha, beta = beta_dist.fit(samples, floc = 0, fscale = b + L*eps2, method=fitmethod)[:2]
         f = lambda y: _pjoint(0, y, L, alpha, beta, k)
         num, e1 = quad(f, 0, eps*L, epsabs=abs, epsrel=rel)
         if method != "single":
@@ -73,7 +76,11 @@ def p_eps_convergence(samples, eps, eps2, abs, rel, method="single", n = -1):
 
     elif b + eps * L > 1: # we are sure that b* is within b and 1
         itype = "x"
-        alpha, beta = beta_dist.fit(samples, floc = a - eps2 * L, fscale = 1 - (a - L*eps2))[:2]
+        if eps2 is None:
+            alpha, beta = beta_dist.fit(samples)[:2]
+        else:
+            alpha, beta = beta_dist.fit(samples, floc = a - eps2 * L, fscale = 1 - (a - L*eps2), method=fitmethod)[:2]
+
         f = lambda x: _pjoint(x, 0, L, alpha, beta, k)
         num, e1 = quad(f, 0, eps*L, epsabs=abs, epsrel=rel)
         if method != "single":
@@ -84,7 +91,11 @@ def p_eps_convergence(samples, eps, eps2, abs, rel, method="single", n = -1):
 
     else:
         itype="xy"
-        alpha, beta = beta_dist.fit(samples, floc = a - eps2 * L, fscale = L + 2*L*eps2)[:2]
+        if eps2 is None:
+            alpha, beta = beta_dist.fit(samples)[:2]
+        else:
+            alpha, beta = beta_dist.fit(samples, floc = a - eps2 * L, fscale = L + 2*L*eps2, method=fitmethod)[:2]
+
         f = lambda x,y: _pjoint(x,y, L, alpha, beta, k)
         num, e1 = double_integral(f, 0, eps*L, lambda y: 0, lambda y: eps*L, epsabs=abs, epsrel=rel)
 
@@ -97,7 +108,11 @@ def p_eps_convergence(samples, eps, eps2, abs, rel, method="single", n = -1):
         else:
             den, e2 = double_integral(f, 0,  a + (1 - b), lambda y: 0, lambda y: a + (1 - b) - y, epsabs=abs, epsrel=rel)
 
-    res = [ num / den, num, den, e1, e2, alpha, beta ]
+    if den == 0.0:
+        res = [ np.nan, num, den, e1, e2, alpha, beta ]    
+    else:
+        res = [ num / den, num, den, e1, e2, alpha, beta ]
+
     if method != "single": res+=[den1, den2, den3, e21, e22, e23]
     res.append(itype)
 
@@ -113,3 +128,37 @@ def p_unif_convergence(data, eps):
     num = (1 + (1 + 2*eps)**(2 - n) - 2 * (1+ eps) ** (2-n)) 
     den = (1 - L ** (n - 2) - (n - 2) * (1 - L) * L ** (n - 2))
     return num/den
+
+
+
+def find_eps(data, lower=0.00001, upper=0.5, target_p=0.99, diff=0.0001) :
+    lower = np.log(lower)
+    upper = np.log(upper)
+    deltap = 1
+    mid = 0
+    while (deltap > diff) | (deltap < 0):
+        mid = (lower + upper) / 2.0
+        eps = np.exp(mid)
+        p, num, den, e1, e2, alpha, beta, info = p_eps_convergence(data, eps, eps, 1.49e-8, 1.49e-8)
+        #print(p, lower, upper, eps)
+        if (p > 1.001):# | (num < e1*10) | (den < e2*10):
+            e = []
+            if p>1.001: 
+                e.append("P")
+            #if (num < e1*10):
+            #    e.append("N") 
+            #if (den < e2*10):
+            #    e.append("D")
+            return [p,eps,"".join(e)]
+            
+        deltap = p - target_p
+        if deltap < 0:
+            lower = mid
+        else:
+            upper = mid
+        
+        if np.abs(upper - lower) < diff : 
+            return [p, eps, "UL"]
+        
+    return [p, eps, "ok"]
+    

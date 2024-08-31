@@ -30,7 +30,7 @@ public class BuildModel {
         // If needed, update
         Path wdir = Path.of("./papers/causal_flavour/");
         Path modelsFolder = wdir.resolve("./models/");
-        String modelname = "simple_learner";
+        String modelname = "simple_learner_10Q";
 
         ////////////////
 

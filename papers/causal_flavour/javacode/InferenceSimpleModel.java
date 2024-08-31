@@ -5,6 +5,7 @@ import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.utility.CollectionTools;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.LabelInfo;
+import ch.idsia.credici.utility.Probability;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import com.opencsv.exceptions.CsvException;
 import gnu.trove.map.TIntIntMap;
@@ -66,7 +67,6 @@ public class InferenceSimpleModel {
         int ytrue = List.of(domainnames.get(Y)).indexOf("right");
         int yfalse = List.of(domainnames.get(Y)).indexOf("wrong");
 
-
         //// Examples of queries
 
         VertexFactor res = null;
@@ -87,6 +87,25 @@ public class InferenceSimpleModel {
         // Probability of sufficiency
         res = (VertexFactor) inf.probSufficiency(X,Y,xtrue,xfalse,ytrue,yfalse);
         System.out.println(res);
+
+        //CollectionTools.getKey(varnames, "VQ1");
+        int target = CollectionTools.getKey(varnames, "USI");
+        res = (VertexFactor) inf.query(target);
+        System.out.println(res);
+
+        target = CollectionTools.getKey(varnames, "USII");
+        res = (VertexFactor) inf.query(target);
+        System.out.println(res);
+
+        int VQ1 =  CollectionTools.getKey(varnames, "VQ1");
+        System.out.println(inf.query(VQ1));
+
+        double maxLL = Probability.maxLogLikelihood(model, data);
+        System.out.println("Maximum log-likelihood"+maxLL);
+        for(StructuralCausalModel m : inf.getInputModels()){
+            System.out.println("LL(model_i) = "+m.logLikelihood(data)+"\tratio = "+(maxLL/m.logLikelihood(data)));
+        }
+
 
     }
 

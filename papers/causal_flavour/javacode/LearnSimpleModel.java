@@ -13,6 +13,8 @@ import java.util.HashMap;
 public class LearnSimpleModel {
     public static void main(String[] args) throws IOException, InterruptedException, CsvException {
 
+
+
         // Learning parameters
         int numRuns = 100;
         int maxIter = 500;
@@ -23,7 +25,7 @@ public class LearnSimpleModel {
         Path modelsFolder = wdir.resolve("./models/");
         Path outputFolder = wdir.resolve("./learntmodels/");
 
-        String modelname = "simple_learner";
+        String modelname = "simple_learner_10Q";
 
         /////////////
 

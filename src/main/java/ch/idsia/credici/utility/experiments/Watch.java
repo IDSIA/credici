@@ -16,7 +16,7 @@ public class Watch {
 	}
 
 	public static void stopAndPrint(){
-		stopAndPrint("Ellapsed time: ");
+		stopAndPrint("Elapsed time: ");
 	}
 
 	public static void stopAndLog(Logger logger){

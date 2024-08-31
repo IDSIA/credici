@@ -4,7 +4,7 @@ This bundle contains the manuscript submited to the PGM2022 and entitled  "Bound
 The organisation  is the following:
 
 - _example_: code for replicating the examples in the paper and an additional toy example.
-- _experiments_: Java files for replicating the experiments.
+- _experiments_: Java files for replicating the code.
 - _lib_: packages needed for running the code.
 - _models_: set of structural causal models in UAI format considered in the experimentation.
 
@@ -104,12 +104,12 @@ The code for replicating the running example of the manuscript is provided in 'e
 
 ## Experiments with the synthetic models
 
-The experiemnts has been conducted with the code  in `experiments/RunSBEMCC.java`. As an example, let us consider the model
-in `./models/synthetic/rand13_mk1_maxDist2_nEndo4_k05_0.uai`. Then the following command run the experiments with r=10 and
+The experiemnts has been conducted with the code  in `code/RunSBEMCC.java`. As an example, let us consider the model
+in `./models/synthetic/rand13_mk1_maxDist2_nEndo4_k05_0.uai`. Then the following command run the code with r=10 and
 a maximum number of iterations of 100.
 
 ```bash
-java -cp lib/credici.jar experiments/RunSBEMCC.java -w -x 10 --maxiter 100 --seed 0 ./models/synthetic/rand13_mk1_maxDist2_nEndo4_k05_0.uai
+java -cp lib/credici.jar code/RunSBEMCC.java -w -x 10 --maxiter 100 --seed 0 ./models/synthetic/rand13_mk1_maxDist2_nEndo4_k05_0.uai
 ```
 
 
@@ -196,7 +196,7 @@ For more details about its usage, run:
 
 
 ```bash
-java -cp lib/credici.jar experiments/RunSBEMCC.java --help 
+java -cp lib/credici.jar code/RunSBEMCC.java --help 
 ```
 ```
 Usage: <main class> [-hqw] [--debug] [-as=<addSeed>] [-l=<logfile>]

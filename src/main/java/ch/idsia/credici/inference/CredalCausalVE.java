@@ -47,6 +47,7 @@ public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
     public CredalCausalVE(StructuralCausalModel model, Collection empirical){
         this(model.toVCredal(empirical));
         this.causalModel = model;
+
     }
 
     public CredalCausalVE(SparseModel model){

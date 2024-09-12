@@ -5,8 +5,12 @@ import ch.idsia.credici.utility.experiments.AsynIsCompatible;
 import ch.idsia.crema.data.ReaderCSV;
 import ch.idsia.crema.data.WriterCSV;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
+import ch.idsia.crema.inference.ve.FactorVariableElimination;
+import ch.idsia.crema.inference.ve.VariableElimination;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
+import ch.idsia.crema.model.graphical.specialized.BayesianNetwork;
+import ch.idsia.crema.user.core.Variable;
 import ch.idsia.crema.utility.ArraysUtil;
 import ch.idsia.crema.utility.InvokerWithTimeout;
 import com.opencsv.*;
@@ -135,6 +139,38 @@ public class DataUtil {
 
 	 	return empirical;
 	}
+
+
+	public static HashMap<Set<Integer>, BayesianFactor> getEmpiricalMap(StructuralCausalModel model, BayesianNetwork empNet){
+		HashMap<Set<Integer>, BayesianFactor> empirical = new HashMap<>();
+
+		VariableElimination inf = new FactorVariableElimination(empNet.getVariables());
+		inf.setFactors(empNet.getFactors());
+
+		for(int u: model.getExogenousVars()) {
+			BayesianFactor fu = null;
+			for (Object dom_ : model.getEmpiricalDomains(u)) {
+				HashMap dom = (HashMap) dom_;
+				int left = (int) dom.get("left");
+				int[] right = (int[]) dom.get("right");
+
+				Strides leftDom = model.getDomain((int) dom.get("left"));
+				Strides rightDom = model.getDomain((int[]) dom.get("right"));
+
+				//BayesianFactor f = DataUtil.getCondProb(data, leftDom, rightDom);
+				BayesianFactor f = (BayesianFactor) inf.conditionalQuery(left, right);
+				if (fu == null)
+					fu = f;
+				else
+					fu = fu.combine(f);
+
+			}
+			empirical.put(Arrays.stream(model.getEndogenousChildren(u)).boxed().collect(Collectors.toSet()), fu);
+		}
+
+		return empirical;
+	}
+
 
 
 	public static TIntObjectMap<BayesianFactor> getCFactorsSplittedMap(StructuralCausalModel model, TIntIntMap[] data ){

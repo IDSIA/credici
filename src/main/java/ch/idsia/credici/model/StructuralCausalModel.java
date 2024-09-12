@@ -713,6 +713,7 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 	}
 
 	public SparseModel toVCredal(Collection empiricalProbs){
+		System.out.println("emp:"+empiricalProbs);
 		return ExactCredalBuilder.of(this)
 				.setEmpirical(empiricalProbs)
 				.setToVertex()

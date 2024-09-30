@@ -1,5 +1,9 @@
 package ch.idsia.credici.model.transform;
 
+import java.util.Arrays;
+
+import org.apache.commons.lang3.ArrayUtils;
+
 import ch.idsia.credici.inference.CausalVE;
 import ch.idsia.credici.learning.ve.VE;
 import ch.idsia.credici.model.Mapping;
@@ -11,12 +15,45 @@ import ch.idsia.crema.inference.ve.order.MinFillOrdering;
 import ch.idsia.crema.model.ObservationBuilder;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.preprocess.RemoveBarren;
+import ch.idsia.crema.utility.ArraysUtil;
+import ch.idsia.crema.utility.IndexIterator;
+import gnu.trove.map.TIntIntMap;
+import gnu.trove.map.hash.TIntIntHashMap;
 
 /**
  * Compute the probability of Necessity and Sufficiency
  */
 public class PNS {
 
+	private boolean fixCBN; 
+	private boolean removingVariables = true;
+	private TIntIntMap evidence;
+	
+	public PNS() {
+	}
+	
+	public PNS(boolean removingVariables) {
+		this.removingVariables = removingVariables;
+	}
+	
+	public void setRemovingVariables(boolean removingVariables) {
+		this.removingVariables = removingVariables;
+	}
+	
+	public boolean isRemovingVariables() {
+		return removingVariables;
+	}
+	
+	
+	public void setFixCBN(boolean fix) {
+		this.fixCBN = fix;
+	}
+	
+	public boolean isFixCBN() {
+		return fixCBN;
+	}
+	
+	
 	/**
 	 * Execute query assuming factual state = 1, alternative state = 0
 	 * 
@@ -29,23 +66,84 @@ public class PNS {
 		return execute(model, cause, 1, 0, effect, 1, 0);
 	}
 
+	/**
+	 * get The offset in the domain given the specified instantiation
+	 * if state is missing in the instantiation it is assumed to be 0
+	 * @param domain a domain
+	 * @param instantiation the instantiation
+	 * @return
+	 */
+	int offsetOf(Strides domain, TIntIntMap instantiation) {
+		int[] states = Arrays.stream(domain.getVariables()).map(instantiation::get).toArray();
+		return domain.getOffset(states);
+	}
+	
+	TIntIntMap getInstantiation(int[] domain, IndexIterator iter) {
+		var pos = iter.getPositions();
+		if (pos.length != domain.length) return null;
+		TIntIntMap inst = new TIntIntHashMap();
+		for (int i = 0; i < pos.length; ++i) {
+			inst.put(domain[i], pos[i]);
+		}
+		return inst;
+	}
+	
 	public double execute(StructuralCausalModel model, int cause, int cause_truestate, int cause_alternativestate,
 			int effect, int effect_truestate, int effect_alternativestate) {
 		
-		Do<BayesianFactor, StructuralCausalModel> doing = new Do<>();
+		evidence = new TIntIntHashMap();
+		
+		Do<StructuralCausalModel> doing = new Do<>(removingVariables);
 		StructuralCausalModel factual = doing.execute(model, cause, cause_truestate);
+		evidence.putAll(doing.getNewEvidence());
+		
 		StructuralCausalModel counter = doing.execute(model, cause, cause_alternativestate);
-
+		evidence.putAll(doing.getNewEvidence());
+		
 		Mapping mapping = new Mapping(model.getExogenousSet());
 		mapping.add(factual);
 		mapping.add(counter);
 
 		StructuralCausalModel world = mapping.getModel();
+		
+		if (fixCBN) {
+			for (int endo : model.getEndogenousVars()) {
+				int y = mapping.mapToGlobal(factual, endo);
+				int yp = mapping.mapToGlobal(counter, endo);
+				
+				int[] pay = world.getParents(y);
+				int[] payp = world.getParents(yp);
+				
+				int[] p = ArraysUtil.unionSet(pay, payp);
+				Arrays.sort(p);
+				
+				int d = world.addVariable(2);
+				world.addParents(d, p);
+
+				var ddom = world.getFullDomain(d);
+				var ydom = world.getFullDomain(y);
+				var ypdom = world.getFullDomain(yp);
+				
+				var yfactor = world.getFactor(y);
+				var ypfactor = world.getFactor(yp);
+				
+				// just a convenience sequential iterator (no reordering or jumping around)
+				var iter = ddom.getIterator();
+				while(iter.hasNext()) {
+					var inst = getInstantiation(ddom.getVariables(), iter);
+					int offset = iter.next();
+					// p = p(y) *p(y') *prod(sum(
+					
+				}
+			}
+		}
+		
+		
 		int fe = mapping.mapToGlobal(factual, effect);
 		int ce = mapping.mapToGlobal(counter, effect);
 
 		RemoveBarren rb = new RemoveBarren();
-		var world1 = rb.execute(world, new int[] { fe, ce });
+		var world1 = rb.execute(world, new int[] { fe, ce }, evidence);
 
 		MinFillOrdering mf = new MinFillOrdering();
 		int[] order = mf.apply(world1);
@@ -53,7 +151,10 @@ public class PNS {
 		VE<BayesianFactor> ve = new VE<BayesianFactor>(order);
 		ve.setFactors(world1.getFactors());
 		ve.setNormalize(false);
-		ve.setEvidence(ObservationBuilder.observe(fe, effect_truestate).and(ce, effect_alternativestate));
+		evidence.put(fe, effect_truestate);
+		evidence.put(ce, effect_alternativestate);
+		
+		ve.setEvidence(evidence);
 
 		BayesianFactor fact = ve.run(fe, ce);
 		
@@ -116,11 +217,38 @@ public class PNS {
 		return pnsmodel(model, cause, 1, 0, effect, 1, 0);
 	}
 	
+	public StructuralCausalModel pnsmodel_nodo(StructuralCausalModel model) {
+	
+//		Do<BayesianFactor, StructuralCausalModel> doing = new Do<>();
+//		StructuralCausalModel factual = doing.execute(model, cause, cause_truestate);
+//		StructuralCausalModel counter = doing.execute(model, cause, cause_alternativestate);
+
+		StructuralCausalModel factual = model.copy();
+		StructuralCausalModel counter = model.copy();
+		
+		Mapping mapping = new Mapping(model.getExogenousSet());
+		mapping.add(factual);
+		mapping.add(counter);
+
+		StructuralCausalModel world = mapping.getModel();
+
+
+		//RemoveBarren rb = new RemoveBarren();
+		return world;//.execute(world, new int[] { fe, ce });
+
+	}
+	
 	
 	public StructuralCausalModel pnsmodel(StructuralCausalModel model, int cause, int cause_truestate, int cause_alternativestate,
 			int effect, int effect_truestate, int effect_alternativestate) {
+		return pnsmodel(model, cause, cause_truestate, cause_alternativestate, effect, effect_truestate, effect_alternativestate, true);
+	}
 	
-		Do<BayesianFactor, StructuralCausalModel> doing = new Do<>();
+	
+	public StructuralCausalModel pnsmodel(StructuralCausalModel model, int cause, int cause_truestate, int cause_alternativestate,
+			int effect, int effect_truestate, int effect_alternativestate, boolean absorbeDo) {
+	
+		Do<StructuralCausalModel> doing = new Do<>(absorbeDo);
 		StructuralCausalModel factual = doing.execute(model, cause, cause_truestate);
 		StructuralCausalModel counter = doing.execute(model, cause, cause_alternativestate);
 

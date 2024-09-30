@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
 import java.io.Writer;
+import java.text.DecimalFormat;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -13,10 +16,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.lang3.ArrayUtils;
 
 import cern.colt.Arrays;
 import ch.idsia.credici.inference.CausalVE;
@@ -26,16 +31,20 @@ import ch.idsia.credici.learning.eqem.EQEMLearner;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.PearlNetwork;
 import ch.idsia.credici.model.builder.RandomMarkovian;
+import ch.idsia.credici.model.io.agrum.Serialize;
 import ch.idsia.credici.model.io.dot.DetailedDotSerializer;
 import ch.idsia.credici.model.io.dot.Info;
 import ch.idsia.credici.model.io.netstring.NetStringSerialize;
 import ch.idsia.credici.model.transform.Canonical;
+import ch.idsia.credici.model.transform.EmpiricalNetwork;
 import ch.idsia.credici.model.transform.PNS;
+import ch.idsia.credici.utility.Probability;
 import ch.idsia.credici.utility.Randomizer;
 import ch.idsia.credici.utility.sample.Sampler;
 import ch.idsia.credici.utility.table.DoubleTable;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
+import ch.idsia.crema.utility.ArraysUtil;
 import gnu.trove.list.TDoubleList;
 import gnu.trove.list.array.TDoubleArrayList;
 import gnu.trove.map.TIntIntMap;
@@ -54,14 +63,14 @@ public class MarkovianDeteExperiements {
 		emcc, emccCanonical, dete, relax, deteLimited, relaxLimited, ccve, ccveCanonical
 	}
 
-
 	@Option(names = { "--alpha" }, required = true, description = "Alpha for dirichlet", defaultValue = "0.01")
 	private double alpha;
 
 	@Option(names = { "--plot" }, required = true, description = "Plot networks", defaultValue = "false")
 	private boolean plot;
 
-	@Option(names = { "--pns-count" }, required = true, description = "Number of FSCM sampled to compute PNS", defaultValue = "10000")
+	@Option(names = {
+			"--pns-count" }, required = true, description = "Number of FSCM sampled to compute PNS", defaultValue = "10000")
 	private Integer numPns;
 
 	@Option(names = { "-o", "--output" }, required = true, description = "Output folder", defaultValue = ".")
@@ -82,12 +91,12 @@ public class MarkovianDeteExperiements {
 	@Option(names = { "-s", "--seed" }, description = "random seed", type = Integer.class)
 	private Integer seed;
 
-	@Option(names = { "--maxsize" }, description = "exogenous limiting size", type = Integer.class, defaultValue = "8")
+	@Option(names = { "--maxsize" }, description = "exogenous limiting size", type = Integer.class, defaultValue = "16")
 	private Integer limiting = 8;
 
-	@Option(names = { "--limiting" }, description = "exogenous limiting size", split=",")
+	@Option(names = { "--limiting" }, description = "exogenous limiting size", split = ",")
 	private int[] limitingSizes;
-	
+
 	@Option(names = { "-m",
 			"--sample-size" }, description = "Sample sizes", type = Integer.class, defaultValue = "5000")
 	private Integer sampleSize;
@@ -95,12 +104,12 @@ public class MarkovianDeteExperiements {
 	@Option(names = { "--network" }, description = "network", type = Network.class, defaultValue = "canonical")
 	Network networkType;
 
-	@Option(names = { "--method" }, description = "Methods to be run", split=",")
+	@Option(names = { "--method" }, description = "Methods to be run", split = ",")
 	private Set<Method> method;
-	
+
 	@Option(names = { "--iter" }, description = "random seed", defaultValue = "100000")
 	private int iter;
-	
+
 	public static void main(String[] args) throws InterruptedException, IOException {
 		MarkovianDeteExperiements exp = new MarkovianDeteExperiements();
 		CommandLine cl = new CommandLine(exp);
@@ -123,7 +132,6 @@ public class MarkovianDeteExperiements {
 		rm.setNumberMaxArcs(indegree * nodes * 2);
 		rm.setNumberNodes(nodes);
 		rm.setNumberMaxInDegree(indegree);
-		
 
 		StructuralCausalModel model = null;
 		int cause = 0;
@@ -134,7 +142,7 @@ public class MarkovianDeteExperiements {
 		File file = null;
 
 		if (networkType == Network.canonical) {
-			
+
 			file = new File(outfolder, seed + ".csv");
 			name = "Canonical" + seed;
 			model = rm.generate(nodes, -1, false);
@@ -157,8 +165,9 @@ public class MarkovianDeteExperiements {
 			// sample some data
 			Sampler s = new Sampler(gen.nextLong());
 			data = s.sample(model, sampleSize, model.getEndogenousVars());
-			if (plot) DetailedDotSerializer.saveModel(new File(outfolder, seed + "_test1.png"),
-					new Info().model(model).hideTables().data(data));
+			if (plot)
+				DetailedDotSerializer.saveModel(new File(outfolder, seed + "_test1.png"),
+						new Info().model(model).hideTables().data(data));
 
 		} else if (networkType == Network.pearl) {
 			file = new File(outfolder, "pearl.csv");
@@ -167,9 +176,10 @@ public class MarkovianDeteExperiements {
 
 			model = g.createCanonicalModel();
 			data = g.createData();
-			
+
 			cause = PearlNetwork.treatment;
 			effect = PearlNetwork.recovery;
+
 			seed = 0;
 
 		} else if (networkType == Network.random) {
@@ -194,14 +204,16 @@ public class MarkovianDeteExperiements {
 
 			file = new File(outfolder, seed + "_random.csv");
 		}
-		
-		System.out.println(networkType + " source network with " + model.getEndogenousVars().length + " + " + model.getExogenousVars().length);
+
+		System.out.println(networkType + " source network with " + model.getEndogenousVars().length + " + "
+				+ model.getExogenousVars().length);
 
 		Writer out = new FileWriter(file);
 		printer = new CSVPrinter(out, CSVFormat.RFC4180);
 //		System.out.println(model);
 //		System.out.println(data);
-		if (plot) DetailedDotSerializer.saveModel(seed + "_source.png", new Info().model(model));
+		if (plot)
+			DetailedDotSerializer.saveModel(seed + "_source.png", new Info().model(model));
 
 		canonical_experiment(model, data, cause, effect, gen, name);
 
@@ -245,7 +257,7 @@ public class MarkovianDeteExperiements {
 		printer.printRecord(row);
 		printer.flush();
 	}
-	
+
 	/*
 	 * Planned experiments: - benchmark: start with M=Canonical FSCM & sample(M) =>
 	 * PNS(M), M'=PSCM(M) => EMCC(M) & CCVE(M), M"=RMEQ(M') => Relax(M") & Dete(M")
@@ -271,10 +283,9 @@ public class MarkovianDeteExperiements {
 	 */
 	public void canonical_experiment(StructuralCausalModel model, DoubleTable data, int cause, int effect, Random gen,
 			String name) throws InterruptedException, IOException {
-		
-		StructuralCausalModel m =  (networkType == Network.canonical) ? 
-				model:
-				Canonical.LOG.apply(model, gen.nextLong());
+
+		StructuralCausalModel m = (networkType == Network.canonical) ? model
+				: Canonical.LOG.apply(model, gen.nextLong());
 
 		DetailedDotSerializer.saveModel("pearl.png", new Info().model(m).title("pearl"));
 
@@ -284,7 +295,6 @@ public class MarkovianDeteExperiements {
 		ArrayList<Object> row = new ArrayList<Object>();
 
 		Randomizer rr = new Randomizer(gen.nextLong());
-		
 
 		// get FSCM value
 		PNS pnstest = new PNS();
@@ -325,8 +335,7 @@ public class MarkovianDeteExperiements {
 
 		// row.add(sizes);
 
-		var settings = new Config().llEPS(ll).numIterations(iter*2).numPSCMRuns(0).maxRun(1) // enough to test //
-																							// m-compatibility
+		var settings = new Config().llEPS(ll).numIterations(iter * 2).numPSCMRuns(0).maxRun(1) // enough to test m-compatibility
 				.deterministic(true).freeEndogenous(false);
 
 		var mmx = pns(m, settings, cause, effect, data, new TIntIntHashMap());
@@ -363,7 +372,7 @@ public class MarkovianDeteExperiements {
 				System.out.println("E: failed");
 			}
 		}
-		
+
 		if (method.contains(Method.emccCanonical)) {
 			System.out.println("Canonical EMCC");
 
@@ -379,7 +388,6 @@ public class MarkovianDeteExperiements {
 				System.out.println("E: failed");
 			}
 		}
-
 
 		if (method.contains(Method.relax)) {
 			System.out.println("Relax");
@@ -409,15 +417,13 @@ public class MarkovianDeteExperiements {
 			}
 		}
 
-		
-
 		if (method.contains(Method.ccve)) {
 			System.out.println("Source model CCVE");
 			try {
 				var mmccve = ccve(model, data, cause, effect);
 				log(row, "CCVE", mmccve);
 				System.out.println("C: " + mmccve.componentSize + " " + Arrays.toString(mmccve.minmax()));
-				
+
 				mmccve = ccve(m, data, cause, effect);
 				System.out.println("C: " + mmccve.componentSize + " " + Arrays.toString(mmccve.minmax()));
 			} catch (Throwable x) {
@@ -425,7 +431,7 @@ public class MarkovianDeteExperiements {
 				row.add("CCVE failed " + x.getMessage());
 			}
 		}
-		
+
 		if (method.contains(Method.ccveCanonical)) {
 			System.out.println("Canonical CCVE");
 			try {
@@ -438,10 +444,8 @@ public class MarkovianDeteExperiements {
 			}
 		}
 		
-		
 		StructuralCausalModel m2 = rr.makeRandom(m, limiting, limitingSizes);
-		
-		
+
 		if (method.contains(Method.relaxLimited)) {
 			System.out.println("Relax Limited");
 			settings = new Config().llEPS(ll).numIterations(iter).numPSCMRuns(0).alpha(alpha).numRun(maxrun)
@@ -457,9 +461,9 @@ public class MarkovianDeteExperiements {
 				System.out.println("RLimit: failed");
 			}
 		}
-		
+
 		Random r;
-		
+
 		if (method.contains(Method.deteLimited)) {
 			System.out.println("Dete Limited");
 			settings = new Config().llEPS(ll).numIterations(iter).numPSCMRuns(0).alpha(alpha).numRun(maxrun)
@@ -477,16 +481,15 @@ public class MarkovianDeteExperiements {
 		System.out.println();
 	}
 
-	
 	public Result ccve(StructuralCausalModel scm, DoubleTable data, int cause, int effect) {
 		long start = System.nanoTime();
-		//scm = log2standard(scm);
-		
+		// scm = log2standard(scm);
+
 		CredalCausalVE ccve = new CredalCausalVE(scm, data.toMap(false), scm.getExogenousVars());
 		long learn = System.nanoTime() - start;
 		long simplify = 0;
 		try {
-			VertexFactor intfac = ccve.probNecessityAndSufficiency(cause, effect,1,0);
+			VertexFactor intfac = ccve.probNecessityAndSufficiency(cause, effect, 1, 0);
 			long inference = System.nanoTime() - start - learn - simplify;
 			return new Result(new double[] { intfac.getData()[0][0][0], intfac.getData()[0][1][0] }, null, null, learn,
 					simplify, inference);
@@ -514,11 +517,11 @@ public class MarkovianDeteExperiements {
 	private Result pns(StructuralCausalModel model, Config config, int cause, int effect, DoubleTable datatable,
 			TIntIntMap sizes) throws InterruptedException {
 		long start = System.nanoTime();
-		for (var exo : model.getExogenousVars() ) {
+		for (var exo : model.getExogenousVars()) {
 			System.out.print(exo + "=" + model.getSize(exo) + ", ");
 		}
 		System.out.println();
-		
+
 		EQEMLearner learner = new EQEMLearner(model, datatable, sizes, true, config);
 
 		// learner.setDebugLoggerGenerator(new PDFLoggerGenerator("./run"));
@@ -549,30 +552,175 @@ public class MarkovianDeteExperiements {
 
 		for (int i = 0; i < numPns && solutions.hasNext(); ++i) {
 			solution = solutions.next(); // log2standard(solutions.next());
-	
-			double pnsval = ppns.executeOther(solution, cause, 0, 1, effect, 0, 1);
+
+			double pnsval = ppns.executeOther(solution, cause, 1, 0, effect, 1, 0);
+			if (pnsval > 0.1) {
+				IntFunction<String> names = (index) -> new String[] { "Z", "X", "Y", "UZ", "UX", "UY", "X2", "Y2" }[index];
+
+				System.out.println("here " + pnsval + " " + i);
+				EmpiricalNetwork en = new EmpiricalNetwork();
+				var x = en.apply(solution, datatable);
+				var ll2 = en.loglikelihood(x, datatable);
+				var lll = Probability.maxLogLikelihood(model, datatable.toMap(false));
+				var xxx = Probability.LL(solution, datatable.toMap(false));
+				System.out.println(ll2 + " " + lll + " " + xxx);
+				
+				var scm = ppns.pnsmodel(solution, cause, 1, 0, effect, 1, 0, false);
+				ppns.pnsmodel(solution, cause, effect);
+				
+				try(var pw = new PrintWriter(System.out)){
+					new Serialize(PearlNetwork.getNaming()).serialize(solution, pw);
+					pw.flush();
+					
+					new Serialize((n)-> new String[] {"Z", "X", "Y", "U_z", "U_x", "U_y", "Zp", "Xp", "Yp"}[n]).serialize(scm, pw);
+					pw.flush();
+				} 
+				
+				DetailedDotSerializer.saveModel("FSCMPearl.png", new Info().model(solution).data(datatable));
+				DetailedDotSerializer.saveModel("PNSPearl.png", new Info().model(scm).data(datatable));
+				Serialize s = new Serialize(names);
+
+				try (var out = new PrintWriter(System.out)) {
+					s.serialize(solution, out);
+					out.println("-----------");
+					s.serialize(scm, out);
+				}
+			}
 			pnss.add(pnsval);
+
 		}
-		
+
 		System.out.println(cause + " " + effect + " " + pnss.size());
 //		System.out.println(pnss);
-		
+
 		long inference = System.nanoTime() - start - learn - simplify;
 		// DetailedDotSerializer.saveModel("./run/solution.png", new
 		// Info().model(solution).data(datatable));
 		return new Result(pnss.toArray(), m, m2, learn, simplify, inference);
 	}
 
+	void toTableHtml(BayesianFactor factor, int subject) {
+		
+		NumberFormat nf = new DecimalFormat("#.#####");
+		
+		StringBuilder builder = new StringBuilder();
+		var domain  = factor.getDomain();
+		int size = domain.getCardinality(subject);
+		
+		int[] vars = domain.getVariables();
+		int[] conditioning = ArrayUtils.removeElement(vars, subject);
+		
+		
+		
+		int cols = domain.getCombinations()/size;
+		int repeats = 1;
+		
+		builder.append("<table>\n<tr><th rowspan='").append(vars.length - 1).append("'>").append(subject).append("</th>");
+		
+		for (int parent : ArraysUtil.reverse(conditioning)) {
+			
+			builder.append("<th>").append(parent).append("</th>");
+			
+			int psize = domain.getCardinality(parent);
+			int span = cols / psize;
+			for (int r = 0; r < repeats; ++r) {
+				for (int s = 0; s < psize; s++) {
+					builder.append("<th colspan='").append(span).append("'>").append(s).append("</th>");
+				}
+			}
+			repeats *= psize;
+			cols /= psize;
+			builder.append("</tr>\n<tr>");
+		}
+		if (conditioning.length == 0) {
+			builder.append("<th></th></tr>");
+		}
+		
+		vars = ArrayUtils.add(conditioning, subject); // append item (so first round will go through subjec==0) 
+		var iter = factor.getDomain().getReorderedIterator(vars);
+		int row=0; 
+		
+		builder.append("<td colspan='2'>").append(row).append("</td>");
+		while (iter.hasNext()) {
+			int[] position = iter.getPositions().clone();
+			if (position[position.length-1] != row) {
+				row = position[position.length-1];
+				builder.append("</tr>\n<tr>");
+				builder.append("<td colspan='2'>").append(row).append("</td>");
+			}
+			int index = iter.next();
+			builder.append("<td>").append(nf.format(factor.getValueAt(index))).append("</td>");
+		}
+		builder.append("</tr></table>");
+		System.out.println(builder);
+	}
+	
+	void toAgrum(BayesianFactor factor, int subject) {
+		
+		NumberFormat nf = new DecimalFormat("#.#####");
+		
+		StringBuilder builder = new StringBuilder();
+		var domain  = factor.getDomain();
+		int size = domain.getCardinality(subject);
+		
+		int[] vars = domain.getVariables();
+		int[] conditioning = ArrayUtils.removeElement(vars, subject);
+		
+		
+		
+		int cols = domain.getCombinations()/size;
+		int repeats = 1;
+		
+		
+		
+		for (int parent : ArraysUtil.reverse(conditioning)) {
+			
+			builder.append("<th>").append(parent).append("</th>");
+			
+			int psize = domain.getCardinality(parent);
+			int span = cols / psize;
+			for (int r = 0; r < repeats; ++r) {
+				for (int s = 0; s < psize; s++) {
+					builder.append("<th colspan='").append(span).append("'>").append(s).append("</th>");
+				}
+			}
+			repeats *= psize;
+			cols /= psize;
+			builder.append("</tr>\n<tr>");
+		}
+		if (conditioning.length == 0) {
+			builder.append("<th></th></tr>");
+		}
+		
+		vars = ArrayUtils.add(conditioning, subject); // append item (so first round will go through subjec==0) 
+		var iter = factor.getDomain().getReorderedIterator(vars);
+		int row=0; 
+		
+		builder.append("<td colspan='2'>").append(row).append("</td>");
+		while (iter.hasNext()) {
+			int[] position = iter.getPositions().clone();
+			if (position[position.length-1] != row) {
+				row = position[position.length-1];
+				builder.append("</tr>\n<tr>");
+				builder.append("<td colspan='2'>").append(row).append("</td>");
+			}
+			int index = iter.next();
+			builder.append("<td>").append(nf.format(factor.getValueAt(index))).append("</td>");
+		}
+		builder.append("</tr></table>");
+		System.out.println(builder);
+	}
 	/**
-	 * A summary of the results given by an algorithm.
-	 * Not all methods will fill all the fields. However, pnss must be present if the methods was successfull.
+	 * A summary of the results given by an algorithm. Not all methods will fill all
+	 * the fields. However, pnss must be present if the methods was successfull.
 	 * 
 	 */
 	record Result(double[] pnss, Map<Integer, Integer> componentSizeBefore, Map<Integer, Integer> componentSize,
 			long learn, long simplify, long inference) {
-		
+
 		/**
 		 * Gets min and max PNS
+		 * 
 		 * @return
 		 */
 		double[] minmax() {
@@ -591,6 +739,7 @@ public class MarkovianDeteExperiements {
 
 		/**
 		 * Number of pnss results
+		 * 
 		 * @return
 		 */
 		int length() {
@@ -599,6 +748,7 @@ public class MarkovianDeteExperiements {
 
 		/**
 		 * Convert a results record in a list of fields
+		 * 
 		 * @return
 		 */
 		List<Object> toCols() {// String base, List<Object> header) {

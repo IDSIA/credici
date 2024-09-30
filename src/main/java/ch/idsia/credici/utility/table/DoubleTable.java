@@ -5,6 +5,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -204,6 +205,7 @@ public class DoubleTable extends DataTable<Double, Double> {
 		}
 	}
 
+	
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
 		String head = Arrays.stream(columns).mapToObj(naming).collect(Collectors.joining(" | "));

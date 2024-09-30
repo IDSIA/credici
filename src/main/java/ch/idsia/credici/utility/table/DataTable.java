@@ -95,7 +95,7 @@ public class DataTable<T, O> implements Iterable<Map.Entry<int[], T>> {
 	
 	
 	public void setNames(String[] names) {
-		this.naming = (i) -> names[i];
+		this.naming = (i) -> i < names.length ? names[i] : Integer.toString(i);
 	}
 	
 	public void setNaming(IntFunction<String> name) {

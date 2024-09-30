@@ -19,13 +19,13 @@ import ch.idsia.crema.model.Domain;
 import ch.idsia.crema.model.NoSuchVariableException;
 import ch.idsia.crema.model.Strides;
 import ch.idsia.crema.preprocess.CutObserved;
+import gnu.trove.iterator.TIntIterator;
 import gnu.trove.list.array.TIntArrayList;
 import gnu.trove.map.hash.TIntIntHashMap;
 import gnu.trove.set.TIntSet;
 import gnu.trove.set.hash.TIntHashSet;
 
 public class Mapping extends StructuralCausalModel {
-	private static int INITIAL_MULTIPLIER = 3;
 
 	private int nextId = 0;
 
@@ -189,6 +189,7 @@ public class Mapping extends StructuralCausalModel {
 		return local;
 	}
 
+	
 	/**
 	 * Get the joined model
 	 * 
@@ -198,47 +199,4 @@ public class Mapping extends StructuralCausalModel {
 		return model;
 	}
 
-	public static void main(String[] args) throws InterruptedException {
-		StructuralCausalModel one = new StructuralCausalModel();
-		
-		int A = one.addVariable(2);
-		int B = one.addVariable(2);
-		int C = one.addVariable(4);
-		int U = one.addVariable(10, true);
-		int U2 = one.addVariable(10, true);
-
-		one.addParents(A, C, U, U2);
-		one.addParent(B, U2);
-		one.addParent(C, U);
-		
-		var fA = BayesianFactor.random(one.getDomain(A), one.getDomain(C,U,U2), 4, true);
-		one.setFactor(A, fA);
-		var fB = BayesianFactor.random(one.getDomain(B), one.getDomain(U2), 4, true);
-		one.setFactor(B, fB);
-		var fC = BayesianFactor.random(one.getDomain(C), one.getDomain(U), 4, true);
-		one.setFactor(C, fC);
-
-		var doing = new Do<BayesianFactor, StructuralCausalModel>();
-		
-		var doset = new TIntIntHashMap();
-		doset.put(B, 1);
-		var two = doing.execute(one, doset);
-		var observe = new CutObserved();
-		var observeset = new TIntIntHashMap();
-		observeset.put(B, 0);
-		var three = observe.execute(one, observeset);
-		
-		var mapping = new Mapping(one.getExogenousSet());
-		var m1 = mapping.add(one);
-		var m2 = mapping.add(two);
-		var m3 = mapping.add(three);
-		
-		var m = mapping.getModel();
-		
-		CausalVE cve = new CausalVE(one);
-		BayesianFactor x = cve.probNecessityAndSufficiency(C, A);
-		
-		
-		DetailedDotSerializer.saveModel("out.png", new Info().model(m).hideTables());
-	}
 }

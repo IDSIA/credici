@@ -1,5 +1,6 @@
 package ch.idsia.credici.model.transform;
 
+import java.util.function.DoubleFunction;
 import java.util.function.Function;
 
 import ch.idsia.credici.factor.EquationOps;
@@ -8,6 +9,7 @@ import ch.idsia.credici.model.StructuralCausalModel.VarType;
 import ch.idsia.credici.utility.Randomizer;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.model.Strides;
+import gnu.trove.map.TIntIntMap;
 
 public class Canonical implements Function<StructuralCausalModel, StructuralCausalModel> {
 
@@ -20,10 +22,13 @@ public class Canonical implements Function<StructuralCausalModel, StructuralCaus
 		this.log = log;
 	}
 
+	
+	
 	@Override
 	public StructuralCausalModel apply(StructuralCausalModel cm) {
 		return apply(cm, System.nanoTime());
 	}
+	
 	
 	public StructuralCausalModel apply(StructuralCausalModel cm, long seed) {
 		

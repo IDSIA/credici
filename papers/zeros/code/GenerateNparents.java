@@ -45,6 +45,9 @@ public class GenerateNparents extends Terminal {
     @CommandLine.Option(names = {"-np", "--numparents"}, description = "Number of parents. Default to 2")
     private int numParents = 2;
 
+    @CommandLine.Option(names = {"-ys", "--ysize"}, description = "Cardinality of Y variable (child). Default to 2")
+    private int ysize = 2;
+
     @CommandLine.Option(names = {"-nzr", "--nzerorate"}, description = "Probability of keeping a zero configuration. Default to 1.0")
     private  double nzerorate = 1.0;
 
@@ -84,8 +87,37 @@ public class GenerateNparents extends Terminal {
     protected void entryPoint() throws Exception {
         init();
         generate();
-        inference();
+        inferenceLoop();
         save();
+
+    }
+
+
+    protected void inferenceLoop() throws InterruptedException {
+        boolean sampled = false;
+        int size = 1000;
+
+        do{
+            try {
+                sampleData(Y, size);
+                inference();
+                sampled = true;
+
+
+
+            }catch (Exception e){
+                logger.info("No feasible solution... resampling");
+
+                if(size>=10000)
+                    throw new IllegalStateException("Unable to generate compatible data");
+
+                size += 100;
+
+
+            }
+        }while (!sampled);
+
+
 
     }
 
@@ -103,20 +135,40 @@ public class GenerateNparents extends Terminal {
         String arcs = IntStream.range(1,numParents+1).mapToObj(i->"("+i+",0)").collect(Collectors.joining());
         SparseDirectedAcyclicGraph dag = DAGUtil.build(arcs);
 
-        m = CausalBuilder.of(dag,2).build();
+
+        int[] endoVarSizes = IntStream.range(0,dag.getVariables().length).map(x -> 2).toArray();
+        endoVarSizes[0] = ysize;
+
+
+        m = CausalBuilder.of(dag,endoVarSizes).build();
         m.fillExogenousWithRandomFactors(3);
         int u  = m.getExogenousParents(0)[0];
         int y = m.getEndogenousChildren(u)[0];
         zeroPerturbation(u);
         logger.info(String.valueOf(m));
-        sampleData(y);
 
     }
 
-    private void sampleData(int y) {
+    private void sampleData(int y){
+        boolean sampled = false;
+        int size = 1000;
+
+        do{
+            try {
+                sampleData(y, size);
+                sampled = true;
+            }catch (Error e){
+                logger.info("No feasible solution... resampling");
+            }
+
+
+        }while (!sampled);
+    }
+
+    private void sampleData(int y, int size) {
         boolean zeroX = false;
         for(int i = 0; i<10; i++){
-            data = m.samples(1000, m.getEndogenousVars());
+            data = m.samples(size, m.getEndogenousVars());
             BayesianFactor p = DataUtil.getJointProb(data, m.getDomain(m.getEndogenousVars()));
             p = p.marginalize(y);
             zeroX = ArraysUtil.where(p.getData(), v -> v==0).length>0;
@@ -206,8 +258,12 @@ public class GenerateNparents extends Terminal {
 
         label = "simple_nparents"+numParents+"" +
                 "_nzr"+String.valueOf(nzerorate).replace(".","")+"" +
-                "_zdr"+String.valueOf(zerodroprate).replace(".","")+"" +
-                "_"+seed;
+                "_zdr"+String.valueOf(zerodroprate).replace(".","")+"";
+
+        if(ysize!=2)
+            label +="_ysize"+String.valueOf(ysize);
+
+        label +="_"+seed;
         logger.info(label);
 
         outputFolder  = Path .of(output, "/");

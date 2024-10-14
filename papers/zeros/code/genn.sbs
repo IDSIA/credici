@@ -9,7 +9,7 @@ echo ${init_seed}
 
 for i in $(seq 0 ${SLURM_NTASKS}); do
   seed=$[init_seed+i]
-  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u genn.py $np $nzr $zdr $seed 2> /dev/null &
+  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u genn.py $np $nzr $zdr $seed $ys 2> /dev/null &
 done
 
 
@@ -19,4 +19,4 @@ wait
 
 
 
-## usage: sbatch  --export=np=2,nzr=0.8,zdr=0.5,init_seed=0 -n 10 learn_select_bias.sbs
+## usage: sbatch  --export=np=2,nzr=0.8,zdr=0.5,ys=3,init_seed=0 -n 10 learn_select_bias.sbs

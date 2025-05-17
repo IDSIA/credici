@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH --time=3-00:00:00
+#SBATCH -o /mnt/beegfs/rcabanas/dev/credici/papers/zeros_ecsqaru25/logs/%x.%j.out
+
+
+
+echo ${init_seed}
+
+
+for i in $(seq 0 ${SLURM_NTASKS}); do
+  seed=$[init_seed+i]
+  srun -n 1 -N 1 -c 1 /mnt/beegfs/rcabanas/singularity/credici.sif python3 -u genn.py $nzr $zdr $seed 2> /dev/null &
+done
+
+
+
+
+wait
+
+
+
+## usage: sbatch  --export=nzr=0.8,zdr=0.5,init_seed=0 -n 10 genn.sbs

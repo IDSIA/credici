@@ -4,7 +4,9 @@ import ch.idsia.credici.IO;
 import ch.idsia.credici.inference.CredalCausalVE;
 import ch.idsia.credici.model.StructuralCausalModel;
 import ch.idsia.credici.model.builder.CausalBuilder;
-import ch.idsia.credici.utility.*;
+import ch.idsia.credici.utility.CollectionTools;
+import ch.idsia.credici.utility.DAGUtil;
+import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.experiments.ResultsManager;
 import ch.idsia.credici.utility.experiments.Terminal;
 import ch.idsia.credici.utility.experiments.Watch;
@@ -28,31 +30,23 @@ import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static ch.idsia.credici.utility.EncodingUtil.getRandomSeqIntMask;
-
 /*
 
--np 2 --output ./papers/zeros/models -rw -s 1234
-
+--output ./papers/zeros/models/s4 -xs 2 -ys 3 -rw -s 1234
 
 */
 //
-public class GenerateNparents extends Terminal {
+public class GenerateNonBin extends Terminal {
 
 
 
 
-    @CommandLine.Option(names = {"-np", "--numparents"}, description = "Number of parents. Default to 2")
-    private int numParents = 2;
+    @CommandLine.Option(names = {"-xs", "--xsize"}, description = "Cardinality of the parent X. Default to 2")
+    private int xsize = 2;
 
     @CommandLine.Option(names = {"-ys", "--ysize"}, description = "Cardinality of Y variable (child). Default to 2")
     private int ysize = 2;
 
-    @CommandLine.Option(names = {"-nzr", "--nzerorate"}, description = "Probability of keeping a zero configuration. Default to 1.0")
-    private  double nzerorate = 1.0;
-
-    @CommandLine.Option(names = {"-zdr", "--zerodroprate"}, description = "Probability of keeping a zero configuration. Default to 1.0")
-    private  double zerodroprate = 1.0;
 
     @CommandLine.Option(names={"-o", "--output"}, description = "Output folder for the results. Default working dir.")
     String output = ".";
@@ -60,13 +54,10 @@ public class GenerateNparents extends Terminal {
     @CommandLine.Option(names={"-rw", "--rewrite"}, description = "If activated, results are rewritten. Otherwise, process is stopped if there are existing results.")
     boolean rewrite = false;
 
-    //@CommandLine.Option(names={"-fs", "--forcesolution"}, description = "If activated, model is saved even if non solution is available.")
-    //boolean forceSolution = false;
-
-
 
     /// Global ///
     TIntIntMap[] data = null;
+
     StructuralCausalModel m = null;
     Path wdir = null;
 
@@ -76,10 +67,6 @@ public class GenerateNparents extends Terminal {
     Path outputFolder = null;
     Path outputFile = null;
 
-    int Y = 0;
-
-    int idinfo = 0;
-    ResultsManager info = null;
 
 
 
@@ -87,43 +74,16 @@ public class GenerateNparents extends Terminal {
     protected void entryPoint() throws Exception {
         init();
         generate();
-        inferenceLoop();
+        sampleData();
+
         save();
 
     }
 
 
-    protected void inferenceLoop() throws InterruptedException {
-        boolean sampled = false;
-        int size = 1000;
-
-        do{
-            try {
-                sampleData(Y, size);
-                inference();
-                sampled = true;
-
-
-
-            }catch (Exception e){
-                logger.info("No feasible solution... resampling");
-
-                if(size>=10000)
-                    throw new IllegalStateException("Unable to generate compatible data");
-
-                size += 100;
-
-
-            }
-        }while (!sampled);
-
-
-
-    }
-
     public static void main(String[] args) {
         argStr = String.join(";", args);
-        CommandLine.run(new code.GenerateNparents(), args);
+        CommandLine.run(new GenerateNonBin(), args);
         if(errMsg!="")
             System.exit(-1);
         System.exit(0);
@@ -132,121 +92,23 @@ public class GenerateNparents extends Terminal {
     public void generate() throws IOException, CsvException, InterruptedException {
 
 
-        String arcs = IntStream.range(1,numParents+1).mapToObj(i->"("+i+",0)").collect(Collectors.joining());
-        SparseDirectedAcyclicGraph dag = DAGUtil.build(arcs);
+
+        SparseDirectedAcyclicGraph dag = DAGUtil.build("1,0");
 
 
-        int[] endoVarSizes = IntStream.range(0,dag.getVariables().length).map(x -> 2).toArray();
-        endoVarSizes[0] = ysize;
+        int[] endoVarSizes = new int[]{ysize,xsize};
 
 
         m = CausalBuilder.of(dag,endoVarSizes).build();
         m.fillExogenousWithRandomFactors(3);
-        int u  = m.getExogenousParents(0)[0];
-        int y = m.getEndogenousChildren(u)[0];
-        zeroPerturbation(u);
         logger.info(String.valueOf(m));
 
     }
 
-    private void sampleData(int y){
-        boolean sampled = false;
-        int size = 1000;
 
-        do{
-            try {
-                sampleData(y, size);
-                sampled = true;
-            }catch (Error e){
-                logger.info("No feasible solution... resampling");
-            }
-
-
-        }while (!sampled);
-    }
-
-    private void sampleData(int y, int size) {
-        boolean zeroX = false;
-        for(int i = 0; i<10; i++){
-            data = m.samples(size, m.getEndogenousVars());
-            BayesianFactor p = DataUtil.getJointProb(data, m.getDomain(m.getEndogenousVars()));
-            p = p.marginalize(y);
-            zeroX = ArraysUtil.where(p.getData(), v -> v==0).length>0;
-            if(!zeroX)
-                break;
-        }
-        if(zeroX) throw new IllegalStateException("Conditioning on zero values");
-
+    private void sampleData() {
+        data = m.samples(1000, m.getEndogenousVars());
         logger.info("Sampled "+data.length+" data instances");
-    }
-
-    private void inference() throws InterruptedException {
-        logger.info("Starting exact inference ");
-
-        // Exact solution
-        Watch.start();
-        CredalCausalVE ccve = new CredalCausalVE(m, data);
-        long tlearn = Watch.stop();
-
-        for(int i = 1; i<= numParents; i++) {
-            Watch.start();
-            VertexFactor res = ccve.probSufficiency(i, Y, 1,0,1,0);
-            long tinfer = Watch.stop();
-            double[] bounds = new double[]{Arrays.stream(Doubles.concat(res.getData()[0])).min().getAsDouble(),
-                    Arrays.stream(Doubles.concat(res.getData()[0])).max().getAsDouble()};
-            logger.info("PS(V"+i+",V"+Y+") in " + Arrays.toString(bounds) + "");
-            addQueryInfo("PS", i, Y, bounds, tlearn, tinfer);
-        }
-
-        for(int i = 1; i<= numParents; i++) {
-            Watch.start();
-            VertexFactor res = ccve.probNecessity(i, Y, 1,0,1,0);
-            long tinfer = Watch.stop();
-
-            double[] bounds = new double[]{Arrays.stream(Doubles.concat(res.getData()[0])).min().getAsDouble(),
-                    Arrays.stream(Doubles.concat(res.getData()[0])).max().getAsDouble()};
-            logger.info("PN(V"+i+",V"+Y+") in " + Arrays.toString(bounds) + " ");
-            addQueryInfo("PN", i, Y, bounds, tlearn, tinfer);
-        }
-    }
-
-    private void zeroPerturbation(int u) {
-
-        logger.info("U cardinality: "+m.getDomain(u).getCardinality(u));
-
-
-        // Add some zeros to P(U)
-        double[] values = m.getFactor(u).getData();
-        for(int i = 0; i< values.length*(1- nzerorate); i++) values[i] = 0;
-        values = CollectionTools.shuffle(values);
-        values = ArraysUtil.roundNonZerosToTarget(values, 1.0, 3);
-        m.setFactor(u, new BayesianFactor(m.getDomain(u), values));
-
-
-        // Removing zero positions
-        BayesianFactor f = m.getFactor(u);
-        logger.info("!0 = " + Arrays.toString(ArraysUtil.where(f.getData(), x -> x != 0)));
-        logger.info("0 = " + Arrays.toString(ArraysUtil.where(f.getData(), x -> x == 0)));
-        int[] zeroPos = ArraysUtil.reverse(ArraysUtil.where(f.getData(), x -> x == 0));
-        ArrayList removedPos = new ArrayList();
-
-
-        for (int s : zeroPos) {
-            if (zerodroprate > RandomUtil.getRandom().nextFloat()) {
-                m = m.dropExoState(u, s);
-                removedPos.add(s);
-                logger.info("Dropping state "+s);
-            }
-        }
-
-        values = f.getData();
-        double[] finalValues = values;
-        values = IntStream.range(0, f.getData().length).filter(i -> !removedPos.contains(i)).mapToDouble(i -> finalValues[i]).toArray();
-        f = new BayesianFactor(m.getDomain(u), values);
-        m.setFactor(u,f);
-
-        logger.info("U cardinality: "+m.getDomain(u).getCardinality(u));
-
     }
 
 
@@ -256,12 +118,10 @@ public class GenerateNparents extends Terminal {
         RandomUtil.setRandomSeed(seed);
         logger.info("Starting logger with seed " + seed);
 
-        label = "simple_nparents"+numParents+"" +
-                "_nzr"+String.valueOf(nzerorate).replace(".","")+"" +
-                "_zdr"+String.valueOf(zerodroprate).replace(".","")+"";
+        label = "simple_1parent";
 
-        if(ysize!=2)
-            label +="_ysize"+String.valueOf(ysize);
+        label +="_x"+String.valueOf(xsize);
+        label +="_y"+String.valueOf(ysize);
 
         label +="_"+seed;
         logger.info(label);
@@ -283,26 +143,7 @@ public class GenerateNparents extends Terminal {
     }
 
 
-    public void addQueryInfo(String query, int i, int Y, double[] bounds, long tlearn, long tinfer) {
-
-        if(info==null) info = new ResultsManager().setIncludeLabel(false);
-
-        info.addExperiment(String.valueOf(idinfo));
-        info.add(String.valueOf(idinfo), "query", query);
-        info.add(String.valueOf(idinfo), "cause", "V"+ i);
-        info.add(String.valueOf(idinfo), "effect", "V"+ Y);
-        info.add(String.valueOf(idinfo), "low", bounds[0]);
-        info.add(String.valueOf(idinfo), "upp", bounds[1]);
-        info.add(String.valueOf(idinfo), "tlearn", tlearn);
-        info.add(String.valueOf(idinfo), "tinfer", tinfer);
-
-
-
-        idinfo++;
-    }
-
     public void save() throws IOException {
-
 
         String outputfile = null;
 
@@ -313,12 +154,6 @@ public class GenerateNparents extends Terminal {
         outputfile = outputFolder.resolve(label+".uai").toString();
         IO.writeUAI(m, outputfile);
         logger.info("Saved model to: "+outputfile);
-
-        outputfile = outputFolder.resolve(label+"_query.csv").toString();
-        if(info != null)
-            info.save(outputfile);
-            logger.info("Saved queries to: "+outputfile);
-
 
     }
 

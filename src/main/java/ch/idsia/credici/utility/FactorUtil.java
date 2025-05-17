@@ -80,6 +80,27 @@ public class FactorUtil {
 	}
 
 
+	public static GenericFactor filterMultiStates(GenericFactor factor, int var, int... states){
+
+		GenericFactor out = null;
+		for (int s : states){
+			if (factor instanceof BayesianFactor) {
+				BayesianFactor pi = ((BayesianFactor) factor).filter(var, s);
+				if (out == null) out = pi;
+				else out = ((BayesianFactor)out).addition(pi);
+			} else if (factor instanceof VertexFactor) {
+				VertexFactor pi = ((VertexFactor) factor).filter(var, s);
+				if (out == null) out = pi;
+				else out = FactorUtil.additionVertexFactor((VertexFactor) out, pi);
+			} else{
+				throw new IllegalArgumentException("Wrong Factor type");
+			}
+		}
+
+		return out;
+
+	}
+
 	public static void print(BayesianFactor p) { print(p, new HashMap(), new HashMap<>());}
 
 	public static void print(BayesianFactor p, HashMap varNames){ print(p, varNames, new HashMap<>());}
@@ -388,6 +409,17 @@ public class FactorUtil {
 		return newFactor;
 	}
 
+
+	public static BayesianFactor dropOther(BayesianFactor factor, int var, int... states){
+
+		int[] otherStates = ArraysUtil.reverse(IntStream.range(0, factor.getDomain().getCardinality(var)).filter(i -> !ArraysUtil.contains(i,states)).toArray());
+
+		for(int s : otherStates)
+			factor = FactorUtil.dropState(factor,var,s);
+
+		return factor;
+	}
+
 	public static HashMap<Set<Integer>, BayesianFactor> intMapToHashMap(TIntObjectMap map){
 		HashMap out = new HashMap();
 		for(int v: map.keys()){
@@ -409,6 +441,112 @@ public class FactorUtil {
 			}
 		}
 		return new VertexFactor(f.getDataDomain(), f.getSeparatingDomain(), values);
+	}
+
+
+
+
+	public static VertexFactor additionVertexFactor(VertexFactor f1, VertexFactor f2) {
+
+		//System.out.println("combine "+toStringSimple()+" with "+other.toStringSimple());
+
+		if(!f1.getDomain().isConsistentWith(f2.getDomain())){
+			throw new IllegalArgumentException("Factors domains are not consistent: "+f1+", "+f2);
+		}
+
+		// union
+		Strides left = f1.getDataDomain().union(f2.getDataDomain());
+		Strides runion = f1.getSeparatingDomain().union(f2.getSeparatingDomain());
+		Strides right = runion.remove(left);
+
+		VertexFactor reshaped1 = f1.reseparate(right);
+		VertexFactor reshaped2 = f2.reseparate(right);
+
+		double target_data[][][] = new double[right.getCombinations()][][];
+
+		IndexIterator iter1 = reshaped1.getSeparatingDomain().getIterator(right);
+		IndexIterator iter2 = reshaped2.getSeparatingDomain().getIterator(right);
+
+		for (int r = 0; r < right.getCombinations(); ++r) {
+			int idx1 = iter1.next();
+			int idx2 = iter2.next();
+			double[][] data1 = reshaped1.getData()[idx1];
+			double[][] data2 = reshaped2.getData()[idx2];
+			double[][] target = new double[data1.length * data2.length][left.getCombinations()];
+			target_data[r] = target;
+
+			for (int v1 = 0; v1 < data1.length; ++v1) {
+				for (int v2 = 0; v2 < data2.length; ++v2) {
+					double[] vertex = target[v1 + v2 * data1.length];
+					double[] vertex1 = data1[v1];
+					double[] vertex2 = data2[v2];
+
+					IndexIterator i1 = reshaped1.getDataDomain().getIterator(left);
+					IndexIterator i2 = reshaped2.getDataDomain().getIterator(left);
+					for (int l = 0; l < left.getCombinations(); ++l) {
+						int offset1 = i1.next();
+						int offset2 = i2.next();
+
+						vertex[l] = vertex1[offset1] + vertex2[offset2];
+					}
+				}
+			}
+		}
+
+		return new VertexFactor(left, right, target_data);
+	}
+
+
+
+
+	public static VertexFactor divisionVertexFactor(VertexFactor f1, VertexFactor f2) {
+
+		//System.out.println("combine "+toStringSimple()+" with "+other.toStringSimple());
+
+		if(!f1.getDomain().isConsistentWith(f2.getDomain())){
+			throw new IllegalArgumentException("Factors domains are not consistent: "+f1+", "+f2);
+		}
+
+		// union
+		Strides left = f1.getDataDomain().union(f2.getDataDomain());
+		Strides runion = f1.getSeparatingDomain().union(f2.getSeparatingDomain());
+		Strides right = runion.remove(left);
+
+		VertexFactor reshaped1 = f1.reseparate(right);
+		VertexFactor reshaped2 = f2.reseparate(right);
+
+		double target_data[][][] = new double[right.getCombinations()][][];
+
+		IndexIterator iter1 = reshaped1.getSeparatingDomain().getIterator(right);
+		IndexIterator iter2 = reshaped2.getSeparatingDomain().getIterator(right);
+
+		for (int r = 0; r < right.getCombinations(); ++r) {
+			int idx1 = iter1.next();
+			int idx2 = iter2.next();
+			double[][] data1 = reshaped1.getData()[idx1];
+			double[][] data2 = reshaped2.getData()[idx2];
+			double[][] target = new double[data1.length * data2.length][left.getCombinations()];
+			target_data[r] = target;
+
+			for (int v1 = 0; v1 < data1.length; ++v1) {
+				for (int v2 = 0; v2 < data2.length; ++v2) {
+					double[] vertex = target[v1 + v2 * data1.length];
+					double[] vertex1 = data1[v1];
+					double[] vertex2 = data2[v2];
+
+					IndexIterator i1 = reshaped1.getDataDomain().getIterator(left);
+					IndexIterator i2 = reshaped2.getDataDomain().getIterator(left);
+					for (int l = 0; l < left.getCombinations(); ++l) {
+						int offset1 = i1.next();
+						int offset2 = i2.next();
+
+						vertex[l] = vertex1[offset1] / vertex2[offset2];
+					}
+				}
+			}
+		}
+
+		return new VertexFactor(left, right, target_data);
 	}
 
 

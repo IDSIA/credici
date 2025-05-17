@@ -1,14 +1,16 @@
 package ch.idsia.credici.inference;
 
-import ch.idsia.credici.model.builder.ExactCredalBuilder;
-import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.model.StructuralCausalModel;
+import ch.idsia.credici.model.builder.ExactCredalBuilder;
 import ch.idsia.credici.model.counterfactual.WorldMapping;
 import ch.idsia.credici.model.tools.CausalInfo;
+import ch.idsia.credici.model.tools.CausalOps;
 import ch.idsia.credici.utility.DataUtil;
 import ch.idsia.credici.utility.FactorUtil;
+import ch.idsia.crema.factor.GenericFactor;
 import ch.idsia.crema.factor.bayesian.BayesianFactor;
 import ch.idsia.crema.factor.convert.BayesianToVertex;
+import ch.idsia.crema.factor.credal.linear.IntervalFactor;
 import ch.idsia.crema.factor.credal.vertex.VertexFactor;
 import ch.idsia.crema.inference.ve.FactorVariableElimination;
 import ch.idsia.crema.inference.ve.order.MinFillOrdering;
@@ -23,127 +25,73 @@ import jdk.jshell.spi.ExecutionControl;
 import org.apache.commons.lang3.ArrayUtils;
 
 import java.util.Collection;
+import java.util.List;
 
-public class CredalCausalVE extends CausalInference<SparseModel, VertexFactor> {
+public class CredalCausalMultiVE{
 
-    private boolean convexHull = true;
+    CredalCausalVE inf = null;
 
-    public CredalCausalVE(StructuralCausalModel model){
 
-        this(model.toVCredal(model.getEmpiricalProbs()));
-        this.causalModel = model;
+    public CredalCausalMultiVE(StructuralCausalModel model, TIntIntMap[] data){
+        this.inf = new CredalCausalVE(model, data);
     }
 
-
-    public CredalCausalVE(StructuralCausalModel model, BayesianFactor[] empirical){
-
-        this(model.toVCredal(empirical));
-        this.causalModel = model;
+    public CredalCausalMultiVE(StructuralCausalModel model){
+        this.inf = new CredalCausalVE(model);
     }
 
+    public double[] probNecessity(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException {
+        SparseModel vmodel = inf.getModel();
 
+        int n = StructuralCausalModel.getNumPreciseModels(vmodel);
+        double minP = Double.POSITIVE_INFINITY, maxP= Double.NEGATIVE_INFINITY;
 
-
-    public CredalCausalVE(StructuralCausalModel model, Collection empirical){
-        this(model.toVCredal(empirical));
-        this.causalModel = model;
-    }
-
-    public CredalCausalVE(SparseModel model){
-        CausalInfo.assertIsVCredal(model);
-        this.model = model;
-    }
-
-    public CredalCausalVE(StructuralCausalModel model, TIntIntMap[] data, int... exoVars){
-        Collection empirical = FactorUtil.fixEmpiricalMap(DataUtil.getEmpiricalMap(model, data),FactorUtil.DEFAULT_DECIMALS).values();
-        SparseModel vmodel = ExactCredalBuilder.of(model).setEmpirical(empirical).setToVertex().build(exoVars).getModel();
-        this.model = vmodel;
-        this.causalModel = model;
-    }
-
-
-    @Override
-    public SparseModel getInferenceModel(Query q, boolean simplify) {
-
-        target = q.getTarget();
-        TIntIntMap evidence = q.getEvidence();
-        TIntIntMap intervention = q.getIntervention();
-
-        // Get the inference model (simple mutilated or twin graph)
-        SparseModel infModel=null;
-        if(!q.isCounterfactual()) {
-            infModel = (SparseModel) CausalOps.applyInterventions(model, intervention);
-        }else{
-            infModel = (SparseModel) CausalOps.counterfactualModel(model, intervention);
-            //map the target to the alternative world
-            q.setCounterfactualMapping(WorldMapping.getMap(infModel));
-            target = q.getCounterfactualMapping().getEquivalentVars(1, target);
+        for(int i =0; i<n; i++) {
+            StructuralCausalModel  m = StructuralCausalModel.getFromCausalVModelAt(vmodel, i);
+            CausalVE cve = new CausalVE(m);
+            double p = cve.probNecessity(cause, effect, causeTrue, causeFalse, effectTrue, effectFalse).getData()[0];
+            if(p>maxP) maxP=p;
+            if(p<minP) minP=p;
         }
 
-        // cut arcs coming from an observed node and remove barren w.r.t the target
-        if (simplify) {
-            RemoveBarren removeBarren = new RemoveBarren();
-            infModel = removeBarren
-                    .execute(new CutObserved().execute(infModel, evidence), target, evidence);
+        return new double[]{minP, maxP};
+
+    }
+
+    public double[] probSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException {
+        SparseModel vmodel = inf.getModel();
+
+        int n = StructuralCausalModel.getNumPreciseModels(vmodel);
+        double minP = Double.POSITIVE_INFINITY, maxP= Double.NEGATIVE_INFINITY;
+
+        for(int i =0; i<n; i++) {
+            StructuralCausalModel  m = StructuralCausalModel.getFromCausalVModelAt(vmodel, i);
+            CausalVE cve = new CausalVE(m);
+            double p = cve.probSufficiency(cause, effect, causeTrue, causeFalse, effectTrue, effectFalse).getData()[0];
+            if(p>maxP) maxP=p;
+            if(p<minP) minP=p;
         }
-        return infModel;
+
+        return new double[]{minP, maxP};
     }
 
-    @Override
-    public VertexFactor run(Query q) throws InterruptedException {
 
-        //Build the inference model
-        SparseModel infModel = getInferenceModel(q);
+    public double[] probNecessityAndSufficiency(int cause, int effect, int causeTrue, int causeFalse, int effectTrue, int effectFalse) throws InterruptedException, ExecutionControl.NotImplementedException {
+        SparseModel vmodel = inf.getModel();
 
-        // Update the evidence
-        TIntIntHashMap filteredEvidence = new TIntIntHashMap();
-        // update the evidence
-        for(int v: q.getEvidence().keys()){
-            if(ArrayUtils.contains(infModel.getVariables(), v)){
-                filteredEvidence.put(v, q.getEvidence().get(v));
-            }
+        int n = StructuralCausalModel.getNumPreciseModels(vmodel);
+        double minP = Double.POSITIVE_INFINITY, maxP= Double.NEGATIVE_INFINITY;
+
+        for(int i =0; i<n; i++) {
+            StructuralCausalModel  m = StructuralCausalModel.getFromCausalVModelAt(vmodel, i);
+            CausalVE cve = new CausalVE(m);
+            double p = cve.probNecessityAndSufficiency(cause, effect, causeTrue, causeFalse, effectTrue, effectFalse).getData()[0];
+            if(p>maxP) maxP=p;
+            if(p<minP) minP=p;
         }
-        // Get the  elimination order
-        int[] elimOrder = new MinFillOrdering().apply(infModel);
-        elimOrder = ArraysUtil.unique(Ints.concat(elimOrder, infModel.getVariables()));
 
-
-        FactorVariableElimination ve = new FactorVariableElimination(elimOrder);
-        if(filteredEvidence.size()>0)
-            ve.setEvidence(filteredEvidence);
-        ve.setNormalize(false);
-        VertexFactor.CONVEX_HULL_MARG = this.convexHull;
-        ve.setFactors(infModel.getFactors());
-        return ((VertexFactor) ve.run(target)).normalize().convexHull(this.convexHull);
-
+        return new double[]{minP, maxP};
     }
 
 
-    public VertexFactor probNecessityAndSufficiency(int cause, int effect, int trueState, int falseState) throws InterruptedException, ExecutionControl.NotImplementedException {
-
-        SparseModel reality = (SparseModel) this.getModel();
-        SparseModel doTrue = (SparseModel)this.causalQuery().setIntervention(cause, trueState).getInferenceModel(false);
-        SparseModel doFalse = (SparseModel)this.causalQuery().setIntervention(cause, falseState).getInferenceModel(false);
-
-        SparseModel pns_model = (SparseModel) CausalOps.merge(reality, doTrue, doFalse);
-
-        WorldMapping map = WorldMapping.getMap(pns_model);
-        int target[] = new int[] {map.getEquivalentVars(1, effect),map.getEquivalentVars(2, effect)};
-        for(int x:CausalInfo.of(reality).getEndogenousVars()) pns_model.removeVariable(x);
-
-        for(int v: pns_model.getVariables()){
-            if (pns_model.getFactor(v) instanceof BayesianFactor)
-                pns_model.setFactor(v, new BayesianToVertex().apply((BayesianFactor) pns_model.getFactor(v), v));
-        }
-        CausalInference infInternal =  new CredalCausalVE(pns_model);
-        VertexFactor prob = (VertexFactor) infInternal.causalQuery().setTarget(target).run();
-        return (VertexFactor) FactorUtil.filter(FactorUtil.filter(prob, target[0], trueState), target[1], falseState);
-
-    }
-
-
-    public CredalCausalVE setConvexHull(boolean convexHull) {
-        this.convexHull = convexHull;
-        return this;
-    }
 }

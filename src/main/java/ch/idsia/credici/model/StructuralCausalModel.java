@@ -1499,4 +1499,48 @@ public class StructuralCausalModel extends GenericSparseModel<BayesianFactor, Sp
 		return q.isIdentifiable();
 	}
 
+
+	public static StructuralCausalModel getFromCausalVModelAt(SparseModel vmodel, int i){
+
+		int[] Uvars = CausalInfo.of(vmodel).getExogenousVars();
+		int[] numVertices = IntStream.of(Uvars).map(u -> ((VertexFactor)vmodel.getFactor(u)).getData()[0].length).toArray();
+
+		Strides s = new Strides(Uvars, numVertices);
+
+
+		int[] selection = s.statesOf(i);
+
+		StructuralCausalModel out = new StructuralCausalModel();
+		for(int v : vmodel.getVariables()){
+			out.addVariable(vmodel.getDomain(v).getCardinality(v), CausalInfo.of(vmodel).isExogenous(v));
+		}
+		for(int v : CausalInfo.of(vmodel).getEndogenousVars()) {
+			out.addParents(v, vmodel.getParents(v));
+			BayesianFactor f = null;
+			VertexFactor vfactor = ((VertexFactor)vmodel.getFactor(v));
+			f = vfactor.sampleVertex(); //out.setFactor(v,  ((VertexFactor)vmodel.getFactor(v)).sampleVertex());
+			out.setFactor(v,f);
+		}
+		for(int k = 0; k< Uvars.length; k++){
+			int u = Uvars[k];
+			VertexFactor vfactor = ((VertexFactor)vmodel.getFactor(u));
+			out.setFactor(u, new BayesianFactor(vfactor.getDomain(), vfactor.getData()[0][selection[k]]));
+		}
+
+		return out;
+
+	}
+
+
+	public static int getNumPreciseModels(SparseModel vmodel){
+
+		int[] Uvars = CausalInfo.of(vmodel).getExogenousVars();
+		int[] numVertices = IntStream.of(Uvars).map(u -> ((VertexFactor)vmodel.getFactor(u)).getData()[0].length).toArray();
+
+		Strides s = new Strides(Uvars, numVertices);
+
+		return s.getCombinations();
+
+	}
+
 }

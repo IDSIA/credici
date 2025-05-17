@@ -13,18 +13,6 @@ from pathlib import Path
 print(sys.argv)
 
 
-numparents, nzerorate, zdroprate, seed, ysize = 2,0.8,0.8,1234,2
-
-numparents = int(sys.argv[1])
-nzerorate = float(sys.argv[2])
-zdroprate= float(sys.argv[3])
-seed = int(sys.argv[4])
-ysize = int(sys.argv[5])
-
-
-
-
-print(numparents, nzerorate, zdroprate, seed)
 
 ####
 
@@ -51,7 +39,7 @@ def strtime():
 prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/")
 prj_path = Path(str(Path("../../../").resolve())+"/")
 exp_folder = Path(prj_path, "papers/zeros/")
-model_folder = Path(exp_folder, "models/s3/")
+model_folder = Path(exp_folder, "models/s4/")
 code_folder = Path(exp_folder, "code")
 
 
@@ -69,22 +57,31 @@ def runjava(javafile, args_str, heap_gbytes=None):
     exec_bash_print(cmd)
 
 
-# -np 2 -nzr 0.2 --output ./papers/zeros/models -rw -s 1234 -ys 3
 
 
-args = ""
-args += f"-np {numparents} "
-args += f"-nzr {nzerorate} "
-args += f"-zdr {zdroprate} "
+seeds = list(range(0,50))
+xsizes = list(range(2,9))
+ysizes = [2,3]
 
-args += f"-o {model_folder} "
-args += "-rw "
-args += f"-s {seed} "
-args += f"-ys {ysize} "
+from itertools import product
 
+params = list(product(xsizes, ysizes, seeds))
+#params = [(x,y,s) for (x,y,s) in params if ((y==2) or (x<5))]
 
+for xsize, ysize, seed in params:
 
-javafile = Path(code_folder, "GenerateNparents.java")
-print(javafile)
-runjava(javafile, args_str=args, heap_gbytes=128)
+    args = ""
+
+    args += f"-o {model_folder} "
+    args += "-rw "
+    args += f"-s {seed} "
+    args += f"-ys {ysize} "
+    args += f"-xs {xsize} "
+
+    print(args)
+
+    javafile = Path(code_folder, "GenerateNonBin.java")
+    print(javafile)
+    runjava(javafile, args_str=args, heap_gbytes=128)
+
 

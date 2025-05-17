@@ -47,7 +47,7 @@ def strtime():
     return datetime.now().strftime("%y%m%d_%H%M%S")
 
 prj_path = Path("/Users/rcabanas/GoogleDrive/IDSIA/causality/dev/credici/")
-#prj_path = Path(str(Path("../../../").resolve())+"/")
+prj_path = Path(str(Path("../../../").resolve())+"/")
 exp_folder = Path(prj_path, "papers/zeros_ecsqaru25/")
 model_folder = Path(exp_folder, "models/sm1/")
 code_folder = Path(exp_folder, "code")
